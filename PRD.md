@@ -58,25 +58,19 @@
 
 ## 4. Functional Requirements
 
-### 4.1. Authentication
+### 4.1. User Management
 
-### 4.2. User Profile Management
+### 4.2. Group Management
 
-### 4.3. Group Management
+### 4.3. Bill Capture & OCR
 
-### 4.4. Member Management
+### 4.4. Bill Management
 
-### 4.5. Bill Management
+### 4.5. Bill Splitting
 
-### 4.6. Bill OCR Scanning
+### 4.6. Payment reminder message
 
-### 4.7. Payment Reminders
-
-### 4.8. Notifications
-
-### 4.9.
-
-### 4.10.
+### 4.7. Group History
 
 ---
 
@@ -86,51 +80,71 @@
 
 ### 5.2. Group Data
 
-### 5.3. Member Data
+### 5.3. Bill Data
 
-### 5.4. Bill Data
+### 5.4. Bill Splitting Data
 
-### 5.5. Bill Item Data
+### 5.5. Payment Reminder Message Data
 
-### 5.6. Expense Split Data
-
-### 5.7. Payment / Settlement Data
-
-### 5.8. Notification Data
+### 5.6. Group History Data
 
 ---
 
-## 6. Use Case Model
+## 6. Use Case
 
 ### 6.1. Overall Use Case Diagram
 
 ### 6.2. Use Case Details
 
-#### 6.2.1. Authentication Use Case
+#### 6.2.1. User Use Case
 
 ##### Use Case Diagram
 
 ##### Use Case Description
 
-#### 6.2.2. User Profile Management Use Case
+#### 6.2.2. Group Management Use Case
 
 ##### Use Case Diagram
 
 ##### Use Case Description
 
-#### 6.2.3.
+#### 6.2.3. Bill Capture & OCR Use Case
+
+##### Use Case Diagram
+
+##### Use Case Description
+
+#### 6.2.4. Bill Review & Management Use Case
+
+##### Use Case Diagram
+
+##### Use Case Description
+
+#### 6.2.5. Bill Splitting Use Case
+
+##### Use Case Diagram
+
+##### Use Case Description
+
+#### 6.2.6. Payment Reminder Message Use Case
+
+##### Use Case Diagram
+
+##### Use Case Description
+
+#### 6.2.7. Group History Use Case
+
+##### Use Case Diagram
+
+##### Use Case Description
 
 ---
 
 ## 7. User Flows
 
-### 7.1. Registration and Login Flow
+### 7.1. End-to-End Bill Flow
 
-### 7.2. Create Group Flow
-
-### 7.3. Add Member Flow
-
-### 7.4.
+### 7.2. Group History Flow
 
 ---
 
