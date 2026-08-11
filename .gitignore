@@ -1,0 +1,51 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary and lock files
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*.lock
+*.lck
+*.~lock.*
+.~lock.*
+*.~*
+*.draft
+*.part
+*.tmp~
+
+# Microsoft Office / document temp files
+~$*
+*.docx~
+*.doc~
+*.pptx~
+*.ppt~
+*.xlsx~
+*.xls~
+*.odt~
+*.ods~
+*.odp~
+*.pdf~
+
+# Git internal / local working artifacts
+.git/
+
+# Logs
+*.log
+
+# Python / Node / build outputs (optional, safe defaults)
+__pycache__/
+node_modules/
+build/
+dist/
+out/
