@@ -33,8 +33,9 @@ VIN SMART FUTURE logo
       <b>Ext Mentor</b>
     </td>
     <td>
+      Bành Quốc Danh (VSF-FINTECH&TT-PTPM)
       Phan Công Huân (VSF-FINTECH-VDTDVTC)
-      <b>Nguyễn Mạnh Tể (VSF-FINTECH&TT-PTPM)</b>
+      Nguyễn Mạnh Tể (VSF-FINTECH&TT-PTPM)
       Nguyễn Nam Trường (VSF-FINTECH-VDTDVTC)
     </td>
   </tr>
