@@ -348,7 +348,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 | 18 | Submit Payment Proof | Payer | \- Allows a Payer to attach evidence of a transfer (screenshot or note) and mark the debt as "paid — awaiting confirmation" |
 | 19 | Confirm Received Payment | Creditor | \- Allows the Creditor to manually confirm that a payment has been received, closing the debt in the ledger |
 | 20 | View List Account | Admin | \- Displays a paginated, searchable, and filterable list of user accounts together with their status and registration date. |
-| 21 | View Account Details | Admin | \- Displays the full profile of a selected account, including linked authentication providers, group membership, and recent activity history. |
+| 21 | View Account Details | Admin | \- Displays the full profile of a selected account, including account status, group membership, and recent activity history. |
 | 22 | Update Account Status | Admin | \- Changes an account's status (active, suspended, or locked). Suspending an account immediately revokes all active sessions of that account. |
 | 23 | System Monitoring | Admin | \- Monitors system health, API performance, and background tasks (OCR, **queues**) via endpoints and the admin dashboard. |
 
@@ -367,7 +367,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The user submits an email and password  
-      * The system locates the corresponding authentication identity and verifies the password hash  
+      * The system locates the user by email and verifies the password against the hash stored on the user record.
       * The system issues a short-lived access token (JWT) and a long-lived refresh token bound to the device, and records the session.  
       * The system returns the token pair together with the user's basic profile.  
     * *In Abnormal Cases:*  
@@ -387,7 +387,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
   * ***Functionality**:*   
     * *In Normal Cases:*  
       * The system verifies that the email is not already associated with an existing account.  
-      * The system creates a user record with a UUID v7 identifier and an associated authentication identity, storing only the password hash.  
+      * The system creates a user record with a UUID v7 identifier and stores only the password hash.
       * The system sends a verification email containing a single-use, time-limited token.  
       * Once the user opens the verification link, the account is marked as verified and may sign in.  
     * *In Abnormal Cases:*  
@@ -726,7 +726,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
   * **Data Validation**: The requester must hold the Admin role; the target account identifier must exist.  
   * ***Functionality**:*  
     * *In Normal Cases:*  
-      * The system displays the account profile, linked authentication providers, active session count, group membership, and recent activity history.  
+      * The system displays the account profile, account status, active session count, group membership, and recent activity history.
       * Sensitive fields such as full bank account numbers are masked by default.  
     * *In Abnormal Cases:*  
       * *Account not found or soft-deleted:* Return HTTP 404, or display the record in read-only form with a "deleted" marker where historical review is required.

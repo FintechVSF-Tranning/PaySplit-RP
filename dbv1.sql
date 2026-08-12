@@ -70,18 +70,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Bảng auth_identities: Tách biệt định danh đăng nhập để dễ dàng mở rộng Social Login (Google, Apple) sau này.
-CREATE TABLE IF NOT EXISTS auth_identities (
-    id             UUID PRIMARY KEY,
-    user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    provider       TEXT NOT NULL DEFAULT 'password',   -- Phương thức đăng nhập: 'password', 'google', v.v.
-    provider_uid   TEXT,                               -- ID do Google/Apple trả về (NULL nếu dùng password)
-    password_hash  TEXT,                               -- Mật khẩu đã mã hóa (NULL nếu là social login)
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (user_id, provider),
-    UNIQUE (provider, provider_uid)
-);
-
 -- Bảng sessions: Quản lý các phiên đăng nhập để hỗ trợ tính năng đăng xuất (Revoke Refresh Token).
 CREATE TABLE IF NOT EXISTS sessions (
     id                  UUID PRIMARY KEY,
