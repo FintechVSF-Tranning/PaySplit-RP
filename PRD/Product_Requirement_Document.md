@@ -263,7 +263,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 
 * **Financial Operations:** Holding funds, acting as a payment intermediary, or executing automated transfers/collections.  
 * **Banking Integration:** Direct production banking integration, auto-reconciliation, or verifying real bank receipts/screenshots.  
-* **Advanced Finance:** Credit scoring, lending (BNPL), cryptocurrency, or managing disputes/refunds.
+* **Advanced Finance:** Debt netting (offsetting), credit scoring, lending (BNPL), cryptocurrency, or managing disputes/refunds.  
 * **Production Deployment:** Processing real financial transactions, high-availability infrastructure, or full CI/CD pipelines.
 
 ## **2\. Product Overview** {#2.-product-overview}
@@ -367,7 +367,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The user submits an email and password  
-      * The system locates the user by email and verifies the password against the hash stored on the user record.
+      * The system locates the user by email and verifies the password against the hash stored on the user record.  
       * The system issues a short-lived access token (JWT) and a long-lived refresh token bound to the device, and records the session.  
       * The system returns the token pair together with the user's basic profile.  
     * *In Abnormal Cases:*  
@@ -387,7 +387,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
   * ***Functionality**:*   
     * *In Normal Cases:*  
       * The system verifies that the email is not already associated with an existing account.  
-      * The system creates a user record with a UUID v7 identifier and stores only the password hash.
+      * The system creates a user record with a UUID v7 identifier and stores only the password hash.  
       * The system sends a verification email containing a single-use, time-limited token.  
       * Once the user opens the verification link, the account is marked as verified and may sign in.  
     * *In Abnormal Cases:*  
@@ -575,11 +575,11 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 * ***Function trigger:*** The Captain or the Creditor allocates items on the bill review screen.  
 * ***Function description:*** Determines the share of the bill attributable to each participant, either per item or by an equal split across selected members. The Captain can assign items for any bill within their group, whereas a Creditor can assign items for bills they have personally uploaded.  
 * ***Function detail:***  
-  * **Data Validation**: Every assignee must be an active member of the group. For per-item splitting, each item must be assigned to at least one participant. For whole-bill splitting, the participant list must not be empty. Assignment weights must be positive.
+  * **Data Validation**: Every assignee must be an active member of the group. Each item must be assigned to at least one participant before the bill can be finalized. Assignment weights must be positive.  
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The Captain or the Creditor selects an item and chooses the participants who consumed it, optionally with different weights or quantities.  
-      * Alternatively, the acting user selects bill participants and applies equal or weighted proportional splitting to the whole bill, including manually entered bills that have no line items.
+      * Alternatively, the acting user applies an "equal split" rule that distributes the whole bill evenly across the selected participants.  
       * The system continuously recalculates a preview of each participant's provisional share.  
       * Shared surcharges (service charge, VAT) and discounts are apportioned proportionally to each participant's subtotal.  
     * *In Abnormal Cases:*  
@@ -611,14 +611,14 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 * ***Function trigger:*** The Captain confirms the finalization action via the review screen.  
 * ***Function description:*** Executed exclusively by the Captain. This action locks the bill immutably, computes the definitive per-person amounts, records them in the ledger, simplifies the resulting debts, and issues an individual payment QR code for each debtor.  
 * ***Function detail:***  
-  * **Data Validation**: The bill must be in `DRAFT` status. Per-item bills must have all items assigned; whole-bill splits must have a non-empty participant list. The respective Creditors must have valid receiving bank account information configured.
+  * **Data Validation**: The bill must be in `DRAFT` status with all items assigned. The respective Creditors must have valid receiving bank account information configured.  
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The system takes an immutable snapshot of the participant list at the moment of execution.  
       * The system globally locks the bill to prevent any further modifications.  
       * The Split Controller computes each participant's share using int64 arithmetic and distributes rounding remainders through the largest-remainder (Hamilton) method, guaranteeing that the sum of all shares equals the bill total exactly.  
       * The system writes balanced double-entry ledger entries so that the sum of all member balances within the group remains zero.  
-      * Within the same database transaction, the Settlement Controller rebuilds the group's `AWAITING` debts from current ledger balances, computes a simplified set of transfers, and records the contributing bills for each resulting debt. Debts already submitted for confirmation or settled are not rewritten.
+      * The Settlement Controller computes a simplified set of transfers that minimizes the number of transactions required to clear the outstanding balances.  
       * For each resulting transfer, the system generates a VietQR payload encoding the recipient account, the exact amount, and a unique reference code for manual cross-checking.  
       * The system transitions the bill to `FINALIZED`, notifies all participants through push notifications, and displays the rounding adjustment applied to each person for transparency.  
     * *In Abnormal Cases:*  
@@ -684,9 +684,9 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 #### ***4.1.19 \- Confirm Received Payment*** {#4.1.19---confirm-received-payment}
 
 * ***Function trigger:*** The Creditor confirms receipt of a payment from the debt list or from a pending-confirmation notification.  
-* ***Function description:*** Manually closes an outstanding debt in the ledger after the Creditor verifies the fund transfer in their personal banking application.  
+* ***Function description:*** The requester must be the recipient of the debt; the debt must be unsettled; the confirmed amount must equal the full outstanding amount. Partial settlement is not supported in this prototype.  
 * ***Function detail:***  
-  * **Data Validation**: The requester must be the recipient of the debt; the debt must be unsettled; the confirmed amount must equal the full outstanding amount. Partial settlement is not supported in this prototype.
+  * **Data Validation**: The requester must be the recipient of the debt; the debt must be unsettled; the confirmed amount must equal the outstanding amount unless a partial settlement is explicitly recorded.  
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The Creditor reviews the pending payment (often after the Payer has marked it as "Paid") and manually confirms receipt based on their actual bank statement.  
@@ -695,7 +695,6 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
       * The system sends a single push notification to the Payer to confirm that the Creditor has successfully received the payment.  
     * *In Abnormal Cases:*  
       * *Requester is not the recipient:* Return HTTP 403\.  
-      * *Payment not received or evidence is invalid:* The Creditor rejects the claim with a required reason. The debt moves to `REJECTED`, the rejection timestamp and reason remain visible to the Payer, and the Payer may submit a new payment proof.
       * *Confirmation issued in error:* The Creditor may reverse it, which creates a compensating reversal entry rather than deleting the original record.  
       * *Database interruption:* The system rolls back the transaction, shows an error message, retains the previous debt status, and asks the user to retry.
 
@@ -726,7 +725,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
   * **Data Validation**: The requester must hold the Admin role; the target account identifier must exist.  
   * ***Functionality**:*  
     * *In Normal Cases:*  
-      * The system displays the account profile, account status, active session count, group membership, and recent activity history.
+      * The system displays the account profile, account status, active session count, group membership, and recent activity history.  
       * Sensitive fields such as full bank account numbers are masked by default.  
     * *In Abnormal Cases:*  
       * *Account not found or soft-deleted:* Return HTTP 404, or display the record in read-only form with a "deleted" marker where historical review is required.
