@@ -21,6 +21,7 @@ DO $$ BEGIN
     -- Đã thêm trạng thái 'stalled_confirmation' cho logic nhắc nhở quá hạn
     CREATE TYPE debt_status      AS ENUM ('awaiting','pending_confirmation','stalled_confirmation','settled');
     CREATE TYPE admin_action     AS ENUM ('suspend','lock','reactivate');
+	CREATE TYPE token_type       AS ENUM ('email_verification', 'password_reset');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -29,10 +30,11 @@ END $$;
 -- 2. USERS & AUTH (Người dùng & Xác thực)
 -- ---------------------------------------------------------------------------
 
--- Bảng users: Lưu trữ thông tin cá nhân và cấu hình tài khoản ngân hàng của người dùng.
+-- Bảng users: Lưu trữ thông tin cá nhân, mật khẩu đăng nhập và cấu hình tài khoản ngân hàng.
 CREATE TABLE IF NOT EXISTS users (
     id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email                       CITEXT NOT NULL UNIQUE, -- Email đăng nhập (không phân biệt hoa/thường)
+    password_hash               TEXT NOT NULL,          -- Mật khẩu đã mã hóa (Bắt buộc vì chỉ dùng đăng nhập thường)
     display_name                TEXT NOT NULL,          -- Tên hiển thị trong nhóm
     avatar_object_key           TEXT,                   -- Đường dẫn lưu ảnh đại diện (trên S3/Object Storage)
     phone_number                TEXT,                   -- Số điện thoại liên hệ
@@ -69,23 +71,14 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_active_by_user ON sessions(user_id) WHERE revoked_at IS NULL;
 
--- Bảng password_reset_tokens: Lưu trữ token dùng một lần khi người dùng quên mật khẩu.
-CREATE TABLE IF NOT EXISTS password_reset_tokens (
+-- Bảng user_tokens: Gộp chung các loại token xác thực dùng 1 lần (quên mật khẩu, xác minh email)
+CREATE TABLE IF NOT EXISTS user_tokens (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash  TEXT NOT NULL UNIQUE,
-    expires_at  TIMESTAMPTZ NOT NULL,
-    used_at     TIMESTAMPTZ,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- Bảng email_verification_tokens: Lưu trữ token để xác minh địa chỉ email lúc đăng ký mới.
-CREATE TABLE IF NOT EXISTS email_verification_tokens (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash  TEXT NOT NULL UNIQUE,
-    expires_at  TIMESTAMPTZ NOT NULL,
-    used_at     TIMESTAMPTZ,
+    type        token_type NOT NULL,    -- Phân loại: 'email_verification' hoặc 'password_reset'
+    token_hash  TEXT NOT NULL UNIQUE,   -- Chuỗi mã hóa của token
+    expires_at  TIMESTAMPTZ NOT NULL,   -- Hạn sử dụng của token
+    used_at     TIMESTAMPTZ,            -- Đánh dấu thời điểm đã sử dụng (NULL = chưa dùng)
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -150,7 +143,8 @@ CREATE TABLE IF NOT EXISTS bills (
     vat                 BIGINT NOT NULL DEFAULT 0,                  -- Thuế VAT
     discount            BIGINT NOT NULL DEFAULT 0,                  -- Tiền giảm giá
     total               BIGINT NOT NULL DEFAULT 0,                  -- Tổng tiền cuối cùng
-    mismatch_warning    BOOLEAN NOT NULL DEFAULT false,             -- Cảnh báo nếu OCR quét tổng tiền không khớp chi tiết
+    is_no_split         BOOLEAN NOT NULL DEFAULT false,             -- BỔ SUNG: TRUE nếu hóa đơn chỉ dùng để lưu trữ/track chi tiêu, không tính toán công nợ
+	mismatch_warning    BOOLEAN NOT NULL DEFAULT false,             -- Cảnh báo nếu OCR quét tổng tiền không khớp chi tiết
     version             INT NOT NULL DEFAULT 1,                     -- Dùng cho Optimistic Locking (chống sửa đồng thời)
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     finalized_at        TIMESTAMPTZ,
@@ -178,16 +172,14 @@ CREATE INDEX IF NOT EXISTS idx_bill_items_bill ON bill_items(bill_id);
 CREATE TABLE IF NOT EXISTS bill_item_assignments (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bill_item_id  UUID NOT NULL REFERENCES bill_items(id) ON DELETE CASCADE,
-    member_id     UUID REFERENCES group_members(id),    -- NULL nếu là is_anonymous = true
-    is_anonymous  BOOLEAN NOT NULL DEFAULT false,       -- Món dùng chung không chia cho ai (Creditor sẽ tự chịu)
-    weight        NUMERIC(10,4) NOT NULL DEFAULT 1,     -- Trọng số (nếu người ăn nhiều, người ăn ít)
+    member_id     UUID NOT NULL REFERENCES group_members(id), 			-- Ép buộc NOT NULL. Nếu Creditor tự chịu, gán thẳng ID của Creditor vào đây.
+    weight        NUMERIC(10,4) NOT NULL DEFAULT 1,     				-- Trọng số (nếu người ăn nhiều, người ăn ít)
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK ( (is_anonymous = false AND member_id IS NOT NULL) OR (is_anonymous = true  AND member_id IS NULL) ),
     CHECK (weight > 0)
 );
 CREATE INDEX IF NOT EXISTS idx_bill_item_assignments_item   ON bill_item_assignments(bill_item_id);
 CREATE INDEX IF NOT EXISTS idx_bill_item_assignments_member ON bill_item_assignments(member_id);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_bill_item_assignment_member ON bill_item_assignments(bill_item_id, member_id) WHERE member_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_bill_item_assignment_member ON bill_item_assignments(bill_item_id, member_id);
 
 -- Bảng bill_participant_shares: Lưu kết quả (Snapshot) số tiền chính xác mỗi người phải trả sau khi Finalize.
 CREATE TABLE IF NOT EXISTS bill_participant_shares (
