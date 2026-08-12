@@ -254,7 +254,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 
 * **Group Management:** Create and join temporary groups via link/QR (including redirects for app downloads).  
 * **Bill Processing:** Upload bills via OCR (extracting merchant, items, taxes, totals) with manual entry/correction options.  
-* **Expense Allocation:** Support equal, item-based, percentage-based, and custom splitting methods.  
+* **Expense Allocation:** Support equal and item-based (weighted) splitting. Percentage-based and fully custom amounts are out of scope for the prototype.  
 * **Debt Calculation & QR:** Track multiple bills and creditors, calculate exact individual dues, and generate unique payment QR codes.  
 * **Payment Workflow:** Track statuses where payers mark transfers as sent, but *only* creditors can confirm or reject. Includes basic reminders.  
 * **Deliverables:** Deliver a functional prototype, APIs, technical documentation
@@ -337,16 +337,16 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 | 07 | Create New Group | Authenticated User | \- Creates a new expense group for a trip, meal, or shared activity. The creator automatically becomes the Captain of that group. |
 | 08 | Join Group | Authenticated User | \- Allows an Authenticated User to join an existing group through an invite link or invite code. Once joined, the user becomes a group member and may act as Creditor or Payer for bills within that group. |
 | 09 | Generate Group Invite | Captain | \- Generates a shareable invite link or code with a configurable expiry so that other users can join the group. |
-| 10 | Remove Member | Captain | \- Removes a member from the group. Removal is only permitted when the member has no outstanding balance, in order to preserve the ledger invariant that the sum of all member balances equals zero. |
+| 10 | Remove Member | Captain | \- Removes a member from the group. Removal is only permitted when the member has no outstanding balance, in order to preserve data integrity: a member may only be removed once all of their debts and credits within the group have been settled. |
 | 11 | Upload Bill Image | Creditor | \- Upload a photograph of a receipt to the system to start the automated bill parsing flow. |
 | 12 | Extract Data from Bill Image | OCR Provider (External System) | \- Sends the uploaded receipt image to the OCR/Vision LLM provider, receives a structured result (including merchant details, line items, taxes, and total), and normalizes it into draft bill data for the Creditor to review. |
 | 13 | Assign Items to Members | Captain, Creditor | \- Allocates each extracted line item to one or more group members, or applies an equal-split rule across selected participants, thereby determining who owes what portion of the bill and to which Creditor. |
 | 14 | Update Bill Information | Creditor | \- Reviews and refines the draft bill before finalization to correct OCR omissions, adjust item details, and update the participant list. |
-| 15 | Finalize Bill | Captain | \- Locks the bill immutably, computes exact participant shares, simplifies debts, updates the ledger, and generates unique VietQR codes for each debtor. |
-| 16 | View Allocated Expense | Payer | \- Displays the amount the Payer owes, the breakdown of the items charged to them, the Srounding adjustment applied, the recipient of the payment, and the reference code attached to their payment request. |
+| 15 | Finalize Bill | Captain | \- Locks the bill immutably, *computes exact participant shares, aggregates per‑pair debts with full source traceability (`debt_sources`), and generates unique VietQR codes for each debtor.* |
+| 16 | View Allocated Expense | Payer | \- Displays the amount the Payer owes, the breakdown of the items charged to them, the rounding adjustment applied, the recipient of the payment, and the reference code attached to their payment request. |
 | 17 | Scan Payment QR | Payer | \- Displays the individual VietQR code for the Payer's debt so that it can be scanned or opened in a banking application. The QR encodes the recipient account, the exact amount. |
 | 18 | Submit Payment Proof | Payer | \- Allows a Payer to attach evidence of a transfer (screenshot or note) and mark the debt as "paid — awaiting confirmation" |
-| 19 | Confirm Received Payment | Creditor | \- Allows the Creditor to manually confirm that a payment has been received, closing the debt in the ledger |
+| 19 | Confirm Received Payment | Creditor | \- Allows the Creditor to manually confirm that a payment has been received, *closing the debt and recording the settlement in the group activity log* |
 | 20 | View List Account | Admin | \- Displays a paginated, searchable, and filterable list of user accounts together with their status and registration date. |
 | 21 | View Account Details | Admin | \- Displays the full profile of a selected account, including account status, group membership, and recent activity history. |
 | 22 | Update Account Status | Admin | \- Changes an account's status (active, suspended, or locked). Suspending an account immediately revokes all active sessions of that account. |
@@ -473,7 +473,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
   * ***Functionality**:*   
     * *In Normal Cases:*  
       * The system creates the group record and adds the creator as its first member with the Captain role.  
-      * The system initializes an empty ledger for the group.  
+      * The system initializes an empty bill list and activity log for the group.  
       * The group appears in the creator's group list, ready to receive members and bills.  
     * *In Abnormal Cases:*  
       * *Group quota exceeded:* Return HTTP 429 or 403 with an explanation of the limit on concurrently active groups per user.
@@ -523,7 +523,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
   * ***Functionality**:*   
     * *In Normal Cases:*  
       * The system verifies that the member has no outstanding debt and no outstanding credit.  
-      * The system marks the membership as inactive rather than deleting it, so that historical ledger entries and past bill participation records remain intact.  
+      * The system marks the membership as inactive rather than deleting it, so that past bill participation, debt records and activity history remain intact.  
       * The removed member loses access to the group but their contribution to finalized bills is preserved.  
     * *In Abnormal Cases:*  
       * *Member still has an outstanding balance:* Return HTTP 409 with the exact amount owed or owing, and require settlement before removal.  
@@ -582,6 +582,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
       * Alternatively, the acting user applies an "equal split" rule that distributes the whole bill evenly across the selected participants.  
       * The system continuously recalculates a preview of each participant's provisional share.  
       * Shared surcharges (service charge, VAT) and discounts are apportioned proportionally to each participant's subtotal.  
+      * Equal split over the whole bill is implemented by assigning every line item to all selected participants with weight \= 1; manually entered bills without line items must be represented as a single synthetic line item covering the whole amount.  
     * *In Abnormal Cases:*  
       * *Unassigned items remain:* The system blocks finalization and highlights the items still requiring an assignee.  
       * *Assignment to a member who has left the group:* Return HTTP 409 and prompt the user to reassign the item.
@@ -617,13 +618,13 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
       * The system takes an immutable snapshot of the participant list at the moment of execution.  
       * The system globally locks the bill to prevent any further modifications.  
       * The Split Controller computes each participant's share using int64 arithmetic and distributes rounding remainders through the largest-remainder (Hamilton) method, guaranteeing that the sum of all shares equals the bill total exactly.  
-      * The system writes balanced double-entry ledger entries so that the sum of all member balances within the group remains zero.  
+      * For every participant other than the Creditor, the system creates or updates a `debtor → creditor` debt record and writes one `debt_source` row per contributing item (plus a row for the apportioned VAT/service charge), so that the sum of all debt sources equals the bill total exactly.  
       * The Settlement Controller computes a simplified set of transfers that minimizes the number of transactions required to clear the outstanding balances.  
       * For each resulting transfer, the system generates a VietQR payload encoding the recipient account, the exact amount, and a unique reference code for manual cross-checking.  
       * The system transitions the bill to `FINALIZED`, notifies all participants through push notifications, and displays the rounding adjustment applied to each person for transparency.  
     * *In Abnormal Cases:*  
       * *Unassigned items or an empty participant list:* Return HTTP 400 identifying the specific blocking condition.  
-      * *Ledger transaction failure:* The entire finalization is rolled back within a single database transaction, leaving the bills in `DRAFT` status; no partial ledger entries are ever persisted.  
+      * *Debt-generation failure:* the entire finalization is rolled back in a single database transaction; the bill stays in `DRAFT` and no partial debt records are persisted.  
       * *QR generation failure for one recipient:* Finalization still completes, and the affected debt is shown with the recipient's bank details in plain form so that a manual transfer remains possible.
 
 ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––-
@@ -690,12 +691,12 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The Creditor reviews the pending payment (often after the Payer has marked it as "Paid") and manually confirms receipt based on their actual bank statement.  
-      * The system writes a balanced settlement entry to the ledger, moving the debt to `SETTLED` (or `COMPLETED`).  
-      * The system recomputes the group balances purely from the ledger entries — balances are always derived, never stored directly.  
+      * The system sets the debt status to `SETTLED`, stamps `settled_at`, and appends a `confirmed_payment` entry to the group activity log.  
+      * Group balances are derived on read by aggregating unsettled debt records.  
       * The system sends a single push notification to the Payer to confirm that the Creditor has successfully received the payment.  
     * *In Abnormal Cases:*  
       * *Requester is not the recipient:* Return HTTP 403\.  
-      * *Confirmation issued in error:* The Creditor may reverse it, which creates a compensating reversal entry rather than deleting the original record.  
+      * *Confirmation issued in error:* not supported in this prototype; the Creditor and Payer must resolve it outside the system. (Out-of-scope)  
       * *Database interruption:* The system rolls back the transaction, shows an error message, retains the previous debt status, and asks the user to retry.
 
 ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––-
@@ -805,9 +806,9 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 
 #### ***5.2.2 Reliability & Robustness*** {#5.2.2-reliability-&-robustness}
 
-* **REL-01:** Financial calculations must strictly use 64-bit integers (int64) and Hamilton rounding algorithms to prevent errors and maintain zero-sum group balances.  
+* **REL-01:** Financial calculations must strictly use 64-bit integers (int64) and Hamilton rounding algorithms to prevent errors and guarantee that the sum of all participant shares equals the bill total exactly (no money created or lost by rounding)  
 * **REL-02:** Unconfirmed OCR results cannot be automatically split and must require user review and manual correction.  
-* **REL-03:** Bill corrections must utilize reversal ledger entries rather than data deletion to maintain an audit trail.  
+* **REL-03:** Finalized bills are immutable. Corrections are made by voiding the bill and issuing a replacement; every change is appended to the group activity log (`updated_bill` / `deleted_bill`) instead of being deleted silently.  
 * **REL-04:** The system targets an uptime of ≥ 99% during peak operational hours.
 
 #### ***5.2.3 Security & Privacy*** {#5.2.3-security-&-privacy}
@@ -820,7 +821,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 
 * **EXP-01:** OCR results and split calculations must display full, transparent breakdowns (including VAT and rounding absorbers) to the users.  
 * **EXP-02:** Debt statuses and historical actions must be highly visible to involved parties.  
-* **EXP-03:** The ledger must rely on double-entry bookkeeping to ensure complete transaction traceability.
+* **EXP-03:** Every debt must be traceable back to the exact bills and line items that produced it, and every state change must be recorded in an append-only group log.
 
 #### ***5.2.5 Maintainability & Reproducibility*** {#5.2.5-maintainability-&-reproducibility}
 
@@ -862,7 +863,7 @@ Detailed architecture is covered in the TDD (System Architecture, Level 1 & Leve
   * **Reminder Scheduler**: cron-style jobs for payment reminders and the N-times reminder rule (transitions stale pending payments to `STALLED_CONFIRMATION` without auto-completing).
 
 * ***Data Layer***  
-  * **PostgreSQL**: stores ledger entries, bills, groups, and user data (accessed via sqlc/pgx). Object Storage holds uploaded bill images.
+  * **PostgreSQL**: stores bills, debts and debt sources, groups, and user data (accessed via sqlc/pgx).
 
   * **Object Storage:** Stores uploaded bill images.
 
@@ -894,7 +895,7 @@ Detailed architecture is covered in the TDD (System Architecture, Level 1 & Leve
 | Week | Deliverables | Checkpoint |
 | :---: | ----- | ----- |
 | **W1** | **Design & Core Backend** •  TDD Level 1 (system architecture, API design, DB schema overview) •  TDD Level 2 per service owner •  C4 Context & Container diagrams •  Auth/User migration (000001\_user\_schema) •  Group module •  Bill/OCR module skeleton •  Split Controller with unit tests •  DB schemas for remaining modules | **TDD review (HARD gate) — end of W1** |
-| **W2** | **Integration, Testing & Demo** •  Ledger \+ Settlement Controller integrated •  VietQR generation per debtor •  Manual payment confirmation flow •  Sequence diagram (photograph bill → generate QR) •  Unit and integration tests •  Security checklist •  API contract finalized •  Final report, Docker package, demo script, presentation | **Test report (HARD gate) — mid W2** Demo \+ handover — end of W2 |
+| **W2** | **Integration, Testing & Demo** •  Debt aggregation \+ Settlement Controller integrated •  VietQR generation per debtor •  Manual payment confirmation flow •  Sequence diagram (photograph bill → generate QR) •  Unit and integration tests •  Security checklist •  API contract finalized •  Final report, Docker package, demo script, presentation | **Test report (HARD gate) — mid W2** Demo \+ handover — end of W2 |
 
 ##### **Table 5\. Milestones & Timeline** {#table-5.-milestones-&-timeline}
 
@@ -905,8 +906,8 @@ Detailed architecture is covered in the TDD (System Architecture, Level 1 & Leve
 | R1 | HIGH | MED | OCR misparses Vietnamese receipts (unusual layouts, poor lighting, handwritten totals). **Mitigation:** User always reviews/edits before finalization; test with varied real-world receipts; manual entry as fallback. |
 | R2 | MED | MED | Vietnamese banking API for resolving account holder names may be unavailable or restricted. **Mitigation:** Fall back to manual entry/confirmation; flag as open question for mentor guidance. |
 | R3 | MED | MED | Manual payment confirmation depends on user diligence; users may forget, delay, or falsely confirm. **Mitigation:** Show reference code & amount prominently; send reminder notifications; support reversal entries for corrections. |
-| R4 | HIGH | LOW | Rounding or ledger bugs break the core invariant (sum of member balances \= zero). **Mitigation:** Enforce int64 VND arithmetic (never float64); Hamilton rounding; pure-logic controller enable 100% deterministic unit tests. |
-| R5 | MED | HIGH | Double-entry ledger and settlement-simplification logic take longer than estimated. **Mitigation:** Escalate to mentor if blocked \> 1 day (Handbook §7); pure-logic modules can be prototyped independently. |
+| R4 | HIGH | LOW | Rounding or aggregation bugs break the core invariant (Σ debt\_sources \= bill total). **Mitigation:** Enforce int64 VND arithmetic (never float64); Hamilton rounding; pure-logic controller enable 100% deterministic unit tests. |
+| R5 | MED | HIGH | Debt aggregation and settlement logic take longer than estimated. **Mitigation:** Escalate to mentor if blocked \> 1 day (Handbook §7); pure-logic modules can be prototyped independently. |
 | R6 | HIGH | HIGH | 2-week timeline is very tight; any W1 slip pushes all integration, testing, and demo into W2. **Mitigation:** Prioritize critical path first; secondary features only if time permits; daily updates with mentor; escalate immediately if blocked \> 1 day. |
 
 ##### **Table 6\. Risks & Mitigations** {#table-6.-risks-&-mitigations}
