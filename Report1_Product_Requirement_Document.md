@@ -263,7 +263,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 
 * **Financial Operations:** Holding funds, acting as a payment intermediary, or executing automated transfers/collections.  
 * **Banking Integration:** Direct production banking integration, auto-reconciliation, or verifying real bank receipts/screenshots.  
-* **Advanced Finance:** Debt netting (offsetting), credit scoring, lending (BNPL), cryptocurrency, or managing disputes/refunds.  
+* **Advanced Finance:** Credit scoring, lending (BNPL), cryptocurrency, or managing disputes/refunds.
 * **Production Deployment:** Processing real financial transactions, high-availability infrastructure, or full CI/CD pipelines.
 
 ## **2\. Product Overview** {#2.-product-overview}
@@ -575,11 +575,11 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 * ***Function trigger:*** The Captain or the Creditor allocates items on the bill review screen.  
 * ***Function description:*** Determines the share of the bill attributable to each participant, either per item or by an equal split across selected members. The Captain can assign items for any bill within their group, whereas a Creditor can assign items for bills they have personally uploaded.  
 * ***Function detail:***  
-  * **Data Validation**: Every assignee must be an active member of the group. Each item must be assigned to at least one participant before the bill can be finalized. Assignment weights must be positive.  
+  * **Data Validation**: Every assignee must be an active member of the group. For per-item splitting, each item must be assigned to at least one participant. For whole-bill splitting, the participant list must not be empty. Assignment weights must be positive.
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The Captain or the Creditor selects an item and chooses the participants who consumed it, optionally with different weights or quantities.  
-      * Alternatively, the acting user applies an "equal split" rule that distributes the whole bill evenly across the selected participants.  
+      * Alternatively, the acting user selects bill participants and applies equal or weighted proportional splitting to the whole bill, including manually entered bills that have no line items.
       * The system continuously recalculates a preview of each participant's provisional share.  
       * Shared surcharges (service charge, VAT) and discounts are apportioned proportionally to each participant's subtotal.  
     * *In Abnormal Cases:*  
@@ -611,14 +611,14 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 * ***Function trigger:*** The Captain confirms the finalization action via the review screen.  
 * ***Function description:*** Executed exclusively by the Captain. This action locks the bill immutably, computes the definitive per-person amounts, records them in the ledger, simplifies the resulting debts, and issues an individual payment QR code for each debtor.  
 * ***Function detail:***  
-  * **Data Validation**: The bill must be in `DRAFT` status with all items assigned. The respective Creditors must have valid receiving bank account information configured.  
+  * **Data Validation**: The bill must be in `DRAFT` status. Per-item bills must have all items assigned; whole-bill splits must have a non-empty participant list. The respective Creditors must have valid receiving bank account information configured.
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The system takes an immutable snapshot of the participant list at the moment of execution.  
       * The system globally locks the bill to prevent any further modifications.  
       * The Split Controller computes each participant's share using int64 arithmetic and distributes rounding remainders through the largest-remainder (Hamilton) method, guaranteeing that the sum of all shares equals the bill total exactly.  
       * The system writes balanced double-entry ledger entries so that the sum of all member balances within the group remains zero.  
-      * The Settlement Controller computes a simplified set of transfers that minimizes the number of transactions required to clear the outstanding balances.  
+      * Within the same database transaction, the Settlement Controller rebuilds the group's `AWAITING` debts from current ledger balances, computes a simplified set of transfers, and records the contributing bills for each resulting debt. Debts already submitted for confirmation or settled are not rewritten.
       * For each resulting transfer, the system generates a VietQR payload encoding the recipient account, the exact amount, and a unique reference code for manual cross-checking.  
       * The system transitions the bill to `FINALIZED`, notifies all participants through push notifications, and displays the rounding adjustment applied to each person for transparency.  
     * *In Abnormal Cases:*  
@@ -686,7 +686,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 * ***Function trigger:*** The Creditor confirms receipt of a payment from the debt list or from a pending-confirmation notification.  
 * ***Function description:*** Manually closes an outstanding debt in the ledger after the Creditor verifies the fund transfer in their personal banking application.  
 * ***Function detail:***  
-  * **Data Validation**: The requester must be the recipient of the debt; the debt must be unsettled; the confirmed amount must equal the outstanding amount unless a partial settlement is explicitly recorded.  
+  * **Data Validation**: The requester must be the recipient of the debt; the debt must be unsettled; the confirmed amount must equal the full outstanding amount. Partial settlement is not supported in this prototype.
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The Creditor reviews the pending payment (often after the Payer has marked it as "Paid") and manually confirms receipt based on their actual bank statement.  
@@ -695,6 +695,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
       * The system sends a single push notification to the Payer to confirm that the Creditor has successfully received the payment.  
     * *In Abnormal Cases:*  
       * *Requester is not the recipient:* Return HTTP 403\.  
+      * *Payment not received or evidence is invalid:* The Creditor rejects the claim with a required reason. The debt moves to `REJECTED`, the rejection timestamp and reason remain visible to the Payer, and the Payer may submit a new payment proof.
       * *Confirmation issued in error:* The Creditor may reverse it, which creates a compensating reversal entry rather than deleting the original record.  
       * *Database interruption:* The system rolls back the transaction, shows an error message, retains the previous debt status, and asks the user to retry.
 
