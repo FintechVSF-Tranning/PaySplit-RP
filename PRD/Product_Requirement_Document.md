@@ -325,7 +325,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 | 12 | Extract Data from Bill Image | OCR Provider (External System) | \- Sends the uploaded receipt image to the OCR/Vision LLM provider, receives a structured result (including merchant details, line items, taxes, and total), and normalizes it into draft bill data for the Creditor to review. |
 | 13 | Assign Items to Members | Captain, Creditor | \- Allocates each extracted line item to one or more group members, or applies an equal-split rule across selected participants, thereby determining who owes what portion of the bill and to which Creditor. |
 | 14 | Update Bill Information | Creditor | \- Reviews and refines the draft bill before finalization to correct OCR omissions, adjust item details, and update the participant list. |
-| 15 | Finalize Bill | Captain | \- Locks the bill immutably, *computes exact participant shares, aggregates per‑pair debts with full source traceability (`debt_sources`), and generates unique VietQR codes for each debtor.* |
+| 15 | Finalize Bill | Captain | \- Locks the bill immutably, computes exact participant shares, creates one debt row per debtor for that bill (traceability derived from item assignments), and generates a VietQR code for each debtor. |
 | 16 | View Allocated Expense | Payer | \- Displays the amount the Payer owes, the breakdown of the items charged to them, the rounding adjustment applied, the recipient of the payment, and the reference code attached to their payment request. |
 | 17 | Scan Payment QR | Payer | \- Displays the individual VietQR code for the Payer's debt so that it can be scanned or opened in a banking application. The QR encodes the recipient account, the exact amount. |
 | 18 | Submit Payment Proof | Payer | \- Allows a Payer to attach evidence of a transfer (screenshot or note) and mark the debt as "paid — awaiting confirmation" |
@@ -601,7 +601,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
       * The system takes an immutable snapshot of the participant list at the moment of execution.  
       * The system globally locks the bill to prevent any further modifications.  
       * The Split Controller computes each participant's share using int64 arithmetic and distributes rounding remainders through the largest-remainder (Hamilton) method, guaranteeing that the sum of all shares equals the bill total exactly.  
-      * For every participant other than the Creditor, the system creates or updates a `debtor → creditor` debt record and writes one `debt_source` row per contributing item (plus a row for the apportioned VAT/service charge), so that the sum of all debt sources equals the bill total exactly.  
+      * For every participant other than the Creditor, the system creates (or updates, keyed on `bill_id + debtor + creditor`) exactly one `debts` row carrying the participant's total share of that bill, so that the sum of all debt amounts equals the bill total exactly. Item-level traceability is derived on read from `bill_item_assignments`; no separate source table is persisted.  
       * The Settlement Controller computes a simplified set of transfers that minimizes the number of transactions required to clear the outstanding balances.  
       * For each resulting transfer, the system generates a VietQR payload encoding the recipient account, the exact amount, and a unique reference code for manual cross-checking.  
       * The system transitions the bill to `FINALIZED`, notifies all participants through push notifications, and displays the rounding adjustment applied to each person for transparency.  
@@ -670,7 +670,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 * ***Function trigger:*** The Creditor confirms receipt of a payment from the debt list or from a pending-confirmation notification.  
 * ***Function description:*** The requester must be the recipient of the debt; the debt must be unsettled; the confirmed amount must equal the full outstanding amount. Partial settlement is not supported in this prototype.  
 * ***Function detail:***  
-  * **Data Validation**: The requester must be the recipient of the debt; the debt must be unsettled; the confirmed amount must equal the outstanding amount unless a partial settlement is explicitly recorded.  
+  * **Data Validation**: The requester must be the creditor of the debt; the debt must be unsettled; settlement is all-or-nothing for the full debt amount.  
   * ***Functionality**:*  
     * *In Normal Cases:*  
       * The Creditor reviews the pending payment (often after the Payer has marked it as "Paid") and manually confirms receipt based on their actual bank statement.  
