@@ -23,6 +23,9 @@ Thumbs.db
 *.draft
 *.part
 *.tmp~
+*.agents
+*.hallmark
+*skills-lock.json
 
 # Microsoft Office / document temp files
 ~$*
