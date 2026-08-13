@@ -130,7 +130,6 @@ CREATE TABLE IF NOT EXISTS bills (
     vat                 BIGINT NOT NULL DEFAULT 0,                  -- Thuế VAT
     discount            BIGINT NOT NULL DEFAULT 0,                  -- Tiền giảm giá
     total               BIGINT NOT NULL DEFAULT 0,                  -- Tổng tiền cuối cùng
-    is_no_split         BOOLEAN NOT NULL DEFAULT false,             -- BỔ SUNG: TRUE nếu hóa đơn chỉ dùng để lưu trữ/track chi tiêu, không tính toán công nợ
 	mismatch_warning    BOOLEAN NOT NULL DEFAULT false,             -- Cảnh báo nếu OCR quét tổng tiền không khớp chi tiết
     version             INT NOT NULL DEFAULT 1,                     -- Dùng cho Optimistic Locking (chống sửa đồng thời)
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -215,55 +214,52 @@ CREATE INDEX IF NOT EXISTS idx_ocr_jobs_pending ON ocr_jobs(status) WHERE status
 -- 7. DEBTS (Nợ, Truy vết nguồn gốc & Thanh toán thủ công)
 -- ---------------------------------------------------------------------------
 
--- Bảng debts: Lưu công nợ tổng hợp 1-1. Đã gỡ bỏ bill_id để hỗ trợ gộp nợ từ nhiều bill.
-CREATE TABLE IF NOT EXISTS debts (
-    id                          UUID PRIMARY KEY,
-    group_id                    UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-    debtor_member_id            UUID NOT NULL REFERENCES group_members(id),  -- Người phải trả
-    creditor_member_id          UUID NOT NULL REFERENCES group_members(id),  -- Người nhận tiền
-    amount                      BIGINT NOT NULL CHECK (amount > 0),          -- Tổng số tiền nợ
-    reference_code              TEXT NOT NULL UNIQUE,                        -- Mã nội dung chuyển khoản
-    qr_payload                  TEXT,                                        -- Chuỗi tạo mã QR
-    status                      debt_status NOT NULL DEFAULT 'awaiting',     
-    reminder_count              INT NOT NULL DEFAULT 0,                      -- Số lần nhắc nhở
-    rejection_reason            TEXT,
-    created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    rejected_at                 TIMESTAMPTZ,
-    settled_at                  TIMESTAMPTZ,                                 
-    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CHECK (debtor_member_id <> creditor_member_id),
-    CHECK (
-        (status = 'rejected' AND rejected_at IS NOT NULL AND rejection_reason IS NOT NULL)
-        OR
-        (status <> 'rejected' AND rejected_at IS NULL AND rejection_reason IS NULL)
-    )
-);
-CREATE INDEX IF NOT EXISTS idx_debts_group ON debts(group_id);
-CREATE INDEX IF NOT EXISTS idx_debts_unsettled ON debts(debtor_member_id) WHERE status <> 'settled';
-
--- Bảng debt_sources (MỚI): Truy vết chi tiết khoản nợ đến từ đâu
-CREATE TABLE IF NOT EXISTS debt_sources (
-    id            UUID PRIMARY KEY,
-    debt_id       UUID NOT NULL REFERENCES debts(id) ON DELETE CASCADE,
-    bill_id       UUID NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
-    bill_item_id  UUID REFERENCES bill_items(id) ON DELETE CASCADE, -- Cho phép NULL nếu khoản tiền này là chia tiền Thuế (VAT)/Phí dịch vụ của cả hóa đơn
-    amount        BIGINT NOT NULL CHECK (amount > 0),               -- Số tiền đóng góp từ item/bill này vào tổng nợ
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_debt_sources_debt ON debt_sources(debt_id);
-CREATE INDEX IF NOT EXISTS idx_debt_sources_bill ON debt_sources(bill_id);
-CREATE INDEX IF NOT EXISTS idx_debt_sources_item ON debt_sources(bill_item_id);
-
--- Bảng payment_proofs: Bằng chứng (ảnh chụp màn hình CK) do Payer tải lên.
+-- 1. Bảng payment_proofs (Tạo trước để bảng debts có thể trỏ khóa ngoại vào)
+-- Bảng payment_proofs này độc lập, đại diện cho 1 LẦN CHUYỂN KHOẢN (có thể thanh toán cho 1 hoặc nhiều nợ).
 CREATE TABLE IF NOT EXISTS payment_proofs (
     id                UUID PRIMARY KEY,
-    debt_id           UUID NOT NULL REFERENCES debts(id) ON DELETE CASCADE,
     submitted_by      UUID NOT NULL REFERENCES group_members(id),
     image_object_key  TEXT,                         
     note              TEXT,                         
     submitted_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_payment_proofs_debt ON payment_proofs(debt_id);
+
+-- 2. Bảng debts: Lưu công nợ chi tiết theo từng hóa đơn (bill_id)
+CREATE TABLE IF NOT EXISTS debts (
+    id                          UUID PRIMARY KEY,
+    group_id                    UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    bill_id                     UUID NOT NULL REFERENCES bills(id) ON DELETE CASCADE, -- BẮT BUỘC CÓ: Nợ này từ bill nào
+    debtor_member_id            UUID NOT NULL,                          -- Người phải trả
+    creditor_member_id          UUID NOT NULL,                          -- Người nhận tiền
+    amount                      BIGINT NOT NULL CHECK (amount > 0),     -- Tổng số tiền nợ
+    reference_code              TEXT NOT NULL UNIQUE,                   -- Mã nội dung chuyển khoản
+    qr_payload                  TEXT,                                   -- Chuỗi tạo mã QR
+    status                      debt_status NOT NULL DEFAULT 'awaiting',    
+    reminder_count              INT NOT NULL DEFAULT 0,                 -- Số lần nhắc nhở
+    rejection_reason            TEXT,
+    
+    -- THÊM MỚI: Trỏ về bằng chứng thanh toán. 
+    -- Nếu gộp 3 bill để trả 1 lần, cả 3 dòng debts sẽ có chung 1 payment_proof_id.
+    payment_proof_id            UUID REFERENCES payment_proofs(id) ON DELETE SET NULL, 
+
+    created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    rejected_at                 TIMESTAMPTZ,
+    settled_at                  TIMESTAMPTZ,                                
+    updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    
+    CHECK (debtor_member_id <> creditor_member_id),
+    CHECK (
+        (status = 'rejected' AND rejected_at IS NOT NULL AND rejection_reason IS NOT NULL)
+        OR
+        (status <> 'rejected' AND rejected_at IS NULL AND rejection_reason IS NULL)
+    ),
+    UNIQUE (id, group_id),
+    FOREIGN KEY (debtor_member_id, group_id) REFERENCES group_members(id, group_id),
+    FOREIGN KEY (creditor_member_id, group_id) REFERENCES group_members(id, group_id)
+);
+CREATE INDEX IF NOT EXISTS idx_debts_group ON debts(group_id);
+CREATE INDEX IF NOT EXISTS idx_debts_unsettled ON debts(debtor_member_id) WHERE status <> 'settled';
+CREATE INDEX IF NOT EXISTS idx_debts_payment_proof ON debts(payment_proof_id);
 
 -- ---------------------------------------------------------------------------
 -- 8. NOTIFICATIONS & ADMIN (Thông báo & Quản trị)
