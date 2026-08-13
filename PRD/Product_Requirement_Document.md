@@ -1,5 +1,3 @@
-Invite your people
-
 ![][image1]
 
 **PAYSPLIT \- SMART BILL-SPLITTING SYSTEM**
@@ -64,7 +62,7 @@ Invite your people
 
 [4.1.6 \- Update Profile Information	16](#4.1.6---update-profile-information)
 
-[4.1.7 \- Create New Group	16](#4.1.7---create-new-group)
+[4.1.7 \- Create New Group	17](#4.1.7---create-new-group)
 
 [4.1.8 \- Generate Group Invite	17](#4.1.8---generate-group-invite)
 
@@ -76,59 +74,63 @@ Invite your people
 
 [4.1.12 \- Extract Data from Bill Image	19](#4.1.12---extract-data-from-bill-image)
 
-[4.1.13 \- Assign Items to Members	19](#4.1.13---assign-items-to-members)
+[4.1.13 \- Assign Items to Members	20](#4.1.13---assign-items-to-members)
 
 [4.1.14 \- Update Bill Information	20](#4.1.14---update-bill-information)
 
 [4.1.15 \- Finalize Bill	21](#4.1.15---finalize-bill)
 
-[4.1.16 \- View Allocated Expense	21](#4.1.16---view-allocated-expense)
+[4.1.16 \- View Allocated Expense	22](#4.1.16---view-allocated-expense)
 
-[4.1.17 \- Scan Payment QR	22](#4.1.17---scan-payment-qr)
+[4.1.17 \- Generate Payment QR	22](#4.1.17---generate-payment-qr)
 
 [4.1.18 \- Submit Payment Proof	23](#4.1.18---submit-payment-proof)
 
-[4.1.19 \- Confirm Received Payment	23](#4.1.19---confirm-received-payment)
+[4.1.19 \- Confirm or Reject Received Payment	24](#4.1.19---confirm-or-reject-received-payment)
 
-[4.1.20 \- View List Account	24](#4.1.20---view-list-account)
+[4.1.20 \- View List Account	25](#4.1.20---view-list-account)
 
-[4.1.21 \- View Account Details	24](#4.1.21---view-account-details)
+[4.1.21 \- View Account Details	25](#4.1.21---view-account-details)
 
-[4.1.22 \- Update Account Status	24](#4.1.22---update-account-status)
+[4.1.22 \- Update Account Status	25](#4.1.22---update-account-status)
 
-[4.1.23 \- System Monitoring	25](#4.1.23---system-monitoring)
+[4.1.23 \- System Monitoring	26](#4.1.23---system-monitoring)
 
-[5\. Non-Functional Requirements	26](#5.-non-functional-requirements)
+[4.2  Automated System Functions	27](#4.2-automated-system-functions)
 
-[5.1. External Interfaces	26](#5.1.-external-interfaces)
+[4.2.1 \- Automated Debt Reminders & Stalled Confirmation	27](#4.2.1---automated-debt-reminders-&-stalled-confirmation)
 
-[5.1.1 User Interface	26](#5.1.1-user-interface)
+[5\. Non-Functional Requirements	27](#5.-non-functional-requirements)
 
-[5.1.2 Software Interface	26](#5.1.2-software-interface)
+[5.1. External Interfaces	27](#5.1.-external-interfaces)
 
-[5.1.3 Hardware Interface	26](#5.1.3-hardware-interface)
+[5.1.1 User Interface	27](#5.1.1-user-interface)
 
-[5.2. Quality Attributes	26](#5.2.-quality-attributes)
+[5.1.2 Software Interface	27](#5.1.2-software-interface)
 
-[5.2.1 Performance & Scalability	26](#5.2.1-performance-&-scalability)
+[5.1.3 Hardware Interface	27](#5.1.3-hardware-interface)
 
-[5.2.2 Reliability & Robustness	26](#5.2.2-reliability-&-robustness)
+[5.2. Quality Attributes	28](#5.2.-quality-attributes)
 
-[5.2.3 Security & Privacy	27](#5.2.3-security-&-privacy)
+[5.2.1 Performance & Scalability	28](#5.2.1-performance-&-scalability)
 
-[5.2.4 Explainability	27](#5.2.4-explainability)
+[5.2.2 Reliability & Robustness	28](#5.2.2-reliability-&-robustness)
 
-[5.2.5 Maintainability & Reproducibility	27](#5.2.5-maintainability-&-reproducibility)
+[5.2.3 Security & Privacy	28](#5.2.3-security-&-privacy)
 
-[6\. Architecture Overview (High-Level)	27](#6.-architecture-overview-\(high-level\))
+[5.2.4 Explainability	28](#5.2.4-explainability)
 
-[6.1  Components	27](#6.1-components)
+[5.2.5 Maintainability & Reproducibility	28](#5.2.5-maintainability-&-reproducibility)
 
-[6.2 Tech Stack	28](#6.2-tech-stack)
+[6\. Architecture Overview (High-Level)	28](#6.-architecture-overview-\(high-level\))
 
-[7\. Milestones & Timeline	28](#7.-milestones-&-timeline)
+[6.1  Components	29](#6.1-components)
 
-[8\. Risks & Mitigations	29](#8.-risks-&-mitigations)
+[6.2 Tech Stack	29](#6.2-tech-stack)
+
+[7\. Milestones & Timeline	30](#7.-milestones-&-timeline)
+
+[8\. Risks & Mitigations	30](#8.-risks-&-mitigations)
 
 **List of Tables**
 
@@ -325,7 +327,7 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 | 12 | Extract Data from Bill Image | OCR Provider (External System) | \- Sends the uploaded receipt image to the OCR/Vision LLM provider, receives a structured result (including merchant details, line items, taxes, and total), and normalizes it into draft bill data for the Creditor to review. |
 | 13 | Assign Items to Members | Captain, Creditor | \- Allocates each extracted line item to one or more group members, or applies an equal-split rule across selected participants, thereby determining who owes what portion of the bill and to which Creditor. |
 | 14 | Update Bill Information | Creditor | \- Reviews and refines the draft bill before finalization to correct OCR omissions, adjust item details, and update the participant list. |
-| 15 | Finalize Bill | Captain | \- Locks the bill immutably, computes exact participant shares, creates one debt row per debtor for that bill (traceability derived from item assignments), and generates a VietQR code for each debtor. |
+| 15 | Finalize Bill | Captain | \- Locks the bill immutably, computes exact participant shares, creates one aggregated debt record per debtor–creditor pair on that bill (item-level detail traceable through assignments), and makes those debts available for QR generation. |
 | 16 | View Allocated Expense | Payer | \- Displays the amount the Payer owes, the breakdown of the items charged to them, the rounding adjustment applied, the recipient of the payment, and the reference code attached to their payment request. |
 | 17 | Scan Payment QR | Payer | \- Displays the individual VietQR code for the Payer's debt so that it can be scanned or opened in a banking application. The QR encodes the recipient account, the exact amount. |
 | 18 | Submit Payment Proof | Payer | \- Allows a Payer to attach evidence of a transfer (screenshot or note) and mark the debt as "paid — awaiting confirmation" |
@@ -629,58 +631,69 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
 
 ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––-
 
-#### ***4.1.17 \- Scan Payment QR*** {#4.1.17---scan-payment-qr}
+#### ***4.1.17 \- Generate Payment QR*** {#4.1.17---generate-payment-qr}
 
-* ***Function trigger:*** A Payer opens the payment screen for an outstanding debt.  
-* ***Function description:*** Presents the individual VietQR code that allows the Payer to transfer the exact amount directly to the Creditor's bank account.  
+* ***Function trigger:*** A Payer opens the payment screen for one or more outstanding debts owed to the same Creditor.  
+* ***Function description:*** Produces a single VietQR code that allows the Payer to transfer the exact aggregated amount directly to the Creditor's bank account.  
 * ***Function detail:***  
-  * **Data Validation**: The debt must exist and be unsettled; the recipient bank account must be valid; the amount must be a positive integer in VND.  
+  * **Data Validation**: All selected debts must belong to the same group, share the same debtor and the same creditor, and be in `AWAITING` status. The Creditor must have valid receiving bank account information configured. The aggregated amount must be a positive integer in VND.  
   * ***Functionality**:*  
     * *In Normal Cases:*  
-      * The system renders the VietQR payload as a scannable code, constructed as a TLV structure with a CRC-16/CCITT-FALSE checksum.  
-      * The QR encodes the recipient's account, the exact amount, and the unique reference code assigned to this specific debt.  
-      * The reference code is displayed in text beneath the QR so that it can be entered manually in the transfer description if the Payer types the transfer by hand.  
+      * **Aggregation within a single bill** is performed at finalization: when a Payer is charged for several items on the same bill, the system stores exactly one debt record per `(bill, debtor, creditor)` triple carrying the summed amount, rather than one record per item. Item-level detail remains traceable through the item assignments.  
+      * **Aggregation across bills** is performed here: the system groups all of the Payer's `AWAITING` debts owed to the same Creditor within the group into a single payment record, and sums their amounts.  
+      * All debts covered by the payment transition to `PENDING_CONFIRMATION` and are linked to the payment record.  
+      * The screen lists which bills the QR covers, so that the Payer can see exactly what is being settled, and displays the reference code in text beneath the QR so that it can be entered manually if the Payer types the transfer by hand.  
+      * The Payer may choose to settle only a subset of their debts to that Creditor; the system then generates a QR covering only the selected subset.  
     * *In Abnormal Cases:*  
-      * *Debt already settled:* The system hides the QR and shows the settlement timestamp instead.  
-      * *QR generation error:* The system falls back to displaying the recipient's bank name, account number, account holder name, and reference code as copyable text.
+      * *Selected debts have different creditors: Return HTTP 400\. A single QR can only target one receiving bank account.*  
+      * *Debts already settled or already covered by an active payment: Return HTTP 409 and refresh the debt list.*  
+      * *Creditor has no bank account configured: Return HTTP 409 and prompt the Payer to ask the Creditor to complete their profile.*  
+      * *QR generation error: The system falls back to displaying the Creditor's bank name, account number, account holder name, aggregated amount, and reference code as copyable text.*
 
 **Note on architecture:** PaySplit never holds user funds. Money moves peer-to-peer directly between the Payer's and the Creditor's bank accounts, which keeps the system outside the scope of the payment intermediary licensing requirements of Decree 52/2024/NĐ-CP.  
 ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––-
 
 #### ***4.1.18 \- Submit Payment Proof*** {#4.1.18---submit-payment-proof}
 
-* ***Function trigger:*** A Payer marks a debt as paid after completing a transfer outside the automatically reconciled flow.  
-* ***Function description:*** Records the Payer's claim of payment, pending confirmation by the Creditor.  
+* ***Function trigger:*** A Payer marks a payment as sent after completing the bank transfer.  
+* ***Function description:*** Records the Payer's claim of payment for all debts covered by that payment, pending confirmation by the Creditor.  
 * ***Function detail:***  
-  * **Data Validation**: The requester must be the debtor on the selected debt; the debt must be unsettled; any attached image must be an accepted type within the size limit.  
+  * **Data Validation**: The requester must be the debtor on the payment record; the payment must not already be confirmed or rejected; any attached image must be an accepted type within the size limit.  
   * ***Functionality**:*  
     * *In Normal Cases:*  
-      * The Payer optionally attaches a transfer screenshot and a short note.  
-      * The system sets the debt status to `PENDING_CONFIRMATION` without yet writing a settlement ledger entry.  
-      * The system notifies the Creditor that a confirmation is awaiting their review.  
-      * The system stops sending automated debt reminders to the Payer for this specific bill.  
+      * The Payer optionally attaches a transfer screenshot and a short note, which are stored once on the payment record and therefore apply to every debt it covers.  
+      * The system stamps the submission timestamp. The covered debts remain in `PENDING_CONFIRMATION`; no settlement is written yet.  
+      * The system notifies the Creditor that a confirmation is awaiting their review, showing the aggregated amount, the reference code, and the list of bills covered.  
+      * The system stops sending automated reminders for every debt covered by that payment.  
     * *In Abnormal Cases:*  
-      * *Debt already settled:* Return HTTP 409 and inform the Payer that this debt has already been confirmed by the Creditor.  
-      * *Duplicate submission:* The system updates the existing pending record instead of creating a new one.
+      * *Payment already confirmed:* Return HTTP 409 and inform the Payer that the Creditor has already acknowledged receipt.  
+      * *Duplicate submission:* The system updates the existing payment record (replacing the image and note) instead of creating a new one.  
+      * *Storage service unavailable:* The note and the submission are still recorded; the system reports that the image upload must be retried.
 
 ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––-
 
-#### ***4.1.19 \- Confirm Received Payment*** {#4.1.19---confirm-received-payment}
+#### ***4.1.19 \- Confirm or Reject Received Payment*** {#4.1.19---confirm-or-reject-received-payment}
 
-* ***Function trigger:*** The Creditor confirms receipt of a payment from the debt list or from a pending-confirmation notification.  
-* ***Function description:*** The requester must be the recipient of the debt; the debt must be unsettled; the confirmed amount must equal the full outstanding amount. Partial settlement is not supported in this prototype.  
+* ***Function trigger:*** The Creditor reviews a pending payment from the debt list or from a pending-confirmation notification.  
+* ***Function description:*** The requester must be the creditor on the payment record; the payment must not already be confirmed or rejected; settlement is all-or-nothing for the aggregated amount — partial settlement is not supported in this prototype. A rejection requires a reason.  
 * ***Function detail:***  
   * **Data Validation**: The requester must be the creditor of the debt; the debt must be unsettled; settlement is all-or-nothing for the full debt amount.  
   * ***Functionality**:*  
-    * *In Normal Cases:*  
-      * The Creditor reviews the pending payment (often after the Payer has marked it as "Paid") and manually confirms receipt based on their actual bank statement.  
-      * The system sets the debt status to `SETTLED`, stamps `settled_at`, and appends a `confirmed_payment` entry to the group activity log.  
-      * Group balances are derived on read by aggregating unsettled debt records.  
-      * The system sends a single push notification to the Payer to confirm that the Creditor has successfully received the payment.  
+    * *In Normal Cases (confirm):*  
+      * The Creditor reviews the claim against their actual bank statement, matching on the reference code and the aggregated amount.  
+      * In a single database transaction, the system stamps the confirmation timestamp on the payment and sets every covered debt to `SETTLED` with its `settled_at` timestamp.  
+      * The system appends a `confirmed_payment` entry to the group activity log and sends a single push notification to the Payer.  
+      * Group balances are derived on read by aggregating unsettled debt records; no ledger entry is written.  
+    * *In Normal Cases (reject):*  
+      * *The Creditor supplies a reason. The system stamps the rejection timestamp and reason on the payment, and returns every covered debt to `AWAITING`, detaching it from the payment.*  
+      * *The rejected payment record is retained as an audit trail; the reference code is not reused.*  
+      * *The system appends a `rejected_payment` entry to the activity log and notifies the Payer with the reason.*  
+      * *The detached debts become individually selectable again, so the Payer may retry with a new QR covering any combination of them.*  
     * *In Abnormal Cases:*  
-      * *Requester is not the recipient:* Return HTTP 403\.  
+      * *Requester is not the creditor:* Return HTTP 403\.  
+      * *Rejection without a reason:* Return HTTP 400\.  
       * *Confirmation issued in error:* not supported in this prototype; the Creditor and Payer must resolve it outside the system. (Out-of-scope)  
-      * *Database interruption:* The system rolls back the transaction, shows an error message, retains the previous debt status, and asks the user to retry.
+      * *Database interruption:* The transaction is rolled back in full — no payment may be left confirmed while its debts remain unsettled — and the user is asked to retry.
 
 ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––-
 
@@ -748,6 +761,22 @@ Ultimately, this prototype serves as a foundation to evaluate usability, OCR acc
     * *In Abnormal Cases:*  
       * A downstream dependency is unavailable: The readiness endpoint reports a degraded status while the liveness endpoint remains healthy, so that the service is not restarted unnecessarily.  
       * Sustained high resource utilization: Metric collection may be delayed; the system prioritizes serving the core bill and payment APIs and raises an alert to the operations channel.
+
+––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––-
+
+### **4.2  Automated System Functions** {#4.2-automated-system-functions}
+
+#### ***4.2.1 \- Automated Debt Reminders & Stalled Confirmation*** {#4.2.1---automated-debt-reminders-&-stalled-confirmation}
+
+* ***Function trigger:*** A scheduled job scans unsettled debts.  
+* ***Function detail:***  
+  * **Data Validation**: None.  
+  * ***Functionality**:*  
+    * *In Normal Cases:*  
+      * For debts in `AWAITING` past the reminder interval, the system notifies the Payer and increments reminder\_count.  
+      * When a debt stays in `PENDING_CONFIRMATION` beyond `N` reminders without the Creditor acting, the system transitions it to `STALLED_CONFIRMATION`, logs a stalled\_payment\_reminder activity, and notifies both parties. The debt is never auto-settled.  
+    * *In Abnormal Cases:*  
+      * ANotification delivery failure: logged; reminder\_count is not incremented so the next run retries.
 
 ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––-
 
@@ -832,7 +861,7 @@ Detailed architecture is covered in the TDD (System Architecture, Level 1 & Leve
 
   * **Split Controller*:*** Handles the basic math for splitting the bill (equal split or per-item). It uses standard integer arithmetic (int64 for VND) to prevent rounding errors.
 
-  * **Settlement Controller:** Calculates how to simplify debts among group members (e.g., A owes B, B owes C \-\> A owes C) to minimize the number of transfers.
+  * **Settlement Controller:** Manages the debt lifecycle (`AWAITING → PENDING_CONFIRMATION → SETTLED | REJECTED | STALLED_CONFIRMATION`) and performs two-tier aggregation: within a bill, all items a Payer owes the same Creditor collapse into one debt record at finalization; across bills, all outstanding debts between the same debtor–creditor pair can be grouped into a single payment carrying one QR code and one reference code. Cross-member debt netting (A owes B, B owes C ⇒ A owes C) is out of scope for this prototype.
 
   * **QR Service**: VietQR generation (TLV, CRC-16/CCITT-FALSE), unique reference code per debtor for manual cross-checking.
 
@@ -854,6 +883,8 @@ Detailed architecture is covered in the TDD (System Architecture, Level 1 & Leve
   * **OCR Provider / Vision LLM**: Gemini Flash or GPT-4o (fallback: local OCR or FPT.AI Reader)
 
   * **VietQR / NAPAS 247**: neutral interbank QR standard.
+
+### 
 
 ### **6.2 Tech Stack** {#6.2-tech-stack}
 
@@ -881,6 +912,8 @@ Detailed architecture is covered in the TDD (System Architecture, Level 1 & Leve
 | **W2** | **Integration, Testing & Demo** •  Debt aggregation \+ Settlement Controller integrated •  VietQR generation per debtor •  Manual payment confirmation flow •  Sequence diagram (photograph bill → generate QR) •  Unit and integration tests •  Security checklist •  API contract finalized •  Final report, Docker package, demo script, presentation | **Test report (HARD gate) — mid W2** Demo \+ handover — end of W2 |
 
 ##### **Table 5\. Milestones & Timeline** {#table-5.-milestones-&-timeline}
+
+## 
 
 ## **8\. Risks & Mitigations** {#8.-risks-&-mitigations}
 
