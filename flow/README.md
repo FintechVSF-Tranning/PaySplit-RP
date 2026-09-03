@@ -14,9 +14,10 @@ Thư mục này mô tả **luồng hoạt động end-to-end** của từng modu
 | 02 | [`02-group.md`](02-group.md) | Module Group (`/groups`) + màn hình Groups / Scan QR / Join by Link / Create Group / Add Members / Group Detail Hub | Tạo nhóm, mời (link/QR), preview + join, rời/xóa thành viên, chuyển Captain, giải tán nhóm, activity timeline |
 | 03 | [`03-bill.md`](03-bill.md) | Module Bill (`/bills`, group close) + màn hình Bill Capture / Bill Detail | Tạo hóa đơn thủ công & quét OCR, worker OCR + SSE, chia tiền (floor allocation), review → finalize → void, khóa nộp bill, finalize hàng loạt |
 | 04 | [`04-settlement.md`](04-settlement.md) | Module Settlement (`/groups/{id}/...`) + màn hình Settlement (4 tab) / VietQR Sheet / Proof Review | Công nợ, tạo Dynamic VietQR, nộp biên lai, xác nhận/từ chối, nhắc nợ thủ công & tự động, idempotency |
-| 05 | [`05-notification.md`](05-notification.md) | Module Notification (`/notifications`) + màn hình Notifications | In-app notification, FCM push worker, đánh dấu đã đọc, điều hướng theo payload |
-| 06 | [`06-admin.md`](06-admin.md) | Module Admin (`/admin`) | Quản lý tài khoản, suspend/lock + thu hồi phiên, audit log, thống kê hệ thống |
+| 05 | [`05-notification.md`](05-notification.md) | Module Notification (`/notifications`) + Push Notification (FCM) + màn hình Notifications | In-app notification, FCM push worker, token registration (`FCMTokenManager`), push listener (`PushNotificationHandler`), điều hướng thông minh (`NotificationRouteResolver`) |
+| 06 | [`06-admin.md`](06-admin.md) | Module Admin (`/admin`) + Web Admin Portal (`/admin-portal/`) | Web Admin Portal nhúng tĩnh (`//go:embed`), 4 biểu đồ Visual Analytics Live, quản lý tài khoản & thu hồi phiên tức thì, cảnh báo nghĩa vụ tài chính, đo độ trễ probes, xoay vòng token |
 | 07 | [`07-app-startup-network.md`](07-app-startup-network.md) | Bootstrap, Splash, GoRouter guards, Dio/AuthInterceptor | Khởi động app, kiểm tra phiên, redirect logic, refresh token single-flight khi 401, xử lý offline |
+| 08 | [`08-serverless-runtime-and-realtime-sync.md`](08-serverless-runtime-and-realtime-sync.md) | Vercel Serverless Function, Supabase Supavisor, Durable Queue `app_jobs`, Realtime Broadcast ES256 & Fallback Polling | Kiến trúc Serverless, Single Active Wave Dispatcher, Batch Drain 45s qua pg_net, cấp token ES256 JWT, RLS private broadcast channel, consolidated polling /sync/versions |
 
 ### Nguồn tham chiếu gốc (báo cáo explore nguyên văn)
 
@@ -29,13 +30,13 @@ Thư mục này mô tả **luồng hoạt động end-to-end** của từng modu
 
 ## 🔤 Quy ước đọc diagram
 
-- **Sequence Diagram** (Mermaid `sequenceDiagram`): thể hiện thứ tự tương tác **Người dùng → Flutter App → API BE → DB/Dịch vụ ngoài**. Số dòng có `autonumber`.
+- **Sequence Diagram** (Mermaid `sequenceDiagram`): thể hiện thứ tự tương tác **Người dùng → Flutter App / Web Admin → API BE → DB / Dịch vụ ngoài**. Số dòng có `autonumber`.
 - **Activity Diagram** (Mermaid `flowchart TD/LR`): thể hiện nhánh quyết định của một màn hình hoặc một thuật toán.
 - Ký hiệu lỗi: `4xx CODE` là mã lỗi nghiệp vụ trả về trong envelope chuẩn:
 
 ```json
 // Thành công
-{ "success": true, "data": { ... }, "message": "..." }
+{ "success": true, "data": { ... }, "message": "Thành công" }
 // Thất bại
 { "success": false, "error": { "code": "VALIDATION_ERROR", "message": "...", "details": { } } }
 ```
@@ -71,21 +72,19 @@ Các worker: `send_notification`, `bill_ocr`, `bill_bulk_finalize_item`, `settle
 
 | Tình huống | Xử lý |
 |---|---|
-| Access token hết hạn (15 phút) | FE `AuthInterceptor` bắt `401` → refresh single-flight → retry request 1 lần (xem 07) |
-| Refresh token bị tái sử dụng | BE coi là gian lận → revoke toàn bộ session + token, `SESSION_REVOKED` → FE xóa token cục bộ, về `/welcome` |
+| Access token hết hạn (15 phút) | FE Mobile (`AuthInterceptor`) và Web Admin (`tryRefreshToken`) bắt `401` → refresh single-flight → retry request tự động |
+| Refresh token bị tái sử dụng | BE coi là gian lận → revoke toàn bộ session + token, `SESSION_REVOKED` → xóa token cục bộ, điều hướng về đăng nhập |
 | Mất mạng / timeout | FE map `connectionError/timeout` → `NetworkFailure` "Không thể kết nối tới máy chủ" |
 | Server lỗi 5xx | FE → `ServerFailure`, hiển thị SnackBar/banner kèm nút retry (tùy màn) |
 | Body 2xx sai shape | FE → `invalidResponseFailure` (parse khoan dung `ApiResponse<T>`) |
 
 ---
 
-## ⚠️ Khoảng trống đã biết (ghi nhận thực tế codebase, cập nhật khi triển khai xong)
+## 📌 Hiện trạng & Khả năng mở rộng tiếp theo
 
-| Khoảng trống | Chi tiết |
-|---|---|
-| FE chưa tích hợp FCM | Không có `firebase_messaging` trong `pubspec.yaml`; push chỉ chạy phía BE, FE hiện polling REST in-app (xem 05) |
-| Logout chưa gọi `POST /auth/sign-out` | FE chỉ xóa secure storage, session phía BE còn sống đến khi hết hạn (xem 01, 07) |
-| Không có deep link/app link | Lời mời dạng link phải **dán tay** vào sheet; QR scanner là placeholder (chọn ảnh từ gallery decode bằng `zxing2`) (xem 02) |
-| Group Detail Hub dùng mock | Panels hóa đơn/công nợ trong nhóm + "Nhóm gần đây"/"Danh bạ" là dữ liệu in-memory; thao tác quản trị thì gọi API thật (xem 02) |
-| Khóa bill phía FE chưa nối API thật | `markGroupClosedLocally` chỉ đổi state local (xem 02) |
-| `NetworkInfo` đã DI nhưng chưa dùng | Offline detection dựa vào `DioException.connectionError` (xem 07) |
+| Hạng mục | Trạng thái triển khai | Chi tiết |
+|---|:---:|---|
+| Push Notification (FCM) | ✅ **Đã hoàn thành** | Đã tích hợp trọn vẹn cả BE (River worker) và FE Mobile (`fcm_token_manager`, `push_notification_handler`, `notification_route_resolver`) |
+| Web Admin Portal | ✅ **Đã hoàn thành** | Đã tích hợp web app nhúng tĩnh tại `/admin-portal/` kèm visual charts, live probes, token auto-refresh |
+| Deep Link / App Link | ⚠️ *Đang phát triển* | Lời mời dạng link hiện dán tay; QR scanner hỗ trợ chọn ảnh từ gallery decode `zxing2` (xem 02-group) |
+| Logout Revocation API | ⚠️ *Đang hoàn thiện* | FE Mobile đang gọi clear local storage; khuyến nghị gọi `POST /api/v1/auth/sign-out` để thu hồi tức thời session phía BE |
