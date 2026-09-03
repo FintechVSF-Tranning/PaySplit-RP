@@ -35,6 +35,8 @@
 | DELETE `/groups/{id}/members/{memberId}` | Tự rời / Captain xóa member | self hoặc Captain |
 | PUT `/groups/{id}/members/{memberId}/role` | Chuyển quyền Captain | Captain |
 | GET `/groups/{id}/activities` | Timeline hoạt động | member active |
+| GET `/groups/{id}/events` | **SSE** delta nhóm (chung listener PostgreSQL với Bill, xem `flow/README.md` mục 5) | member active |
+| GET `/groups/{id}/sync` | Catch-up theo `since` (snapshot hoặc events) khi SSE đứt | member active |
 
 ### FE màn hình
 
@@ -316,3 +318,4 @@ flowchart TD
 | 18 | Cursor pagination sai định dạng / quá giới hạn | Validate cursor keyset `(created_at,id)`; limit clamp [1..100] | `400 INVALID_CURSOR` | `repository.go:85-163` |
 | 19 | FE dán link sai hoa/thường code | FE **không** chuẩn hóa case — code Base62 phân biệt hoa thường → 404 nếu gõ sai | `404 INVITE_NOT_FOUND` | `features/groups/.../invite_code.dart:2` |
 | 20 | FE bấm "Rời nhóm" khi còn công nợ | Client guard sớm bằng `myBalance ≠ 0` trước khi gọi API (vẫn có lớp 409 của BE làm nguồn sự thật) | chặn tại UI | `group_detail_page.dart:459-481` |
+| 21 | Shared listener PostgreSQL đứt khi đang SSE | BE đóng mọi stream local; client reconnect `GET /groups/{id}/events` và hàn gap bằng `GET /groups/{id}/sync?since=` | stream đóng, rồi snapshot/events | `notification_listener.go`, `group/.../sse_hub.go` |

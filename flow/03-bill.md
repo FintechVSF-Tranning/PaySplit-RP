@@ -61,7 +61,7 @@ Giảm giá 2 lớp: `final_price = line_total − discount_amount` (từng món
 |---|---|
 | POST `/bills` | Tạo bill — multipart 1–5 ảnh (OCR) hoặc JSON thủ công |
 | GET `/bills` · GET `/bills/{id}` | Danh sách (offset legacy) / chi tiết (signed URL ảnh 5 phút + preview breakdown + mismatch_codes) |
-| GET `/bills/{id}/events` | **SSE** realtime OCR events |
+| GET `/bills/{id}/events` | **SSE** realtime OCR events (chung listener PostgreSQL với Group, xem `flow/README.md` mục 5) |
 | POST `/bills/{id}/ocr-retry` | Chạy lại OCR (≤5 lần thủ công/24h; 1 job active/bill) |
 | POST `/bills/{id}/apply-candidate` | Áp kết quả OCR (check version kép) |
 | POST `/bills/calculate` · POST `/bills/{id}/calculate` | Tính breakdown stateless (yêu cầu creditor_member_id) |
@@ -155,10 +155,11 @@ sequenceDiagram
             W->>BE: SSE 'ocr.updated' succeeded
         end
     and FE nhận kết quả
-        alt SSE hoạt động (heartbeat 15s; đa replica qua Postgres LISTEN/NOTIFY; max age connection 15 phút)
-            BE-->>FE: event ocr.updated
-        else SSE hỏng/mất mạng
-            FE->>BE: Poll GET /bills/{id} mỗi 1.5s, tối đa 40 lần (~60s)<br/>dừng sớm khi thấy job failed; lỗi poll từng lần bị bỏ qua
+        alt SSE hoạt động (heartbeat 15s; đa replica qua shared LISTEN bill_events; max age 15 phút)
+            BE-->>FE: event snapshot lúc connect, rồi ocr.updated
+        else Listener đứt hoặc SSE hỏng/mất mạng
+            Note over BE: Đóng stream local; FE reconnect lấy snapshot mới<br/>hoặc poll GET /bills/{id} mỗi 1.5s, tối đa 40 lần (~60s)
+            FE->>BE: Reconnect SSE / poll chi tiết bill
         end
     end
     
@@ -382,7 +383,7 @@ flowchart TD
 | 19 | Provider timeout/lỗi tạm thời | Retry exp backoff `base × 2^(attempt−1)`, cap attempt 20 |
 | 20 | Lỗi vĩnh viễn (schema invalid, bill not found...) | Failed ngay với mã đóng `provider_timeout/provider_unavailable/provider_error/download_failed/no_images/bill_not_found/schema_invalid` — không retry |
 | 21 | River giao job trùng (at-least-once) | Idempotent skip nếu succeeded/failed; CAS `queued→processing` |
-| 22 | FE mất SSE | Polling fallback 1.5s × 40 (~60s), stop sớm khi thấy failed, lỗi poll từng lần ignore |
+| 22 | FE mất SSE hoặc shared listener đứt | BE đóng stream local; FE reconnect lấy `snapshot` hoặc poll 1.5s × 40 (~60s), stop sớm khi failed, lỗi poll từng lần ignore |
 | 23 | Camera unavailable (desktop/web test) | FE chèn ảnh dummy PNG fallback để luồng vẫn chạy được |
 | 24 | File giả đuôi `.jpg` | FE `ImageValidator` check magic bytes trước khi upload |
 

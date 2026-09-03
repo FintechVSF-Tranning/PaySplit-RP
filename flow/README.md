@@ -68,7 +68,16 @@ Mọi mutation theo nhóm (group/bill/settlement) đều gọi `LockActiveGroup`
 ### 4. River Queue (background jobs trên PostgreSQL)
 Các worker: `send_notification`, `bill_ocr`, `bill_bulk_finalize_item`, `settlement_scan` (nhắc nợ tự động + cảnh báo payment treo), các job retention/cleanup. Job luôn được enqueue **trong cùng transaction** với bản ghi nghiệp vụ (BeforeCommit hook) → không có job mồ côi hay bản ghi thiếu job.
 
-### 5. Edge case xuyên suốt (mọi màn hình)
+`RIVER_POLL_ONLY` mặc định `false` (River vẫn giữ notifier `LISTEN`). Khi bật `true`, River không giữ session `LISTEN`; job mới được tìm bằng polling (`RIVER_FETCH_POLL_INTERVAL_MS`, mặc định 1s). Enqueue của thư viện vẫn có thể gửi `NOTIFY`. Rollback: đặt lại `false` rồi restart process, không cần migration. Chi tiết: spec [0010](../docs/specs/0010-connection-efficient-events/index.md).
+
+### 5. Shared PostgreSQL listener (Bill SSE + Group SSE)
+Mỗi backend instance giữ **một** connection `LISTEN bill_events` và `LISTEN group_events` (`internal/platform/database/notification_listener.go`), không còn hai vòng `StartPostgresListener` trên Hub. Hub chỉ decode, validate envelope, rồi publish vào subscriber local (Bill buffer 16, Group buffer 32).
+
+- `/health/ready` chỉ `200` khi listener đã đăng ký đủ hai channel; mất connection → `503 degraded`, reconnect backoff, rồi mới healthy lại.
+- Khi listener đứt, server **đóng mọi SSE local**. Client Bill mở lại stream để lấy `snapshot`. Client Group dùng version fencing và `GET /groups/{id}/sync`.
+- Tắt process: đóng SSE trước, rồi HTTP, River, `UNLISTEN *`, rồi pool.
+
+### 6. Edge case xuyên suốt (mọi màn hình)
 
 | Tình huống | Xử lý |
 |---|---|
