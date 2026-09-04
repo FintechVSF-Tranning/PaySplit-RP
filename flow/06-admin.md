@@ -75,12 +75,12 @@ sequenceDiagram
     participant BE as Admin API
     participant DB as PostgreSQL
 
-    A->>FE: Đổi TT → suspended/locked + lý do
-    FE->>BE: PUT /admin/accounts/{id}/status
-    BE->>BE: Enum status. Suspend/lock thiếu reason → 400 VALIDATION_FAILED
+    A->>FE: Đổi TT sang suspended/locked kèm lý do
+    FE->>BE: PUT /admin/accounts/id/status
+    BE->>BE: Enum status. Suspend/lock thiếu reason thì 400 VALIDATION_FAILED
     BE->>DB: BEGIN
     BE->>DB: GetAccountByID (không FOR UPDATE)
-    alt Target = chính mình
+    alt Target là chính mình
         BE-->>FE: 403 CANNOT_MODIFY_SELF
     else Target role admin và status mới suspended/locked
         BE-->>FE: 403 CANNOT_MODIFY_ADMIN
@@ -88,15 +88,28 @@ sequenceDiagram
         BE-->>FE: 400 INVALID_STATUS_TRANSITION
         Note over BE: Phải đi OTP, không khóa hộ
     else OK
-        BE->>DB: users.status = ...
+        BE->>DB: cập nhật users.status
         BE->>DB: Revoke sessions RETURNING id WHERE revoked_at IS NULL<br/>reason admin_suspended / admin_locked
         BE->>DB: Revoke refresh + NotifySessionEnded (lô 100 sid)
         BE->>DB: INSERT audit reason NOT NULL
         BE->>DB: Đếm nợ/công outstanding
-        BE-->>FE: 200 {account, warning}
-        FE-->>A: Toast + cảnh báo công nợ nếu >0
+        BE-->>FE: 200 account, warning
+        FE-->>A: Toast + cảnh báo công nợ nếu lớn hơn 0
     end
 ```
+
+Cách đọc:
+
+Admin chọn user, status mới (`suspended`/`locked`), lý do bắt buộc. Thiếu reason → `400 VALIDATION_FAILED` (không có mã `REASON_REQUIRED`).
+
+Một transaction, thứ tự trong hình: đọc account (**không** `FOR UPDATE` hàng user — hai admin đua vẫn có cửa hẹp), rồi các cửa:
+- Chính mình → `403 CANNOT_MODIFY_SELF` (không phải 400).
+- Target role admin **và** đang khóa/suspend → `403 CANNOT_MODIFY_ADMIN`. Reactivate admin khác **được**.
+- `pending_verification` → `400 INVALID_STATUS_TRANSITION` (không phải 409). Phải đi OTP, không khóa hộ tài khoản chưa kích hoạt.
+
+Hợp lệ: đổi `users.status`, `UPDATE sessions ... RETURNING id WHERE revoked_at IS NULL` (lý do `admin_suspended` / `admin_locked`), thu hồi refresh, `NotifySessionEnded` chia lô 100 sid, INSERT audit (`reason NOT NULL`), đếm nợ/công outstanding trả về `warning`.
+
+Nạn nhân: JWT còn hạn 15 phút nhưng `liveAuth` hỏi DB → 401 ngay. App `endSession`. SSE `close: session_ended` **không** tự logout, REST mới đá. Xem [`01-auth.md`](01-auth.md).
 
 Nạn nhân: JWT còn hạn nhưng `liveAuth` 401. Refresh thấy session chết → `INVALID_OR_EXPIRED_TOKEN` → app `endSession`. SSE (nếu bật) `close: session_ended` — app **không** logout từ frame đó, REST mới đá. Xem [`01-auth.md`](01-auth.md) mục 4.
 
@@ -107,13 +120,22 @@ sequenceDiagram
     autonumber
     actor A as Admin
     participant BE as Admin API
-    A->>BE: PUT status=active, reason có thể rỗng
-    Note over BE: Reason rỗng → "Reactivated by admin" để cột NOT NULL
+    participant DB as PostgreSQL
+    A->>BE: PUT status active, reason có thể rỗng
+    Note over BE: Reason rỗng thì gán Reactivated by admin để cột NOT NULL
     BE->>DB: Cùng check self/pending. Admin khác được reactivate
-    BE->>DB: status=active + audit action=reactivate
+    BE->>DB: status active, audit action reactivate
     Note over BE: Không tự tạo session. User phải đăng nhập lại
     BE-->>A: 200
 ```
+
+Cách đọc:
+
+Status `active`, reason có thể để trống. Backend tự gán câu `"Reactivated by admin"` để cột audit `reason NOT NULL` không vỡ.
+
+Cùng các cửa self / pending như lúc khóa. Khác một điểm: **được** reactivate admin khác (cửa `CANNOT_MODIFY_ADMIN` chỉ chặn suspend/lock).
+
+Không INSERT session mới, không cấp JWT. Mọi sid đã chết lúc khóa. User phải đăng nhập lại trên app hoặc portal. Toast + refresh bảng.
 
 ### 4.3 Overview 15 giây
 
@@ -132,6 +154,14 @@ sequenceDiagram
     FE->>FE: Vẽ canvas / SVG / stacked
 ```
 
+Cách đọc:
+
+Tab Tổng quan (hoặc timer 15 giây) gọi `GET /admin/system/overview` Bearer. Handler **không** `par` trong Go: query users theo status, groups, bills, debts 5 trạng thái (kể cả `stalled_confirmation`/`rejected` ít dùng), media cleanup, OCR jobs, rồi `runtime.ReadMemStats` / `NumGoroutine` / uptime từ `processStartTime`.
+
+JSON về portal: vẽ canvas RAM + goroutine, donut nợ, stacked River/OCR, thanh user/bill. Số trên thẻ và góc SVG đều tính phía browser, không có endpoint chart riêng.
+
+`/health/ready` là probe khác (tab Giám sát), không nằm trong overview.
+
 Query **tuần tự**, không `par` trong Go. Portal vẽ song song.
 
 ### 4.4 Auto refresh portal — chỗ đang gãy
@@ -144,11 +174,19 @@ sequenceDiagram
 
     FE->>BE: GET overview, access hết hạn
     BE-->>FE: 401
-    FE->>BE: POST /auth/refresh {refresh_token}
-    Note over FE,BE: Thiếu device_id. BE: không parse UUID → INVALID_OR_EXPIRED_TOKEN
+    FE->>BE: POST /auth/refresh chỉ refresh_token
+    Note over FE,BE: Thiếu device_id. BE không parse UUID, INVALID_OR_EXPIRED_TOKEN
     BE-->>FE: 400
     Note over FE: Không lấy cặp mới. Admin phải login lại mỗi 15 phút
 ```
+
+Cách đọc:
+
+Access JWT portal cũng 15 phút. `app.js` bắt 401, gọi `tryRefreshToken`: `POST /auth/refresh` body **chỉ** `refresh_token`. BE `Refresh` đòi `device_id` là UUID hợp lệ, thiếu → `400 INVALID_OR_EXPIRED_TOKEN`. Portal không lấy cặp mới. Admin phải login lại mỗi 15 phút.
+
+Đây **không** phải chi tiết implement. Mobile (`SessionRefresher`) gửi đủ `{refresh_token, device_id}` và chạy đúng. Portal quên field. Đừng ghi "đã có auto-refresh" như thể đã chạy.
+
+Sign-in portal có gửi `device_id` + `device_name: Admin Web Portal`. Chỉ bước refresh thiếu.
 
 Mobile gửi đủ `{refresh_token, device_id}`. Portal quên. Đừng ghi "đã có auto-refresh" như thể đã chạy.
 
@@ -179,6 +217,16 @@ flowchart TD
     N --> O
     O --> P["200 — nạn nhân chết ở request kế"]
 ```
+
+Cách đọc:
+
+Hình là toàn bộ cửa đổi status, đọc từ trên xuống.
+
+Status ngoài `active` / `suspended` / `locked` → 400. Khóa/suspend thiếu reason → 400 `VALIDATION_FAILED`. Reactivate thiếu reason → tự điền câu mặc định rồi vào tx.
+
+Trong tx: mình → 403. Admin khác đang bị khóa (suspend/lock) → 403. `pending_verification` → 400. Rồi UPDATE. Nhánh khóa thì revoke session + audit. Nhánh active thì chỉ audit reactivate. Cuối cùng luôn tính WarningMeta công nợ — **không chặn** khóa user còn nợ, chỉ cảnh báo admin biết hệ quả.
+
+Nạn nhân chết ở request HTTP kế, không chờ JWT hết hạn.
 
 ---
 

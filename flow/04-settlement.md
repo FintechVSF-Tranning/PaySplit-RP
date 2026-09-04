@@ -57,6 +57,14 @@ flowchart LR
     A -->|"QR mới khác tập nợ, hoặc void bill"| E["superseded"]
 ```
 
+Cách đọc:
+
+Năm trạng thái, ba trạng thái cuối (`confirmed`, `rejected`, `superseded`) không đi tiếp. DB CHECK `chk_payments_state_matrix` khóa bộ cột theo từng status: `pending_proof` **cấm** có ảnh, cấm có snapshot bank, cấm lý do từ chối. Không tồn tại payment "nửa vời".
+
+Mũi tên đặc "nộp ảnh" mới đổi nợ: `awaiting` → `pending_confirmation` và gắn `payment_id`. Trước đó QR chỉ là ý định. CHECK `debts_check1`: awaiting/voided ⇔ `payment_id` NULL, nên QR **không thể** ghim nợ dù muốn.
+
+`superseded` khi tạo QR mới **khác tập nợ** cùng cặp debtor-creditor, hoặc Captain void bill lúc QR còn treo. `confirmed` mới `settled` nợ. `rejected` đưa nợ về `awaiting`, `payment_id` NULL, debtor tạo QR lại từ đầu.
+
 `chk_payments_state_matrix` khóa bộ cột theo status — không tồn tại trạng thái nửa vời. `confirmed`/`rejected`/`superseded` là cuối.
 
 Ai được xem payment: debtor, creditor, hoặc **Captain**. Confirm/reject: **chỉ creditor** (Captain không thế). Remind: creditor **hoặc** Captain.
@@ -101,10 +109,10 @@ sequenceDiagram
     participant BE as Settlement API
     participant DB as PostgreSQL
 
-    U->>FE: Chọn khoản awaiting → Trả
-    Note over FE: Key = UUIDv5(qr:{groupId}:{creditorId}:{sortedDebtIds})
-    FE->>BE: POST .../payments/qr {debt_ids?} + Idempotency-Key
-    BE->>BE: Parse 1–100 UUID, dedupe, sort. Omit = mọi awaiting của cặp
+    U->>FE: Chọn khoản awaiting rồi Trả
+    Note over FE: Key UUIDv5 từ qr, groupId, creditorId, sortedDebtIds
+    FE->>BE: POST payments/qr kèm debt_ids và Idempotency-Key
+    BE->>BE: Parse 1-100 UUID, dedupe, sort. Bỏ field thì lấy mọi awaiting của cặp
     alt Key completed
         BE-->>FE: Replay 200
     else Key khác hash
@@ -112,8 +120,8 @@ sequenceDiagram
     else in_progress
         BE-->>FE: 409 IDEMPOTENCY_IN_PROGRESS + Retry-After 1
     end
-    BE->>DB: Lock group. Caller = debtor (không member → GROUP_NOT_FOUND)
-    BE->>DB: Creditor active; đủ 3 trường bank + directory
+    BE->>DB: Lock group. Caller là debtor (không member thì GROUP_NOT_FOUND)
+    BE->>DB: Creditor active, đủ 3 trường bank và directory
     alt Thiếu STK
         BE-->>FE: 422 BANK_ACCOUNT_REQUIRED
         FE-->>U: SnackBar — không phải Dialog
@@ -126,14 +134,26 @@ sequenceDiagram
     else Đã có pending_proof cùng cặp, cùng tập UUID
         BE-->>FE: 200 QR dựng lại từ bank LIVE
     else Cùng cặp, khác tập
-        BE->>DB: Cũ → superseded + INSERT mới
+        BE->>DB: Cũ sang superseded rồi INSERT mới
     else Sạch
         BE->>BE: reference_code PAY + 8 Base32 (không I,O,0,1)
         Note over DB: INSERT pending_proof KHÔNG có cột bank. Activity + notify creditor + settlement.payment_changed
-        BE-->>FE: 201 {payment}
+        BE-->>FE: 201 payment
     end
     FE->>U: Sheet QR, copy STK / số tiền / nội dung CK
 ```
+
+Cách đọc:
+
+Key FE là UUIDv5 deterministic từ `qr + groupId + creditorId + danh sách debt id đã sort`. Bấm Trả hai lần cùng tập nợ = cùng key = replay, không sinh QR thứ hai.
+
+Idempotency **trước** check bank: bản ghi đã `completed` vẫn 200 dù creditor xóa STK sau đó. Key khác hash payload → `409 IDEMPOTENCY_KEY_REUSED` (không có mã HTTP `IDEMPOTENCY_CONFLICT`). Key đang chạy → `IN_PROGRESS` + `Retry-After: 1`.
+
+Caller **là** debtor (membership của người gọi). Không phải member → `404 GROUP_NOT_FOUND`, không 403. Thiếu 3 trường bank hoặc bank lạ → `422 BANK_ACCOUNT_REQUIRED`, UI SnackBar không phải Dialog. Creditor không còn trong nhóm → `404 CREDITOR_NOT_FOUND`.
+
+Lock debts theo id tăng. Gửi 5 id mà 1 id không còn awaiting → hủy **cả batch**, `409 DEBTS_NOT_AWAITING`, không tạo payment 4/5. Cùng cặp đã có `pending_proof`: cùng tập UUID thì 200 QR dựng lại từ bank **live**; khác tập thì QR cũ `superseded` rồi INSERT mới.
+
+`reference_code` = `PAY` + 8 ký tự alphabet loại I, O, 0, 1 (tránh nhầm khi đọc STK). INSERT `pending_proof` **không** ghi cột bank (CHECK cấm). `qr_image_url` nằm **trong** object payment, không phải field anh em.
 
 Idempotency **trước** check bank: replay bản completed vẫn 200 dù creditor đã xóa STK sau đó.
 
@@ -149,19 +169,19 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     U->>FE: Ảnh gallery JPEG/PNG/HEIC 1 byte–10MB, note ≤500
-    Note over FE: Key UUIDv5(proof:{groupId}:{paymentId})
+    Note over FE: Key UUIDv5 từ proof, groupId, paymentId
 
     rect rgb(240,240,245)
         Note over BE: PrepareProof — commit in_progress
-        BE->>DB: Caller = debtor, payment pending_proof, bank creditor còn hợp lệ
+        BE->>DB: Caller là debtor, payment pending_proof, bank creditor còn hợp lệ
         alt Sai trạng thái
             BE-->>FE: 409 PAYMENT_NOT_PENDING_PROOF
         end
     end
     BE->>BE: Sniff magic bytes, ghi đè Content-Type
-    BE->>CDN: payments/{pid}/proofs/{operationId} WebP q100
+    BE->>CDN: payments/pid/proofs/operationId WebP q100
     alt Upload fail
-        BE->>DB: ResetProofAttempt(replaceOperation=false)
+        BE->>DB: ResetProofAttempt replaceOperation false
         BE-->>FE: 503 STORAGE_UNAVAILABLE
     end
 
@@ -170,14 +190,26 @@ sequenceDiagram
         BE->>DB: Lock debts. Phải còn awaiting. Snapshot bank VÀO payment. pending_confirmation
         alt RowsAffected ≠ số debt
             BE-->>FE: 409 DEBTS_NOT_AWAITING
-            Note over BE: Sau lỗi pha 2: Delete CDN (fail → media_cleanup) + ResetProofAttempt(true) — operation_id MỚI
+            Note over BE: Sau lỗi pha 2: Delete CDN (fail thì media_cleanup) và ResetProofAttempt true, operation_id mới
         else OK
-            BE->>DB: Activity + notify creditor payment_submitted + debts_changed + bill.settlement_changed
+            BE->>DB: Activity, notify creditor payment_submitted, debts_changed, bill.settlement_changed
             BE-->>FE: 200
             FE->>U: Pop + snackbar chờ xác nhận
         end
     end
 ```
+
+Cách đọc:
+
+Hai pha vì upload CDN không nằm trong transaction Postgres. Phải chốt ý định trước, upload sau, ghi DB sau.
+
+**Pha 1 PrepareProof:** lock nhóm, reserve key, caller phải là debtor, payment còn `pending_proof`, bank creditor còn hợp lệ. Commit `in_progress` + `operation_id` (UUIDv7). Sai trạng thái → `409 PAYMENT_NOT_PENDING_PROOF` (không phải 400), **trước** khi tốn CDN.
+
+Rồi sniff magic bytes JPEG/PNG/HEIC (không tin header multipart), upload `payments/pid/proofs/operationId`. Upload fail: `ResetProofAttempt(false)` giữ operation, `503 STORAGE_UNAVAILABLE`.
+
+**Pha 2 SubmitProof:** lock debts, mọi hàng phải còn awaiting, snapshot bank **lúc này** vào payment, status `pending_confirmation`, `RowsAffected` phải đúng số debt. Sai: 409, xóa object CDN (fail thì `media_cleanup`), `ResetProofAttempt(true)` = **operation_id mới** để retry không đè key CDN cũ.
+
+Hai `replaceOperation` khác nhau là chủ đích. Đừng gộp thành một.
 
 ### 5.3 Confirm / Reject
 
@@ -191,21 +223,29 @@ sequenceDiagram
 
     alt Xác nhận
         FE->>BE: POST confirm (key UUIDv5)
-        BE->>DB: Lock debts. Mọi debt pending_confirmation VÀ payment_id = pid. Caller PHẢI là creditor
+        BE->>DB: Lock debts. Mọi debt pending_confirmation và payment_id đúng pid. Caller PHẢI là creditor
         BE->>DB: confirmed + debts settled
         Note over BE: Thêm home.balance_changed chỉ debtor+creditor
         BE-->>FE: 200
     else Từ chối
         FE->>FE: Dialog bắt buộc lý do
-        FE->>BE: POST reject {reason} (reason nằm trong key)
+        FE->>BE: POST reject kèm reason (reason nằm trong key)
         alt Reason rỗng / quá dài
             BE-->>FE: 400 VALIDATION_FAILED
         end
         BE->>DB: rejected + debts awaiting, payment_id NULL
         BE-->>FE: 200 — debtor tạo QR lại
     end
-    Note over BE: Hai thiết bị đua: kẻ thua 409 PAYMENT_NOT_PENDING_CONFIRMATION
+    Note over BE: Hai thiết bị đua, kẻ thua 409 PAYMENT_NOT_PENDING_CONFIRMATION
 ```
+
+Cách đọc:
+
+Hai nhánh `alt` cùng hàm `finishPayment`. Lock debts tăng dần, mọi debt phải `pending_confirmation` **và** `payment_id` đúng payment này. Caller **phải là creditor**. Captain xem được payment nhưng bấm xác nhận vẫn `403 FORBIDDEN`.
+
+Xác nhận: payment `confirmed`, debts `settled`, realtime thêm `home.balance_changed` **chỉ** cho đúng cặp debtor+creditor (không broadcast cả nhóm). Từ chối: lý do 1–500 rune, `VALIDATION_FAILED` nếu thiếu. Debts về `awaiting`, `payment_id` NULL. Reason nằm trong idempotency key: đổi lý do = request khác, không replay nhầm.
+
+Hai thiết bị đua confirm/reject: một thắng nhờ lock + check state. Kẻ thua `409 PAYMENT_NOT_PENDING_CONFIRMATION`. FE còn mutex `mutate` chặn bấm đôi trên **một** máy.
 
 FE `mutate` mutex chặn bấm đôi trên một máy.
 
@@ -222,21 +262,29 @@ sequenceDiagram
     S->>FE: Nhắc
     FE->>FE: Cooldown UI 24 giờ từ lastRemindedAt
     FE->>BE: POST remind (key UUIDv4 ngẫu nhiên)
-    alt count ≥ 3 hoặc last < 24h
+    alt count từ 3 hoặc lần nhắc chưa đủ 24h
         BE-->>FE: 429 REMINDER_RATE_LIMITED
         FE->>FE: Vẫn bật cooldown 24h
     else OK
-        BE->>DB: count++ actor_kind=member + notify debtor + settlement.debt_reminded
+        BE->>DB: count cong 1, actor_kind member, notify debtor, settlement.debt_reminded
         BE-->>FE: 200
     end
 
     par Job tự động
-        Q->>Q: awaiting, created_at ≥ 72h, count<3, last ≥24h, SKIP LOCKED LIMIT 100
-        Q->>BE: actor_kind=system
+        Q->>Q: awaiting, created_at từ 72h, count nhỏ hơn 3, last từ 24h, SKIP LOCKED LIMIT 100
+        Q->>BE: actor_kind system
     and Payment treo
-        Q->>Q: pending_confirmation >48h, stalled_alerted_at NULL → alert một lần, không đổi status
+        Q->>Q: pending_confirmation qua 48h, stalled_alerted_at NULL, alert một lần, không đổi status
     end
 ```
+
+Cách đọc:
+
+Nút Nhắc: creditor hoặc Captain, debt phải `awaiting`. Trần **3** lần/khoản, cách nhau tối thiểu 24 giờ, DB CHECK 0..3. Tay (`actor_kind=member`) và job (`system`) **cộng chung** một `reminder_count`. Không thì user bấm 3 lần rồi job vẫn spam thêm.
+
+Key nhắc là **UUIDv4 mỗi lần**. Nếu UUIDv5 deterministic, lần 2 thành replay im lặng, count không tăng, người nợ không nhận tin. FE cooldown UI **24 giờ** (không phải 60 giây), seed từ `lastRemindedAt`. 429 cũng bật cooldown 24 giờ.
+
+Job `settlement_scan` mỗi giờ + lúc process start: quét awaiting quá 72 giờ, count < 3, lần cuối ≥ 24 giờ, `SKIP LOCKED LIMIT 100` (đa instance an toàn). Nhánh kia: `pending_confirmation` quá 48 giờ chưa `stalled_alerted_at` → cảnh báo creditor **một lần**, không đổi status payment.
 
 ---
 
@@ -258,8 +306,16 @@ flowchart TD
     J --> K{"OK?"}
     K -->|"DEBTS_NOT_AWAITING"| A
     K -->|"OK"| L["Chờ creditor"]
-    L --> M{"Confirm → lịch sử / Reject → awaiting, QR mới"}
+    L --> M{"Confirm thì lịch sử, Reject thì QR mới"}
 ```
+
+Cách đọc:
+
+Tab Cần trả: chọn từng khoản hoặc batch gom theo `groupId + creditorId` (chỉ `awaiting`). POST tạo QR.
+
+422 thiếu STK chủ nợ → SnackBar, không Dialog, không tự chuyển tab. 409 key → SnackBar, thử lại sau. 200/201 mở sheet QR (ảnh, copy STK / số tiền / nội dung CK).
+
+Người dùng chuyển tiền **ngoài app**. Đóng sheet không nộp ảnh: payment còn `pending_proof`, nợ còn `awaiting`, Captain **vẫn void bill được**. Đó là hệ quả của "QR không ghim nợ". Nộp ảnh xong mới chờ confirm. Reject thì về đầu, tạo QR mới.
 
 ### 6.2 Góc creditor
 
@@ -276,6 +332,14 @@ flowchart TD
     H -->|"Không"| I["Danh sách + nút nhắc 24h"]
 ```
 
+Cách đọc:
+
+Hero trên đầu màn: có N biên lai chờ thì tap sang tab Cần thu. Card gồm ảnh, số tiền, lời nhắn.
+
+Xác nhận đi thẳng POST. Từ chối bắt buộc dialog lý do rồi POST. Cả hai đi qua mutex `mutate` (một thao tác ghi tại một thời điểm trên máy này), rồi reload. Còn proof thì lặp card. Hết thì về danh sách khoản chờ thu, nút nhắc đếm 24 giờ.
+
+Nền (không vẽ trên diagram chính): job 48 giờ cảnh báo proof treo, không đổi trạng thái giúp creditor quên duyệt.
+
 ### 6.3 Gom dữ liệu đa nhóm
 
 ```mermaid
@@ -287,8 +351,18 @@ flowchart TD
     E --> F{"Record JSON hỏng / status lạ?"}
     F -->|"Skip từng record"| G
     F -->|"OK"| G["Phân loại payable / receivable / proofs / history"]
-    G --> H["Lỗi request một nhóm → fail CẢ load + banner Thử lại. Không skip theo nhóm"]
+    G --> H["Lỗi request một nhóm thì fail cả load, banner Thử lại. Không skip theo nhóm"]
 ```
+
+Cách đọc:
+
+Màn Settlement **không** gọi `GET /expenses/me`. Nó tự gom: `GET /groups` 100/trang, tối đa 50 trang, cursor phải tiến (chống vòng lặp cursor hỏng).
+
+Mỗi nhóm: `listDebts` + `listBills` song song. Giữa các nhóm throttle **6** request một lúc, tránh 429 limiter IP. Debts/bills cũng paginate 100 × 50. Rồi load payment cho những debt có `paymentId` (pending_confirmation/settled), cũng throttle 6.
+
+JSON một **record** hỏng: skip record đó, map status lạ về `voided`/`superseded`. HTTP **một nhóm** fail: fail **cả** `loadData`, banner Thử lại toàn trang. Tài liệu cũ nói "bỏ qua từng nhóm" là sai so với code.
+
+Kết quả chia: payable, receivable, proofs (mình là creditor), lịch sử confirmed.
 
 ---
 

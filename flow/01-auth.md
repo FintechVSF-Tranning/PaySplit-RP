@@ -97,32 +97,32 @@ Khi `USER_SSE_ENABLED`, mỗi lần revoke còn `pg_notify` `session.ended` (chi
 sequenceDiagram
     autonumber
     actor U as Người dùng
-    participant FE as RegisterPage → VerifyOtpPage
+    participant FE as RegisterPage / VerifyOtpPage
     participant BE as Auth API
     participant DB as PostgreSQL
     participant Mail as Gmail SMTP
 
     U->>FE: Tên, email, mật khẩu, SĐT, điều khoản
     FE->>FE: Tên ≥2, email có @ và .<br/>SĐT regex 0[3/5/7/8/9] + 8 số
-    FE->>BE: POST /auth/sign-up {display_name, email, password, phone_number}
-    BE->>BE: Email lower 3–254, SĐT → E.164 VN, tên 1–100 rune, policy MK 8–72 + hoa + thường + số
+    FE->>BE: POST /auth/sign-up (display_name, email, password, phone_number)
+    BE->>BE: Email lower 3-254, SĐT sang E.164 VN, tên 1-100 rune, policy MK 8-72
     BE->>DB: Rate limit sign_up theo hash(IP): 10/giờ
     alt Vượt giới hạn / email trùng / SĐT trùng
         BE-->>FE: 429 RATE_LIMITED / 409 EMAIL_EXISTS / PHONE_EXISTS
     end
-    Note over BE,DB: 1 tx: bcrypt → INSERT users pending_verification + INSERT user_tokens OTP
+    Note over BE,DB: Một tx bcrypt rồi INSERT users pending_verification và user_tokens OTP
     BE->>Mail: Gửi OTP
     Note over BE,Mail: SMTP fail CHỈ log. Signup vẫn 201, verification_email_sent=false
-    BE-->>FE: 201 {user, verification_email_sent, verification_expires_at}
+    BE-->>FE: 201 user, verification_email_sent, verification_expires_at
     FE->>U: /verify-otp (extra: email)
 
     U->>FE: 6 số (Pinput auto-submit)
-    FE->>BE: POST /auth/verify-email {email, otp}
+    FE->>BE: POST /auth/verify-email (email, otp)
     BE->>DB: SELECT user + token FOR UPDATE
     alt User đã active (bấm hai lần)
-        BE->>BE: So sánh constant-time với OTP đã used → 200 (idempotent)
+        BE->>BE: So sánh constant-time với OTP đã used, vẫn 200 (idempotent)
     else Sai OTP, chưa đủ 5
-        BE->>DB: attempt_count += 1
+        BE->>DB: attempt_count cong 1
         BE-->>FE: 400 INVALID_OR_EXPIRED_TOKEN
         FE-->>U: SnackBar + haptic
     else Sai lần thứ 5
@@ -130,11 +130,21 @@ sequenceDiagram
         BE-->>FE: 400 INVALID_OR_EXPIRED_TOKEN
         Note over FE: Phải bấm Gửi lại mã. Token cũ không bao giờ sống lại
     else OTP đúng, còn hạn
-        BE->>DB: users.status=active, tokens.used_at=now()
-        BE-->>FE: 200 {status: active}
-        FE->>U: /login — đăng nhập bằng tay, không cấp token ở bước này
+        BE->>DB: users.status active, tokens.used_at now()
+        BE-->>FE: 200 status active
+        FE->>U: /login bằng tay, không cấp token ở bước này
     end
 ```
+
+Cách đọc:
+
+Luồng chạy hai nửa. Nửa trên là đăng ký: app gửi tên, email, mật khẩu, SĐT. Backend chuẩn hóa email (viết thường) và SĐT sang E.164 Việt Nam, rồi ghi user ở trạng thái `pending_verification` cùng một mã OTP 6 số (chỉ lưu bản băm SHA-256). Nửa dưới là kích hoạt: đủ 6 số thì auto-submit.
+
+`201` nghĩa là tài khoản đã được tạo, **không** nghĩa là đã đăng nhập. Cột `verification_email_sent` cho biết mail có gửi được không. SMTP lỗi chỉ ghi log, signup vẫn thành công, tránh chặn người mới vì Gmail sập.
+
+Sai OTP: mỗi lần `attempt_count` tăng 1. Đủ 5 lần thì token bị **supersede** (vô hiệu vĩnh viễn). Cùng mã đó gõ lần 6 cũng fail. Phải bấm Gửi lại mã để sinh token mới. User đã active rồi mà bấm verify lần nữa vẫn `200` (so sánh constant-time với OTP đã dùng) để double-submit không báo lỗi giả.
+
+Verify xong **không** cấp JWT. Người dùng tự vào `/login` gõ mật khẩu. Đó là chủ đích: kích hoạt email và mở phiên là hai việc khác nhau.
 
 **Gửi lại OTP**: countdown 60 giây trên UI; `POST /auth/resend-verification`. Token mới supersede token cũ (partial unique `uq_user_tokens_one_active_per_type`). Email không tồn tại hoặc user không còn `pending_verification` → vẫn **202**, không gửi mail.
 
@@ -150,14 +160,14 @@ sequenceDiagram
 
     U->>FE: Email + mật khẩu
     FE->>FE: Lấy device_id (secure storage, sống sót logout) + FCM token nếu có
-    FE->>BE: POST /auth/sign-in {email, password, device_id, device_name, fcm_token?}
-    BE->>DB: GetByEmail; không có user vẫn RecordLoginFailure (no-op) rồi 401
+    FE->>BE: POST /auth/sign-in (email, password, device_id, device_name, fcm_token)
+    BE->>DB: GetByEmail. Không có user vẫn RecordLoginFailure (no-op) rồi 401
     BE->>DB: login_blocked_until TRƯỚC bcrypt
     alt Đang khóa
         BE-->>FE: 429 RATE_LIMITED + Retry-After
         Note over FE: LoginPage luôn khóa nút 900 giây, KHÔNG đọc Retry-After
     else bcrypt sai
-        BE->>DB: +1 failure; đủ 5 trong 15 phút → block 15 phút
+        BE->>DB: cộng 1 failure. Đủ 5 trong 15 phút thì khóa 15 phút
         BE-->>FE: 401 INVALID_CREDENTIALS (hoặc 429 nếu vừa khóa)
     else bcrypt OK, pending_verification
         BE-->>FE: 403 EMAIL_NOT_VERIFIED
@@ -171,11 +181,21 @@ sequenceDiagram
             BE->>DB: Revoke ngay session vừa tạo (access_issue_failed)
             BE-->>FE: 500 INTERNAL_ERROR
         end
-        BE-->>FE: 200 {access_token, refresh_token, user, access_token_expires_at, refresh_token_expires_at}
-        FE->>FE: Lưu 2 token. unawaited FCMTokenManager.initialize() → PUT /users/me/fcm-token
-        FE->>U: Router → /home
+        BE-->>FE: 200 access_token, refresh_token, user, access_token_expires_at, refresh_token_expires_at
+        FE->>FE: Lưu 2 token. unawaited FCMTokenManager.initialize() rồi PUT /users/me/fcm-token
+        FE->>U: Router sang /home
     end
 ```
+
+Cách đọc:
+
+App luôn gửi `device_id` (UUID lưu trong secure storage, sống sót lúc logout) và có thể kèm `fcm_token`. Backend không tiết lộ email có tồn tại hay không: email lạ vẫn gọi `RecordLoginFailure` rồi trả cùng `401 INVALID_CREDENTIALS`.
+
+Thứ tự trong hình **không được đảo**. (1) Đang bị khóa `login_blocked_until` thì 429 ngay, chưa so mật khẩu. (2) bcrypt sai thì cộng failure, đủ 5 lần trong 15 phút thì khóa 15 phút. (3) Mật khẩu đúng **rồi mới** nhìn `status`: chưa kích hoạt ra `403 EMAIL_NOT_VERIFIED`, suspended/locked ra `403 ACCOUNT_UNAVAILABLE`. Nếu xét status trước bcrypt, kẻ không biết mật khẩu vẫn biết "email này chưa verify".
+
+Nhánh `active`: thu hồi session cũ (`replaced_by_sign_in`), tạo session mới, ký JWT 15 phút chứa `sid`. Máy cũ lần gọi API kế bị `liveAuth` chặn vì sid đã chết trong DB, dù JWT cũ còn hạn. Ký JWT fail thì session vừa tạo bị thu hồi luôn (`access_issue_failed`), tránh sid mồ côi.
+
+LoginPage khi 429 luôn khóa nút 900 giây, **không** đọc header `Retry-After`. 429 từ limiter IP toàn cục (300/phút) cũng bị khóa 15 phút trên UI.
 
 Body đăng nhập nhận `fcm_token` tùy chọn, ghi thẳng vào session (`NULLIF` rỗng). App vẫn gọi thêm `PUT /users/me/fcm-token` sau đó vì Firebase có thể chưa kịp cấp token lúc bấm Đăng nhập.
 
@@ -197,12 +217,12 @@ sequenceDiagram
     REST->>SR: refresh() vì 401
     SSE->>SR: refresh() vì 401 cùng lúc
     Note over SR: Chỉ một _inFlight. Bên sau await cùng future
-    SR->>BE: {refresh_token, device_id} trên Dio trần, không interceptor
+    SR->>BE: refresh_token và device_id trên Dio trần, không interceptor
     BE->>DB: Tra SHA-256, khóa session + token
     alt used_at đã có (tái sử dụng)
         BE->>DB: Revoke session + mọi refresh của nó (refresh_reuse) + session.ended
         BE-->>SR: 401 SESSION_REVOKED
-        SR->>SR: endSession() → xóa token → AuthController = null → /welcome
+        SR->>SR: endSession() xóa token, AuthController null, sang /welcome
     else Token/session chết hoặc hết hạn, hoặc không tìm thấy
         BE-->>SR: 400 INVALID_OR_EXPIRED_TOKEN
         SR->>SR: endSession()
@@ -211,12 +231,22 @@ sequenceDiagram
     else User không còn active
         BE-->>SR: 403 ACCOUNT_UNAVAILABLE
     else Hợp lệ
-        BE->>DB: used_at=now() + INSERT token mới<br/>TTL = min(now+7 ngày, session.expires_at)
+        BE->>DB: used_at now() rồi INSERT token mới. TTL min 7 ngày và hạn session
         BE-->>SR: 200 cặp token mới
-        SR-->>REST: OK → retry request gốc đúng một lần (flag retried)
-        SR-->>SSE: OK → mở lại stream đúng một lần
+        SR-->>REST: OK, retry request gốc đúng một lần (flag retried)
+        SR-->>SSE: OK, mở lại stream đúng một lần
     end
 ```
+
+Cách đọc:
+
+Access JWT sống 15 phút. REST (`AuthInterceptor`) và kênh realtime (`SseTransport`) đều có thể hết hạn cùng lúc. Cả hai gọi `SessionRefresher.refresh()`. Bên trong chỉ có **một** future `_inFlight`: bên đến sau chờ kết quả, không bắn thêm `POST /auth/refresh`.
+
+Vì sao phải chung một cửa: refresh token là loại **dùng một lần** (rotation). Lần gọi thành công đánh `used_at` rồi cấp token mới. Lần gọi thứ hai cầm token cũ đã `used_at` bị coi là **reuse** (nghi đánh cắp) → thu hồi cả phiên, `401 SESSION_REVOKED`. Người dùng bị đá mà không hiểu vì sao.
+
+Các nhánh khác **không** ra `SESSION_REVOKED`: token không tìm thấy, hết hạn, sai `device_id` đều `400 INVALID_OR_EXPIRED_TOKEN`; user không còn `active` thì `403 ACCOUNT_UNAVAILABLE`. App vẫn `endSession()` trên mọi refresh fail, nên UX về Welcome giống nhau. Đừng viết client chỉ bắt mã `SESSION_REVOKED`.
+
+Thành công: REST retry request gốc đúng một lần (cờ `retried` chống vòng lặp). SSE mở lại stream đúng một lần với token mới.
 
 Skip-list của interceptor (401 ở các path này **không** refresh, **không** `endSession`): `sign-in`, `register`/`sign-up`, `refresh`, `forgot-password`, `reset-password`, `verify-email`, `resend-verification`. `sign-out` **không** nằm trong list: access hết hạn lúc bấm Đăng xuất sẽ refresh trước rồi mới gọi sign-out.
 
@@ -234,14 +264,14 @@ sequenceDiagram
 
     alt Quên mật khẩu
         U->>FE: Nhập email
-        FE->>BE: POST /auth/forgot-password {email}
-        Note over BE: Luôn 202. Rate limit email+IP. User pending vẫn nhận OTP reset;<br/>bước reset sau mới từ chối non-active
+        FE->>BE: POST /auth/forgot-password (email)
+        Note over BE: Luôn 202. Rate limit email+IP. User pending vẫn nhận OTP reset. Bước reset sau mới từ chối non-active
         BE-->>FE: 202
         FE->>U: /reset-password (extra: email)
         U->>FE: OTP + MK mới
-        FE->>BE: POST /auth/reset-password → 204
+        FE->>BE: POST /auth/reset-password, 204
         BE->>DB: Thu hồi TOÀN BỘ session (password_reset)
-        FE->>U: /login extra=true → alert xanh
+        FE->>U: /login extra true, alert xanh
     else Đổi mật khẩu khi đã vào app
         U->>FE: MK hiện tại + MK mới
         FE->>BE: PUT /users/me/password
@@ -258,6 +288,16 @@ sequenceDiagram
     end
 ```
 
+Cách đọc:
+
+Hai đường trông giống "đổi mật khẩu" nhưng **phạm vi đá phiên khác nhau**. Đó là chỗ diagram muốn nhấn.
+
+**Quên mật khẩu (OTP, chưa đăng nhập):** `forgot-password` luôn `202` nếu email hợp lệ về cú pháp, kể cả email không tồn tại (chống dò). User `pending_verification` vẫn nhận OTP reset, nhưng bước `reset-password` chỉ nhận user `active`. Thành công thì thu hồi **mọi** session (`password_reset`), kể cả máy đang mở app. App về `/login` với alert xanh.
+
+**Đổi mật khẩu (đã vào app):** phải gửi mật khẩu hiện tại. Sai → `400 INVALID_CURRENT_PASSWORD`. Trùng mật khẩu cũ → `400 VALIDATION_FAILED`. Thành công: bcrypt mới, thu hồi mọi session **khác** sid hiện tại (`password_changed`). Máy đang cầm được giữ, snackbar rồi pop, không tự logout.
+
+Lý do thiết kế: quên mật khẩu = không chắc ai đang cầm máy, đá hết cho an toàn. Đổi khi đã login = chính chủ đang cầm, không nên tự đá mình.
+
 Handler map `ErrInvalidInput` → JSON code `VALIDATION_FAILED` (không phải `INVALID_INPUT`).
 
 ### 5.5 Avatar: xóa bù, không đi River
@@ -268,6 +308,7 @@ Cleanup ảnh **không** phải River. Bảng `media_cleanup_jobs` + ticker `aut
 sequenceDiagram
     autonumber
     actor U as ProfilePage
+    participant FE as Flutter
     participant BE as Auth API
     participant CDN as Cloudinary
     participant DB as PostgreSQL
@@ -275,13 +316,13 @@ sequenceDiagram
 
     U->>FE: Chọn ảnh (picker max 1024, q85 — không qua ImageValidator)
     FE->>BE: PUT /users/me/avatar (field "avatar")
-    alt >10 MiB
+    alt Ảnh lớn hơn 10 MiB
         BE-->>FE: 413 PAYLOAD_TOO_LARGE
     else Không decode được
         BE-->>FE: 400 INVALID_IMAGE
     else HEIC / timeout convert (IsUnsupported)
-        Note over BE: Upload NGUYÊN bytes. Cloudinary vẫn yêu cầu webp<br/>→ hay gặp 502 IMAGE_STORAGE_FAILED, không phải 200
-        BE->>CDN: Upload original paysplit/avatars/{uid}/{uuidv7}
+        Note over BE: Upload nguyên bytes. Cloudinary vẫn yêu cầu webp nên hay gặp 502 IMAGE_STORAGE_FAILED
+        BE->>CDN: Upload original paysplit/avatars/uid/uuidv7
     else JPEG/PNG/GIF/WebP
         BE->>CDN: Convert WebP q82, max 1024, strip EXIF, semaphore
     end
@@ -292,8 +333,20 @@ sequenceDiagram
         BE->>DB: INSERT media_cleanup_jobs ON CONFLICT DO NOTHING
         Note over W: Claim FOR UPDATE SKIP LOCKED, backoff ≤10 lần, cap 24h
     end
-    BE-->>FE: 200 {avatar_url}
+    BE-->>FE: 200 avatar_url
 ```
+
+Cách đọc:
+
+Ảnh đi Cloudinary **trước**, URL mới mới ghi vào `users`. Nếu làm ngược, DB trỏ object chưa tồn tại.
+
+Nhánh `IsUnsupported` (HEIC hoặc convert timeout): server upload **nguyên bytes**, không 400. Cloudinary phía PaySplit vẫn cấu hình `Format: webp` nên nhánh này hay ra `502 IMAGE_STORAGE_FAILED`, không phải 200 như tài liệu cũ.
+
+Hai kiểu fail **khác nhau**:
+- Upload CDN xong, `UPDATE` DB fail: xóa object **mới** bằng `Delete(context.Background())` để không bị request cancel cắt. Lỗi xóa bị bỏ qua, **không** enqueue. Ảnh mồ côi chấp nhận vì request đã 500, user sẽ thử lại.
+- DB đã trỏ URL mới, xóa object **cũ** fail: enqueue `media_cleanup_jobs`. Worker ticker claim `FOR UPDATE SKIP LOCKED`, backoff tối đa 10 lần, trần 24 giờ. User đã thấy avatar mới, dọn rác chạy nền.
+
+Cleanup **không** đi River. Đó là goroutine ticker trong module auth.
 
 ### 5.6 Hồ sơ ngân hàng
 
@@ -325,6 +378,17 @@ flowchart TD
     L --> E
 ```
 
+Cách đọc:
+
+`extra resetSuccess` là cờ bool từ màn reset mật khẩu: `true` thì hiện alert xanh rồi mới hiện form, tránh người dùng tưởng chưa đổi xong.
+
+Validate client chỉ chặn form trống. Nút Đăng nhập gọi `POST /auth/sign-in`. Ba nhánh lỗi UI xử lý khác nhau:
+- `200`: lưu token, `FCMTokenManager.initialize()`, router đẩy `/home`.
+- `EMAIL_NOT_VERIFIED`: banner vàng + link `/verify-otp`, **giữ** email trên form.
+- `RATE_LIMITED`: khóa nút 900 giây cứng. Backend có thể gửi `Retry-After` ngắn hơn (limiter IP 300/phút), UI vẫn khóa 15 phút. Đó là lệch UX đã biết, không phải hợp đồng API.
+
+Lỗi khác (sai mật khẩu, mạng) chỉ SnackBar, form còn đó.
+
 ### 6.2 Verify OTP
 
 ```mermaid
@@ -346,6 +410,16 @@ flowchart TD
     L --> B
 ```
 
+Cách đọc:
+
+Pinput 6 ô, `onCompleted` tự gọi API, không cần nút. Sai thì SnackBar + haptic, **không** có animation rung từng ô.
+
+Hai đồng hồ khác nhau, đừng gộp:
+- Gợi ý trên màn: OTP sống **10 phút**, tối đa **5 lần thử** (đúng với BE).
+- Nút Gửi lại mã đếm **60 giây** chỉ là UI. BE rate-limit resend theo hash(email) **và** hash(IP): tối thiểu 1 phút/lần **hoặc** tối đa 10 lần/giờ. Hết countdown UI mà vẫn 429 thì phải đợi tiếp.
+
+Sau 5 lần sai, token bị supersede. Gõ lại 6 số cũ vô ích. Phải xin mã mới. Resend luôn `202` kể cả email không tồn tại, chống dò hộp thư.
+
 ### 6.3 Phạm vi đá phiên
 
 ```mermaid
@@ -363,6 +437,16 @@ flowchart LR
         S2 --> S3["Máy này vào /home"]
     end
 ```
+
+Cách đọc:
+
+Ba cột là ba **phạm vi đá phiên**, không phải ba cách đổi mật khẩu.
+
+- **Reset qua OTP:** không chắc ai cầm máy → đá mọi sid, kể cả máy đang reset → về `/login`.
+- **Đổi MK đã đăng nhập:** chính chủ đang cầm → giữ sid hiện tại, chỉ đá máy khác → ở lại app.
+- **Đăng nhập máy mới:** unique index một session active/user → máy cũ `replaced_by_sign_in`. JWT cũ còn hạn 15 phút nhưng `liveAuth` hỏi DB mỗi request nên máy cũ chết ở lần gọi kế.
+
+Admin khóa tài khoản đi nhánh giống reset (đá hết) cộng `session.ended` trên SSE. App **không** logout từ frame SSE đó, REST 401 mới đá. Xem [`08-realtime.md`](08-realtime.md) mục 5.3.
 
 ---
 

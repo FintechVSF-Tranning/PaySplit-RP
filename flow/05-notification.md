@@ -92,7 +92,7 @@ sequenceDiagram
     P->>DB: COMMIT — bản ghi và job cùng sống hoặc cùng mất
 
     Q-->>W: Deliver (at-least-once), payload chỉ notification_id
-    alt pushNotifier == nil
+    alt pushNotifier nil
         W-->>Q: xong ngay, không load DB
     end
     W->>DB: Load notification
@@ -109,16 +109,26 @@ sequenceDiagram
     else Message invalid
         Note over W: Log, GIỮ token
     else Lỗi mạng
-        W-->>Q: err → River backoff
+        W-->>Q: err, River backoff
     else OK
-        FCM-->>FE: data.type = notif.Type luôn được nhét
+        FCM-->>FE: data.type luôn được nhét bằng notif.Type
         alt App foreground
             FE->>FE: SnackBar + nút Xem
         else Background / terminated
-            FE->>FE: Hệ thống hiện notification. Tap → resolver, không mark-read
+            FE->>FE: Hệ thống hiện notification. Tap đi resolver, không mark-read
         end
     end
 ```
+
+Cách đọc:
+
+Producer (finalize bill, nộp proof, confirm...) **BEGIN** transaction nghiệp vụ. Trong cùng tx: INSERT hàng `notifications` và `InsertTx` job River `send_notification` chỉ mang `notification_id`. COMMIT thì cả hai sống. Rollback thì cả hai mất. Không có chuông trong app mà không có job, cũng không có job đẩy tin ma.
+
+Worker nhận job at-least-once. `pushNotifier == nil` (dev không cấu hình Firebase) return ngay, **không** load DB, không retry. Có notifier thì load lại row theo id. Row đã xóa → xong, không retry vô hạn.
+
+Token FCM lấy session active mới nhất (`issued_at DESC`). Rỗng: bỏ push, in-app vẫn còn. Gửi FCM luôn nhét `data.type = notif.Type` dù producer quên.
+
+Unregistered / invalid token: `ClearFCMToken` theo cặp `(token, user_id)` — không xóa mọi token của user, tránh cướp máy mới lúc rotate. Message invalid (payload lỗi): log, **giữ** token. Lỗi mạng: trả err, River backoff. Thành công: foreground hiện SnackBar (không phải heads-up hệ thống), nền/tắt máy hiện notification hệ thống.
 
 ### 5.2 Đăng ký token
 
@@ -131,19 +141,29 @@ sequenceDiagram
     participant BE as PUT /users/me/fcm-token
 
     Note over App: Firebase.initializeApp TRƯỚC EnvConfig. Background handler đăng ký lúc này
-    App->>FTM: initialize() (mỗi cold start nếu có token; và sau login)
+    App->>FTM: initialize() mỗi cold start nếu có token, và sau login
     FTM->>FCM: requestPermission
     Note over FTM: Từ chối quyền vẫn gọi getToken() — không early return
     FTM->>FCM: getToken
     alt Không có access token
         FTM->>FTM: bỏ sync
     else Có
-        FTM->>BE: PUT {fcm_token} Bearer
-        Note over BE: Ghi vào sid liveAuth. Race revoke → handler 500 INTERNAL_ERROR
-        FTM->>FCM: onTokenRefresh → PUT lại, dedupe _lastSyncedToken
+        FTM->>BE: PUT fcm_token Bearer
+        Note over BE: Ghi vào sid liveAuth. Race revoke thì handler 500 INTERNAL_ERROR
+        FTM->>FCM: onTokenRefresh rồi PUT lại, dedupe _lastSyncedToken
         Note over FTM: Fail: retry 10s, 1 phút, 5 phút
     end
 ```
+
+Cách đọc:
+
+`Firebase.initializeApp` và background handler đăng ký **trước** `EnvConfig.init` trong bootstrap. Isolate nền không đọc flavor. Sai thứ tự = FCM lúc app tắt mất.
+
+`initialize()` chạy mỗi cold start (nếu storage còn access token) **và** sau login. `requestPermission` (alert, badge, sound). Từ chối quyền OS **không** early return: vẫn `getToken()`, vì một số máy vẫn cấp token.
+
+Chưa có access token: bỏ `PUT`, không 401 sớm. Có token: PUT gắn vào **sid hiện tại** (liveAuth). Race session vừa revoke: handler nuốt thành 500, xem [`01-auth.md`](01-auth.md). `onTokenRefresh` của Firebase tự PUT lại, dedupe `_lastSyncedToken`. Fail: retry 10 giây, 1 phút, 5 phút.
+
+Login body có thể đã gửi `fcm_token` nếu SDK kịp. PUT sau đó bù cho trường hợp Firebase chưa kịp lúc bấm Đăng nhập. Logout: hủy sub, tăng `_sessionEpoch`, `deleteToken()`, rồi mới xóa storage.
 
 Login còn gửi `fcm_token` trên `POST /auth/sign-in` nếu SDK đã có sẵn. Logout: `onLogout` hủy sub, tăng `_sessionEpoch`, `deleteToken()`, rồi mới clear storage.
 
@@ -160,15 +180,25 @@ sequenceDiagram
     alt Từ danh sách in-app
         U->>FE: Tap hàng
         FE->>FE: Optimistic readAt + unreadCount−1
-        FE->>BE: PATCH /notifications/{id}/read
+        FE->>BE: PATCH /notifications/id/read
         FE->>R: resolve(type, payload)
         FE->>U: context.push
     else Từ banner FCM
         U->>FE: Tap
         FE->>R: resolve
-        FE->>U: context.go — không gọi mark-read
+        FE->>U: context.go, không gọi mark-read
     end
 ```
+
+Cách đọc:
+
+Hai nguồn tap, hai hành vi **cố ý khác nhau**.
+
+Từ danh sách in-app: optimistic `readAt = now()`, `unreadCount - 1`, rồi `PATCH /notifications/id/read` (WHERE id **và** user_id, đọc hộ người khác 404). Rồi `NotificationRouteResolver.resolve` → `context.push` (chồng lên stack, Back về list).
+
+Từ banner FCM (nền hoặc terminated `getInitialMessage`): **không** mark-read. `context.go` thay stack. Chủ đích: user mở app vẫn thấy chấm chuông chưa đọc, tự quyết. Đừng "đồng bộ" hai nhánh.
+
+Resolver nhận `type` + payload (`bill_id`, `group_id`, `payment_id`...). Chi tiết nhánh: diagram 6.2.
 
 ---
 
@@ -194,6 +224,16 @@ flowchart TD
     H -->|"OK"| L["Thiết bị nhận"]
 ```
 
+Cách đọc:
+
+Đây là quyết định của **worker**, sau khi job đã được giao. In-app row đã nằm trong DB từ lúc COMMIT nghiệp vụ. Push chỉ là lớp phụ.
+
+Không credentials / notifier nil → xong. Không còn row → xong. Không token → xong (user chưa cấp quyền, lần mở app sẽ thấy chuông). Có token thì gửi.
+
+Ba kết quả gửi: Unregistered = máy gỡ app hoặc rotate, xóa đúng token đó. Message invalid = nội dung lỗi, **giữ** token kẻo xóa nhầm máy tốt. Mạng = River thử lại. Thành công = thiết bị hiện thông báo.
+
+Badge Home **không** cập nhật khi FCM tới lúc app đang mở. Phải vào màn Notifications hoặc pull-to-refresh.
+
 ### 6.2 Resolver — type trước, không phải bill_id trước
 
 Producer luôn gửi `group_id`, nên hầu hết payment **mở Group Detail tab Công nợ**, không phải tab Settlement.
@@ -218,8 +258,18 @@ flowchart TD
     T -->|"group_invitation / group_invite / member_joined"| GI{"group_id?"}
     GI -->|"Có"| GB
     GI -->|"Không"| GL["/groups"]
-    T -->|"fallback"| F["batch → group; bill_id → detail; payment_id → /settlement; group_id → group"]
+    T -->|"fallback"| F["batch sang group, bill_id sang detail, payment_id sang /settlement, group_id sang group"]
 ```
+
+Cách đọc:
+
+Code `NotificationRouteResolver.resolve` xét **type trước**, không phải "có `bill_id` thì luôn bill-detail". `bill_bulk_finalize_completed` có `group_id` nhưng phải mở Group tab Hóa đơn + `openBatchId`, không phải chi tiết một bill.
+
+Producer hiện tại **luôn** gửi `group_id`. Vì thế hầu hết payment (`payment_submitted`, `payment_created`, `debt_reminded`...) đi nhánh "có group_id" → **Group Detail tab Công nợ**, không phải `/settlement` tab Cần thu/Cần trả như tài liệu cũ. Nhánh `/settlement` chỉ khi payload thiếu `group_id` (alias cũ, test).
+
+`payment_confirmed` không group → tab Lịch sử. `bill_finalized` có `bill_id` → `/bill-detail`. Fallback cuối: batch → group, bill_id → detail, payment_id → `/settlement`, group_id → group.
+
+`payment_created` trên giấy là tin cho **creditor**, alias không group đi tab payable. Với producer thật luôn có group nên vào group debts.
 
 `payment_created` → **payable** (người nhận tin là creditor, nhưng alias đi nhánh payable khi không có group — với producer hiện tại luôn có `group_id` nên vào group debts).
 

@@ -113,6 +113,14 @@ flowchart LR
     K --> L["Màn hình tự cập nhật"]
 ```
 
+Cách đọc:
+
+Người B xóa hóa đơn. Backend **BEGIN**, khóa hàng nhóm, DELETE bill, ghi activity, lấy audience (thành viên active), gọi `pg_notify` **trong cùng tx**, rồi COMMIT.
+
+Hình hỏi "commit?": Rollback → PostgreSQL **không** gửi NOTIFY. Không ai bị làm mới oan. Commit → mọi session `LISTEN` nhận payload. Mỗi backend instance chỉ có **một** connection nghe, Hub giải mã, lọc audience, nhét frame vào hàng chờ SSE (64 frame, đầy thì đóng `backpressure`).
+
+App nhận `invalidate` rất ngắn: `scope`, `type`, `group_id`, `resource_id`. **Không** có tên quán, không có số tiền. App đánh dấu màn liên quan bẩn, gọi REST, UI tự cập nhật. REST vẫn kiểm tra quyền: gửi nhầm địa chỉ cũng không đọc được nội dung.
+
 ### 4.2 Vì sao `pg_notify` phải nằm **trong** transaction
 
 Đây là chi tiết nhỏ nhưng quyết định tính đúng đắn của cả hệ thống.
@@ -141,6 +149,14 @@ flowchart TD
     H3 --> S2["Kết nối của session B"]
     H3 --> S3["..."]
 ```
+
+Cách đọc:
+
+Trước đây mỗi Hub tự `LISTEN`, mỗi process giữ vài connection Postgres chỉ để nghe. Nay `notification_listener.go` giữ **một** connection, trên đó `LISTEN` ba kênh `group_events`, `bill_events`, `user_events`.
+
+Shared listener đẩy raw notify cho ba Hub. Group/Bill Hub phục vụ SSE **cũ** (mỗi nhóm/hóa đơn một kết nối). User Hub phục vụ kênh mới (một kết nối/session). Hub không hỏi DB thêm, chỉ decode envelope, validate, publish vào hàng chờ local (buffer 16/32/64).
+
+`/health/ready` chỉ 200 khi đã LISTEN đủ ba kênh. Mất connection → 503 `degraded`, đóng **mọi** SSE local, reconnect backoff. App kết nối lại, `ready` hàn dữ liệu. Không giả vờ khỏe khi tai nghe đã đứt.
 
 - `/health/ready` chỉ trả `200` khi listener đã đăng ký đủ cả ba kênh. Mất connection → `503 degraded`.
 - Listener đứt thì server **đóng mọi kết nối SSE**, không giả vờ khỏe. App kết nối lại và `ready` sẽ hàn lại dữ liệu.
@@ -174,7 +190,7 @@ sequenceDiagram
     end
     API->>API: Sinh stream_id (UUID v7 do server tạo, không lấy từ request)
     API->>Hub: Đăng ký ở trạng thái PAUSED<br/>(nhận frame vào hàng chờ nhưng chưa gửi đi)
-    API->>PG: NOTIFY user_events: stream.replace<br/>{sid, replacement_stream_id}
+    API->>PG: NOTIFY user_events stream.replace sid va replacement_stream_id
     alt Gửi phiếu thất bại
         API->>Hub: Gỡ đăng ký, GIỮ NGUYÊN kết nối cũ
         API-->>FE: 503 (chưa hề ghi header SSE)
@@ -183,11 +199,21 @@ sequenceDiagram
     Hub->>Hub: Đóng mọi kết nối cùng sid, TRỪ replacement_stream_id
     Hub->>Hub: Chuyển kết nối mới sang ACTIVE
     Hub-->>API: Đã được thừa nhận
-    Note over API: Chờ tối đa 5 giây. Quá hạn → 503
-    API-->>FE: 200 + header SSE
-    API-->>FE: event: ready {stream_id, timestamp}
+    Note over API: Chờ tối đa 5 giây. Quá hạn thì 503
+    API-->>FE: 200 va header SSE
+    API-->>FE: event ready kèm stream_id, timestamp
     FE->>FE: Làm mới lại toàn bộ màn hình đang mở
 ```
+
+Cách đọc:
+
+Bài toán: cùng một `sid` mở hai stream gần như cùng lúc (app resume đúng lúc reconnect), có thể rơi **hai process** backend. Không process nào tự quyết ai thắng.
+
+Cờ `USER_SSE_ENABLED` tắt → 404, app lùi legacy. Quá 10 lần/60 giây/session → 429 + `Retry-After`. `stream_id` do server sinh (UUID v7), client không được chọn.
+
+Đăng ký Hub trạng thái **PAUSED**: nhận frame vào hàng chờ nhưng **chưa ghi một byte** ra HTTP. Gửi phiếu `stream.replace` qua `pg_notify`. Gửi fail: gỡ đăng ký mới, **giữ** kết nối cũ, 503 trước header. Phiếu quay về theo **thứ tự commit Postgres** (trọng tài đa process): đóng mọi kết nối cùng sid trừ `replacement_stream_id`, chuyển mới sang ACTIVE. Chờ tối đa 5 giây, quá hạn 503.
+
+Kẻ thắng: 200 + header SSE + `event: ready`. App làm mới **toàn bộ** màn đang mở rồi mới coi là dữ liệu sống. Kẻ thua: `close: replaced` hoặc 503 sạch, không phải stream mở rồi chết.
 
 **Điểm cần nhớ**: kết nối mới **không ghi một byte nào** ra response cho tới khi phiếu của chính nó quay về. Nhờ vậy nếu nó thua, client nhận được `503` sạch sẽ chứ không phải một stream đã mở rồi bị đóng ngay.
 
@@ -202,24 +228,32 @@ sequenceDiagram
     participant Hub as User Hub
     participant A as App của người dùng A
 
-    B->>API: DELETE /bills/{id}?group_id=...
+    B->>API: DELETE /bills/id kèm group_id
     API->>PG: BEGIN
     API->>PG: Khóa hàng nhóm (SELECT ... FOR UPDATE)
     API->>PG: Xóa hóa đơn, ghi activity
     API->>PG: Lấy danh sách thành viên đang active của nhóm
-    API->>PG: pg_notify('bill_events', {type: bill.deleted, group_id, resource_id, audience})
+    API->>PG: pg_notify bill_events type bill.deleted, group_id, resource_id, audience
     API->>PG: COMMIT
     Note over PG: Chỉ tới đây NOTIFY mới thật sự được gửi
     PG-->>Hub: bill.deleted
     Hub->>Hub: Lọc: chỉ những session của người trong audience
-    Hub-->>A: event: invalidate {type: bill.deleted, group_id, resource_id}
-    A->>A: Tra bảng định tuyến → các màn hình cần làm mới
+    Hub-->>A: event invalidate type bill.deleted, group_id, resource_id
+    A->>A: Tra bảng định tuyến, đánh thức màn hình liên quan
     A->>A: Chờ gộp 250 ms (phòng khi có sự kiện khác dồn tới)
-    A->>API: GET /groups/{group_id}
-    API-->>A: {group, members, pending_bill_count, ...}
+    A->>API: GET /groups/group_id
+    API-->>A: group, members, pending_bill_count
     A->>A: Vá đúng dòng nhóm đó trong danh sách
-    Note over A: Chip "1 bill mở" biến mất, danh sách không nhảy, không cuộn
+    Note over A: Chip 1 bill mở biến mất, danh sách không nhảy, không cuộn
 ```
+
+Cách đọc:
+
+Ví dụ cụ thể của sơ đồ 4.1. Người B `DELETE /bills/id`. Trong tx: khóa nhóm, xóa bill, lấy audience, `pg_notify bill.deleted`. **Chỉ sau COMMIT** Hub mới nhận.
+
+Hub lọc session của người trong audience (trần 50 user). App A nhận `invalidate` type `bill.deleted` kèm `group_id` + `resource_id`. Tra bảng định tuyến (mục 6): đánh thức `group.bills`, hai danh sách nhóm, `home.activities`, ... Chỉ surface **đang đăng ký** mới chạy.
+
+Gộp 250 ms: chốt một hóa đơn có thể sinh vài invalidate liên tiếp. Gộp theo **đích làm mới**, không theo loại sự kiện. Rồi `GET /groups/id` (phải có `pending_bill_count`). Vá đúng một dòng trong list đã tải trang 3. Chip "1 bill mở" biến mất, vị trí cuộn không đổi. Không gọi lại trang 1 (sẽ tụt về 20 nhóm).
 
 ### 5.3 Thu hồi phiên: đăng xuất, đổi mật khẩu, đăng nhập máy khác
 
@@ -232,16 +266,26 @@ sequenceDiagram
     participant FE as App đang mở
 
     API->>PG: BEGIN
-    API->>PG: UPDATE sessions SET revoked_at=now(), revoked_reason=...<br/>WHERE user_id=$1 AND revoked_at IS NULL<br/>RETURNING id
+    API->>PG: UPDATE sessions SET revoked_at now, revoked_reason ... WHERE user_id AND revoked_at IS NULL RETURNING id
     Note over PG: RETURNING id trả về ĐÚNG các sid vừa bị thu hồi.<br/>Điều kiện revoked_at IS NULL rất quan trọng:<br/>nó loại các phiên đã chết từ trước ra khỏi danh sách.
-    API->>PG: pg_notify('user_events', session.ended {target_sids})
+    API->>PG: pg_notify user_events session.ended target_sids
     Note over API,PG: Nhiều hơn 100 sid thì chia thành nhiều lô,<br/>vẫn nằm trong cùng transaction này
     API->>PG: COMMIT
     PG-->>Hub: session.ended
-    Hub-->>FE: event: close {reason: session_ended}
+    Hub-->>FE: event close reason session_ended
     FE->>FE: Xóa token khỏi secure storage
     FE->>FE: Điều hướng về màn đăng nhập
 ```
+
+Cách đọc:
+
+Đăng xuất, đổi/reset mật khẩu, login máy khác, admin khóa: `UPDATE sessions SET revoked_at = now() ... WHERE user_id AND revoked_at IS NULL RETURNING id`. Điều kiện `IS NULL` loại sid đã chết từ trước, không chiếm chỗ lô thông báo.
+
+`pg_notify session.ended` với `target_sids`. Hơn 100 sid thì chia lô, **vẫn trong cùng tx**. Không dùng `NormalizeAudience` (cắt trần 50): sid là UUID v7, phiên sống nằm cuối danh sách đã sort, cắt 50 sẽ **bỏ sót đúng máy đang dùng**.
+
+COMMIT → Hub → `event: close reason session_ended`. Trong spec/BE, app **nên** xóa token về login. FE hiện tại coi hầu hết `close` (trừ `max_connection_age`) là reconnect, **không** logout từ frame này. Máy bị đá chết ở REST 401 kế. Xem [`01-auth.md`](01-auth.md) mục 4.
+
+Đoạn "Cái bẫy" ngay dưới là lịch sử cắt trần 50. Đã tách `NormalizeAudience` (có cắt) và `NormalizeSIDs` (không cắt).
 
 > **Cái bẫy đã từng có ở đây**: hàm chuẩn hóa danh sách người nhận có cắt trần 50 phần tử. Nếu đem dùng luôn cho danh sách sid bị thu hồi, thì một tài khoản còn giữ hơn 50 phiên cũ sẽ bị cắt mất **đúng phiên đang sống** (vì sid là UUID v7, phiên mới nhất nằm cuối danh sách đã sắp xếp). Kết quả: đổi mật khẩu xong mà máy kia vẫn dùng được. Nay hai việc đã tách riêng: cắt trần chỉ áp cho người nhận, còn danh sách sid thì giữ nguyên và chia lô.
 
@@ -265,9 +309,17 @@ sequenceDiagram
         FE->>FE: Đặt lại bộ đếm backoff về 0
         FE->>API: Làm mới lại TOÀN BỘ màn hình đang mở
         Note over FE: Không thể biết đã bỏ lỡ sự kiện nào trong lúc đứt,<br/>nên cách duy nhất chắc chắn là đọc lại tất cả
-        FE->>FE: Chỉ khi làm mới xong hết mới coi là "dữ liệu sống"
+        FE->>FE: Chỉ khi làm mới xong hết mới coi là dữ liệu sống
     end
 ```
+
+Cách đọc:
+
+Stream đứt (mạng, proxy, server đóng). App **không** xóa trắng màn, không quay vòng vô hạn. Dữ liệu cũ vẫn hiện.
+
+Backoff: 1, 2, 4, 8, 15, 30 giây, nhân ngẫu nhiên 0.7–1.3 (jitter) để trăm máy không đập cùng một nhịp. Trong lúc chờ, user vẫn cuộn list cũ.
+
+Kết nối lại được: `event: ready` → reset bộ đếm backoff về 0 → làm mới **mọi** surface đang đăng ký. Không thể biết đã miss invalidate nào lúc đứt, cách chắc chắn duy nhất là đọc lại REST. Chỉ khi **mọi** refresh xong mới chuyển trạng thái `live`. Thất bại một surface thì đích đó còn bẩn, thử lại theo backoff (mục 9.2), không đánh dấu sống giả.
 
 ### 5.5 Access token hết hạn giữa chừng
 
@@ -287,15 +339,25 @@ sequenceDiagram
     alt REST cũng đang refresh
         SR-->>SSE: Chờ chung kết quả đó, KHÔNG gọi thêm lần nữa
     else Chưa ai refresh
-        SR->>API: POST /auth/refresh {refresh_token, device_id}
+        SR->>API: POST /auth/refresh refresh_token và device_id
         API-->>SR: Cặp token mới
     end
     SR-->>SSE: Thành công
     SSE->>API: Mở lại stream với token mới (đúng MỘT lần thử lại)
     alt Vẫn 401
-        SSE->>SR: endSession() → xóa token, về màn đăng nhập
+        SSE->>SR: endSession() xóa token, về màn đăng nhập
     end
 ```
+
+Cách đọc:
+
+Kết nối SSE sống lâu hơn access token 15 phút, nên 401 giữa chừng là bình thường.
+
+`SseTransport` gặp 401 gọi `SessionRefresher.refresh()`, **cùng** singleton REST đang dùng. Nếu interceptor cũng đang refresh: chờ chung, không gọi lần nữa. Chưa ai refresh: `POST /auth/refresh` trên Dio trần.
+
+Thành công: mở lại `GET /users/me/events` với token mới, **đúng một lần**. Vẫn 401: `endSession()` xóa token, về login. Không treo "đang kết nối".
+
+Đoạn "Vì sao phải dùng chung" ngay dưới: hai vòng rotation = reuse detection = đá phiên. Chi tiết [`01-auth.md`](01-auth.md) mục 5.3.
 
 > **Vì sao phải dùng chung một chỗ refresh**: backend có cơ chế phát hiện refresh token bị dùng lại. Nếu REST và SSE cùng lúc mỗi bên xoay một vòng refresh token, thì vòng thứ hai sẽ dùng lại token mà vòng thứ nhất vừa tiêu thụ. Backend hiểu đó là dấu hiệu gian lận và **thu hồi cả phiên**. Người dùng bị đăng xuất mà không hiểu vì sao. Xem thêm [`01-auth.md`](01-auth.md) mục 3.3.
 
@@ -363,13 +425,23 @@ flowchart TD
     B -->|"Không"| C["Làm mới cả surface<br/>(gọi refresh)"]
     B -->|"Có"| D{"Surface này có khai báo<br/>vá lẻ (patchGroup) không?"}
     D -->|"Không"| C
-    D -->|"Có"| E["Đích bẩn = (surface, groupId)"]
-    E --> F["GET /groups/{groupId}"]
+    D -->|"Có"| E["Đích bẩn là surface kèm groupId"]
+    E --> F["GET /groups/groupId"]
     F --> G{"Nhóm đó còn<br/>trong danh sách?"}
     G -->|"Không"| H["Bỏ qua, không làm gì"]
     G -->|"Có"| I["Thay đúng một dòng tại chỗ"]
     I --> J["Vị trí không đổi, cuộn không đổi,<br/>các trang đã tải vẫn còn"]
 ```
+
+Cách đọc:
+
+List nhóm cuộn vô hạn, đã tải trang 3 (60 nhóm). Invalidate mà gọi lại trang 1 thì list tụt 20 dòng, cuộn về đầu.
+
+Có `group_id` **và** surface khai báo `patchGroup`: đích bẩn = (surface, groupId), `GET /groups/id`, nếu nhóm **còn trong list** thì thay đúng một dòng. Thứ tự list theo `created_at` (không đổi vì hoạt động) nên không cần chuyển vị trí. Nhóm không còn (đã rời) → bỏ qua, không chèn dòng lạ.
+
+Không `group_id`, hoặc surface không vá lẻ được → refresh cả surface. `ready`, tràn 256 đích, user kéo tay: vẫn làm mới toàn bộ nhưng **giữ số trang đã tải**, neo đuôi theo id.
+
+Chỉ gắn `groupId` vào đích bẩn khi surface thật sự vá được. Gắn vô điều kiện: hai nhóm đổi cùng lúc sinh hai đích, hai lần GET y hệt.
 
 Nhờ vậy **mọi nhóm đã tải đều sống**, không riêng 20 nhóm đầu. Và vì thứ tự danh sách là theo `created_at` (không đổi theo hoạt động), nên vá tại chỗ luôn đúng: dòng đó không bao giờ cần chuyển vị trí.
 
@@ -392,7 +464,7 @@ Riêng khi làm mới toàn bộ, app vẫn **giữ nguyên số trang đã tả
 flowchart TD
     A["App khởi động / đăng nhập xong"] --> B{"Đã đăng nhập?"}
     B -->|"Chưa"| Z["Không mở kết nối nào"]
-    B -->|"Rồi"| C{"REALTIME_MODE = legacy?"}
+    B -->|"Rồi"|     C{"REALTIME_MODE legacy?"}
     C -->|"Đúng"| Y["Dùng cơ chế SSE cũ theo từng nhóm/hóa đơn"]
     C -->|"Không"| D{"App đang chạy nền?"}
     D -->|"Đang nền"| E["Hoãn, chờ app quay lại"]
@@ -417,6 +489,21 @@ flowchart TD
     M -->|"close: session_ended"| J
     M -->|"close: khác"| L
 ```
+
+Cách đọc:
+
+Vòng đời kết nối phía Flutter, đọc từ trên.
+
+Chưa login: không mở gì. `REALTIME_MODE=legacy`: luôn SSE cũ từng nhóm/hóa đơn. App nền: hoãn, không mở kết nối mới (iOS/Android cắt). Mở lại app thì connect + resync.
+
+Mở `GET /users/me/events`:
+- 200 + `ready` → trạng thái `resyncing` (làm mới mọi surface) → `live`.
+- 401 sau một lần refresh → `endSession`, login.
+- 404/501 **và chưa từng ready**: lùi legacy. Đã từng ready rồi 503: **ở lại** kênh mới, backoff. Một lỗi thoáng qua không được đẩy app xuống đường cũ rồi ở lì.
+- 429: chờ đúng `Retry-After`, jitter **chỉ cộng thêm**, không trừ (trừ sẽ thử sớm, ăn thêm 429).
+- 503 / timeout / đứt: backoff 1..30s.
+
+Đang `live`: `invalidate` → bẩn → gộp 250ms → REST. `roster` áp delta thẳng. `heartbeat` bỏ qua. `close: max_connection_age` kết nối lại **ngay**. `replaced` im. `session_ended` về login (theo diagram; implementation hiện reconnect, REST 401 mới đá). `close` khác → backoff.
 
 **Một quy tắc quan trọng ở nhánh `404/501`**: chỉ được lùi về cơ chế cũ khi **chưa từng** nhận `ready` trong phiên này. Đã từng chạy được rồi mà sau đó gặp lỗi thì đó là sự cố tạm thời, phải kiên nhẫn thử lại chứ không được đổi cơ chế. Nếu không, một lỗi thoáng qua sẽ làm app tụt về đường cũ và ở lì đó.
 

@@ -98,17 +98,17 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     U->>FE: Tên nhóm (FE min 3, max 50)
-    FE->>BE: POST /groups {name}
-    BE->>BE: Trim 1–100 rune, currency = VND
+    FE->>BE: POST /groups (name)
+    BE->>BE: Trim 1-100 rune, currency VND
     Note over DB: 1 tx: INSERT groups + group_members(captain) + activity group_created
-    BE-->>FE: 201 {group, membership}
+    BE-->>FE: 201 group, membership
     FE->>U: Push AddMembersPage
 
     U->>FE: Mời bằng liên kết
     FE->>FE: resolveGroupInvite: GET /invites TRƯỚC — chỉ POST khi chưa có available
     alt Caller Captain và body có expiry / max_uses / regenerate
         BE->>BE: Presence-first 403 nếu không phải Captain, rồi mới decode
-        opt regenerate = true
+        opt regenerate true
             BE->>DB: Revoke mọi invite available rồi tạo mới
         end
     else Member thường, body rỗng
@@ -116,10 +116,20 @@ sequenceDiagram
     end
     alt Collision code 23505
         BE->>DB: Retry tối đa 5 lần, mỗi lần transaction mới
-        Note over BE: Hết 5 lần → 500 INTERNAL_ERROR (không phải INVITE_CODE_COLLISION)
+        Note over BE: Hết 5 lần ra 500 INTERNAL_ERROR (không phải INVITE_CODE_COLLISION)
     end
-    BE-->>FE: 200 {invite_url}
+    BE-->>FE: 200 invite_url
 ```
+
+Cách đọc:
+
+Tạo nhóm và lấy mã mời là hai API. `POST /groups` trong một transaction: INSERT nhóm, INSERT caller là Captain, ghi activity `group_created`. App nhận `201` rồi **push** `AddMembersPage`, không ở lại list.
+
+Trên trang mời, `resolveGroupInvite` **GET** danh sách invite trước. Đã có mã `available` thì tái sử dụng, tránh spam mã rác mỗi lần bấm chia sẻ. Chỉ POST tạo mới khi chưa có mã sống, hoặc Captain gửi `regenerate true`.
+
+Quyền theo **sự có mặt của field**, không theo "ai bấm nút": body có `expires_in_hours` / `max_uses` / `regenerate` thì phải là Captain (403 trước khi decode). Body rỗng thì member thường cũng xin được mã đang có, nhưng không chỉnh hạn hay số lượt.
+
+`max_uses` để trống (NULL) nghĩa là không giới hạn, không phải mặc định 50. Code Base62 8 ký tự phân biệt hoa thường. Trùng unique `code` thì thử tối đa 5 transaction mới. Hết 5 lần ra `500 INTERNAL_ERROR`, không có mã public `INVITE_CODE_COLLISION`. URL trả về lấy từ `APP_INVITE_BASE_URL` + code (mặc định `/join/{code}`).
 
 Access log **che** path `/api/v1/groups/invites/{code}`. Activity chỉ ghi `invite_id`, không ghi code.
 
@@ -136,38 +146,50 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     U->>FE: Dán link / camera / ảnh gallery
-    FE->>FE: extractInviteCode = segment cuối. KHÔNG lower-case. Phải đúng 8 Base62
-    FE->>BE: GET /groups/invites/{code}  [RL kép]
+    FE->>FE: extractInviteCode là segment cuối. Không lower-case. Phải đúng 8 Base62
+    FE->>BE: GET /groups/invites/code (rate limit kép)
     alt Mọi lý do chết
         BE-->>FE: 404 INVITE_NOT_FOUND
         FE-->>U: Liên kết không hợp lệ
     else OK
-        BE-->>FE: 200 {preview: group_name, active_member_count, captain_display_name}
+        BE-->>FE: 200 preview group_name, active_member_count, captain_display_name
         FE-->>U: Sheet xác nhận
     end
     U->>FE: Xác nhận
     Note over FE: Sheet pop preview entity. GroupsPage mới POST join
-    FE->>BE: POST /groups/join {code}  [RL kép]
+    FE->>BE: POST /groups/join (code), rate limit kép
     BE->>BE: Resolve invite ngoài tx (fail fast)
     BE->>DB: LOCK groups FOR UPDATE
     alt Caller đã là member active
         Note over BE: Kiểm tra TRƯỚC invite/capacity. Không tăng use_count
-        BE-->>FE: 200 {join: result=already_active}
+        BE-->>FE: 200 join result already_active
     else Invite không available
         BE-->>FE: 404 INVITE_NOT_FOUND
     else Đủ 50
         BE-->>FE: 409 GROUP_MEMBER_LIMIT_REACHED
     else Từng rời (row inactive)
-        BE->>DB: RE-ACTIVATE, role=member, joined_at=now, giữ member_id
+        BE->>DB: RE-ACTIVATE, role member, joined_at now, giữ member_id
         BE->>DB: Activity member_reactivated
-        BE-->>FE: 200 {join: result=reactivated}
+        BE-->>FE: 200 join result reactivated
     else Mới hoàn toàn
-        BE->>DB: INSERT + use_count += 1 + activity member_joined
-        BE-->>FE: 200 {join: result=joined}
+        BE->>DB: INSERT, use_count cong 1, activity member_joined
+        BE-->>FE: 200 join result joined
     end
     FE->>FE: refresh() danh sách + SnackBar
     Note over FE: Không push GroupDetail. User tự bấm vào nhóm
 ```
+
+Cách đọc:
+
+Hai bước cố ý tách. Preview (`GET /groups/invites/code`) chỉ trả tên nhóm, số member, tên Captain. Join (`POST /groups/join`) mới đổi dữ liệu. Sheet xác nhận **pop** entity về `GroupsPage`, chính page đó mới gọi join. Comment cũ "sheet cũng POST join" là sai.
+
+Mọi invite chết (sai format, hết hạn, bị thu hồi, hết lượt, nhóm archive) cùng `404 INVITE_NOT_FOUND`. Không tiết lộ lý do, kẻ đoán mã không biết mã từng tồn tại.
+
+Sau khi xác nhận, backend `LOCK groups FOR UPDATE` rồi mới xét. Thứ tự trong hình quan trọng: **đã là member active thì 200 ngay**, không kiểm tra invite, không tăng `use_count`. Không thì Captain bấm lại link của chính nhóm mình có thể bị 404 vì mã đã hết lượt.
+
+Trần 50 đếm dưới khóa hàng: hai người bấm cùng lúc khi còn 1 chỗ, chỉ một người thắng. Người từng rời nhóm được **reactivate** hàng cũ (`UNIQUE group_id, user_id`), giữ `member_id` để hóa đơn/nợ không đứt, role reset về `member`.
+
+Join xong chỉ `refresh()` list + SnackBar. **Không** tự mở Group Detail.
 
 Limiter kép: mỗi lần preview/join tăng **cả** `account:<uid>` và `ip:<TCP IP>` (không đọc `X-Forwarded-For`). Vượt → `429` + `Retry-After` đến phút epoch kế.
 
@@ -182,9 +204,9 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     opt Guard FE
-        FE->>FE: myBalance ≠ 0 → chặn "còn công nợ", không gọi API
+        FE->>FE: myBalance khác 0 thì chặn còn công nợ, không gọi API
     end
-    FE->>BE: DELETE /groups/{id}/members/{membershipId}
+    FE->>BE: DELETE /groups/id/members/membershipId
     BE->>DB: Lock group
     BE->>BE: Authorization TRƯỚC khi lộ trạng thái target
     alt Không phải self và không phải Captain
@@ -195,13 +217,25 @@ sequenceDiagram
     else Target đã inactive
         BE-->>FE: 204 (idempotent, không ghi activity)
     else Còn nợ 2 chiều (status NOT IN settled/voided)
-        BE-->>FE: 409 GROUP_MEMBER_HAS_OPEN_DEBTS {payable_amount, receivable_amount}
+        BE-->>FE: 409 GROUP_MEMBER_HAS_OPEN_DEBTS kèm payable_amount, receivable_amount
         FE-->>U: Dialog kèm số tiền
     else OK
         BE->>DB: inactive + left_at + activity member_left hoặc member_removed
         BE-->>FE: 204
     end
 ```
+
+Cách đọc:
+
+`memberId` trên URL là **UUID membership**, không phải user id.
+
+**Anti-oracle:** kiểm tra caller là chính target hoặc Captain **trước** khi nói target đang inactive hay còn nợ. Member thường xóa người khác, hoặc đoán UUID không tồn tại, đều `403 FORBIDDEN`. Nếu trả 404 khi target không có, kẻ đoán được ai còn trong nhóm.
+
+Captain active không tự rời cũng không bị xóa (`409 CAPTAIN_TRANSFER_REQUIRED`). Phải chuyển quyền trước. Target đã inactive rồi thì `204` im lặng, không ghi activity trùng.
+
+Nợ mở là **hai chiều**: mình nợ người khác (`payable`) và người khác nợ mình (`receivable`), status không thuộc `settled`/`voided`. 409 kèm đúng số tiền để UI hiện dialog.
+
+Guard FE `myBalance khác 0` chỉ chặn sớm. Captain số dư 0 vẫn gọi API và ăn 409 chuyển quyền. BE là nguồn sự thật.
 
 Guard FE chỉ nhìn `myBalance`. Captain còn số dư 0 vẫn gọi API và ăn 409 `CAPTAIN_TRANSFER_REQUIRED`. BE là nguồn sự thật.
 
@@ -216,24 +250,34 @@ sequenceDiagram
     participant BE as Group API
     participant DB as PostgreSQL
 
-    C->>BE: PUT /groups/{id}/members/{targetId}/role {role: captain}
+    C->>BE: PUT /groups/id/members/targetId/role captain
     BE->>DB: LOCK groups FOR UPDATE NOWAIT
     alt 55P03 đang có người giữ khóa
         BE-->>C: 409 CAPTAIN_TRANSFER_CONFLICT
     end
     alt Caller không phải Captain
         BE-->>C: 403 CAPTAIN_REQUIRED
-    else target = chính mình
+    else target là chính mình
         BE-->>C: 400 VALIDATION_FAILED
         Note over BE: Check ở repository, không phải service
     else Target không active
         BE-->>C: 404 MEMBER_NOT_FOUND
     else OK
         Note over DB: Lock 2 membership theo UUID tăng dần — chống deadlock khi 2 nhóm chuyển chéo
-        BE->>DB: Demote cũ → promote mới → activity captain_transferred
-        BE-->>C: 200 {group}
+        BE->>DB: Demote cũ rồi promote mới, activity captain_transferred
+        BE-->>C: 200 group
     end
 ```
+
+Cách đọc:
+
+Body chỉ nhận `{role: captain}`. Không có API "tự giáng cấp thành member".
+
+`FOR UPDATE NOWAIT` trên hàng nhóm: đang có mutation khác giữ khóa thì SQLSTATE `55P03`, trả `409 CAPTAIN_TRANSFER_CONFLICT` ngay. Không xếp hàng chờ, tránh timeout 15 giây rồi 500 khó hiểu.
+
+Hai membership (Captain cũ và người được chọn) được khóa theo **UUID tăng dần**. Nếu nhóm A chuyển Captain cho user X đồng thời nhóm B chuyển cho user Y, mà X và Y là membership chéo, khóa không theo thứ tự cố định sẽ deadlock. Check "chuyển cho chính mình" nằm ở **repository**, ra `400 VALIDATION_FAILED`.
+
+Non-captain → `403 CAPTAIN_REQUIRED`. Target không active → `404 MEMBER_NOT_FOUND`. Thành công: demote cũ, promote mới, activity `captain_transferred` trong cùng tx.
 
 ### 4.5 Giải tán
 
@@ -244,19 +288,29 @@ sequenceDiagram
     participant BE as Group API
     participant DB as PostgreSQL
 
-    C->>BE: DELETE /groups/{id}
+    C->>BE: DELETE /groups/id
     BE->>DB: Lock group, verify Captain
     alt Batch finalize-all queued/processing
-        BE-->>C: 409 BULK_FINALIZE_IN_PROGRESS {active_batch_id}
+        BE-->>C: 409 BULK_FINALIZE_IN_PROGRESS kèm active_batch_id
     else Còn bill chưa xong HOẶC nợ mở
-        BE-->>C: 409 GROUP_HAS_UNSETTLED_OBLIGATIONS {draft_or_reviewed_bill_count, open_debt_count}
+        BE-->>C: 409 GROUP_HAS_UNSETTLED_OBLIGATIONS kèm số bill và số nợ
         Note over BE: Count bill là mọi status chưa finalized/voided, không chỉ draft/reviewed
     else OK
         Note over DB: Deactivate members + revoke invites + archived + activity group_archived
         BE-->>C: 204
-        FE-->>U: Pop về danh sách
+        C->>C: Pop về danh sách
     end
 ```
+
+Cách đọc:
+
+Giải tán là `DELETE /groups/id` nhưng dữ liệu **không xóa cứng**. Status nhóm thành `archived`, member inactive, invite bị revoke, activity `group_archived`. Lần GET detail sau ra `404 GROUP_NOT_FOUND` (anti-enumeration: archived trông giống không tồn tại).
+
+Hai cửa chặn trước khi archive:
+- Batch finalize-all đang `queued`/`processing` → `409 BULK_FINALIZE_IN_PROGRESS` kèm `active_batch_id` để Captain theo dõi, đừng giải tán giữa chừng.
+- Còn bill chưa `finalized`/`voided` **hoặc** còn nợ mở → `409 GROUP_HAS_UNSETTLED_OBLIGATIONS` kèm số lượng. Tên field `draft_or_reviewed_bill_count` hơi hẹp: count là mọi bill chưa xong, không chỉ draft/reviewed.
+
+204 thì app pop về danh sách nhóm.
 
 Lịch sử không xóa. Nhóm archived: detail → `GROUP_NOT_FOUND`.
 
@@ -304,7 +358,7 @@ flowchart TD
     E -->|"Không quét được"| C
     C --> J{"Code 8 ký tự Base62?"}
     J -->|"Không"| C
-    J -->|"Có"| I["GET /groups/invites/{code}"]
+    J -->|"Có"| I["GET /groups/invites/code"]
     I --> K{"Invite sống?"}
     K -->|"Mọi chết → 404"| L["SnackBar liên kết không hợp lệ"] --> A
     K -->|"OK"| M["Sheet: tên nhóm, số member, Captain"]
@@ -315,6 +369,14 @@ flowchart TD
     O -->|"Lỗi khác"| R["SnackBar"] --> A
     P --> A
 ```
+
+Cách đọc:
+
+Hai cửa vào, một điểm hội tụ. Nhập link lấy **segment cuối** của URL (nhận cả `/j/code` và `/join/code`). Quét QR: camera sống (`mobile_scanner`) hoặc ảnh gallery (`zxing2`). Decode lỗi tách NotFound / Format / Checksum / ảnh hỏng để hiện đúng câu. Không quét được thì quay lại sheet dán link.
+
+Code phải đúng 8 ký tự Base62, **không** lower-case. Sai hoa thường là mã khác, 404.
+
+Mọi invite chết cùng 404, SnackBar "liên kết không hợp lệ". Preview OK thì sheet tên nhóm / số member / Captain. Xác nhận xong `GroupsPage` mới POST join. `already_active`, `joined`, `reactivated` đều chỉ refresh list + SnackBar. User tự bấm vào nhóm. Trần 50 hiện câu riêng.
 
 ### 6.2 Cài đặt nhóm
 
@@ -335,6 +397,16 @@ flowchart TD
     F1 -->|"Có"| F2["Chặn UI"]
     F1 -->|"Không"| F3["DELETE members/me — Captain vẫn 409 TRANSFER_REQUIRED"]
 ```
+
+Cách đọc:
+
+Sheet cài đặt là nơi Captain (và member với "Rời") gọi API thật. Không còn mock.
+
+Đổi tên: `PATCH` chỉ trả `{group}`, thiếu `memberCount` / `myBalance`. App **merge** giữ số cũ. Đừng dùng hàm merge này để vá realtime (hàm đó cố ý giữ `pendingBillCount` lúc đổi tên). Vá số bill mở phải hàm khác, xem [`08-realtime.md`](08-realtime.md).
+
+Khóa nộp / mở lại / finalize-all là route module bill trên prefix `/groups`. `markGroupClosedLocally` chỉ cache sau HTTP 200, không phải chỗ khóa. Unlock **có** trong V hiện tại.
+
+Rời: UI chặn `myBalance khác 0`. Captain số dư 0 vẫn 409 chuyển quyền. Giải tán 409 thì hiện số liệu BE trả, không pop.
 
 `markGroupClosedLocally` chỉ là **cache sau 200**, không phải chỗ khóa. Comment cũ "khóa một chiều V1" trong provider **stale**.
 
