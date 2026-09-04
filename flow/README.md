@@ -1,8 +1,8 @@
 # PaySplit — Tài liệu Luồng hoạt động (Flows)
 
-Thư mục này mô tả **luồng hoạt động end-to-end** của từng module/màn hình trong hệ sinh thái PaySplit, bao gồm cả Backend (Go) và Frontend (Flutter), kèm **Sequence Diagram** và **Activity Diagram** (Mermaid) và mục **Edge Cases** chi tiết cho mỗi luồng.
+Thư mục này mô tả **luồng hoạt động end-to-end** của từng module/màn hình trong hệ sinh thái PaySplit, bao gồm cả Backend (Go) và Frontend (Flutter). Mỗi file mở bằng **vấn đề và ý tưởng**, rồi bảng tổng quan, sequence/activity (Mermaid), edge cases, ghi chú chỗ dễ làm sai, và trạng thái hiện tại — cùng giọng với [`08-realtime.md`](08-realtime.md).
 
-> Nguồn tham chiếu: mã nguồn thực tế tại `PaySplit-BE/` và `PaySplit-FE/`. Mỗi điểm quan trọng đều ghi kèm đường dẫn file để đối chiếu.
+> Nguồn tham chiếu: mã nguồn thực tế tại `PaySplit-BE/` và `PaySplit-FE/` tại thời điểm viết. Chỗ lệch với OpenAPI hay comment cũ trong code được ghi rõ, không lấy tài liệu cũ làm nguồn sự thật.
 
 ---
 
@@ -10,14 +10,14 @@ Thư mục này mô tả **luồng hoạt động end-to-end** của từng modu
 
 | # | File | Phạm vi | Nội dung chính |
 |---|------|---------|----------------|
-| 01 | [`01-auth.md`](01-auth.md) | Module Auth (`/auth`, `/users`) + màn hình Welcome / Register / Verify OTP / Login / Forgot & Reset Password / Profile | Đăng ký, kích hoạt OTP, đăng nhập, phiên đơn (single session), refresh rotation + reuse detection, quên/đổi mật khẩu, avatar, bank profile |
-| 02 | [`02-group.md`](02-group.md) | Module Group (`/groups`) + màn hình Groups / Scan QR / Join by Link / Create Group / Add Members / Group Detail Hub | Tạo nhóm, mời (link/QR), preview + join, rời/xóa thành viên, chuyển Captain, giải tán nhóm, activity timeline |
-| 03 | [`03-bill.md`](03-bill.md) | Module Bill (`/bills`, group close) + màn hình Bill Capture / Bill Detail | Tạo hóa đơn thủ công & quét OCR, worker OCR + SSE, chia tiền (floor allocation), review → finalize → void, khóa nộp bill, finalize hàng loạt |
-| 04 | [`04-settlement.md`](04-settlement.md) | Module Settlement (`/groups/{id}/...`) + màn hình Settlement (4 tab) / VietQR Sheet / Proof Review | Công nợ, tạo Dynamic VietQR, nộp biên lai, xác nhận/từ chối, nhắc nợ thủ công & tự động, idempotency |
-| 05 | [`05-notification.md`](05-notification.md) | Module Notification (`/notifications`) + Push Notification (FCM) + màn hình Notifications | In-app notification, FCM push worker, token registration (`FCMTokenManager`), push listener (`PushNotificationHandler`), điều hướng thông minh (`NotificationRouteResolver`) |
-| 06 | [`06-admin.md`](06-admin.md) | Module Admin (`/admin`) + Web Admin Portal (`/admin-portal/`) | Web Admin Portal nhúng tĩnh (`//go:embed`), 4 biểu đồ Visual Analytics Live, quản lý tài khoản & thu hồi phiên tức thì, cảnh báo nghĩa vụ tài chính, đo độ trễ probes, xoay vòng token |
-| 07 | [`07-app-startup-network.md`](07-app-startup-network.md) | Bootstrap, Splash, GoRouter guards, Dio/AuthInterceptor | Khởi động app, kiểm tra phiên, redirect logic, refresh token single-flight khi 401, xử lý offline |
-| 08 | [`08-serverless-runtime-and-realtime-sync.md`](08-serverless-runtime-and-realtime-sync.md) | Vercel Serverless Function, Supabase Supavisor, Durable Queue `app_jobs`, Realtime Broadcast ES256 & Fallback Polling | Kiến trúc Serverless, Single Active Wave Dispatcher, Batch Drain 45s qua pg_net, cấp token ES256 JWT, RLS private broadcast channel, consolidated polling /sync/versions |
+| 01 | [`01-auth.md`](01-auth.md) | Module Auth (`/auth`, `/users`) + màn hình Welcome / Register / Verify OTP / Login / Forgot & Reset Password / Profile | Một người một phiên, cửa khóa trước bcrypt, OTP chống enumeration, refresh dùng chung với SSE (`SessionRefresher`), quên/đổi mật khẩu khác phạm vi đá phiên, avatar, bank |
+| 02 | [`02-group.md`](02-group.md) | Module Group (`/groups`) + màn hình Groups / Scan QR / Join by Link / Create Group / Add Members / Group Detail Hub | Anti-enumeration, khóa hàng nhóm, invite Base62, camera QR thật, 4 tab API thật, khóa/mở nộp bill, realtime user stream + vá list tại chỗ |
+| 03 | [`03-bill.md`](03-bill.md) | Module Bill (`/bills`, group close) + màn hình Bill Capture / Bill Detail | Chia tiền largest remainder (không dồn creditor), OCR 202 + `ocr.updated`, khóa `version`, review `BILL_NOT_READY`, khóa/mở nộp bill, finalize-all |
+| 04 | [`04-settlement.md`](04-settlement.md) | Module Settlement (`/groups/{id}/...`) + màn hình Settlement (4 tab) / VietQR Sheet / Proof Review | QR không giữ nợ, snapshot bank lúc nộp proof, idempotency `IDEMPOTENCY_KEY_REUSED`, nhắc nợ 24h × 3, job 72h/48h |
+| 05 | [`05-notification.md`](05-notification.md) | Module Notification (`/notifications`) + Push Notification (FCM) + màn hình Notifications | Insert+enqueue trong tx nghiệp vụ, FCM phụ in-app chính, resolver type-first (ưu tiên Group Detail), foreground SnackBar |
+| 06 | [`06-admin.md`](06-admin.md) | Module Admin (`/admin`) + Web Admin Portal (`/admin-portal/`) | Nhúng tĩnh `//go:embed`, khóa tài khoản = thu hồi sid trong cùng tx, mask STK, warning công nợ, probe `/health*`. Auto-refresh portal đang gãy (thiếu `device_id`) |
+| 07 | [`07-app-startup-network.md`](07-app-startup-network.md) | Bootstrap, Splash, GoRouter guards, Dio/`SessionRefresher` | Splash chỉ animation, một redirect, REST và SSE 401 đi chung một cửa refresh, logout gọi `POST /auth/sign-out` |
+| 08 | [`08-realtime.md`](08-realtime.md) | Kênh sự kiện realtime dùng chung (`GET /users/me/events`) + ba kênh PostgreSQL `LISTEN/NOTIFY` ↔ mọi màn hình có dữ liệu sống | Một kết nối SSE cho mỗi phiên, invalidation nhỏ (chỉ báo tin, không chở dữ liệu), `pg_notify` trong transaction, thay thế kết nối theo thứ tự commit, sổ đăng ký mối quan tâm phía Flutter, vá danh sách tại chỗ, gộp 250ms, backoff và hàn dữ liệu sau `ready` |
 
 ### Nguồn tham chiếu gốc (báo cáo explore nguyên văn)
 
@@ -70,18 +70,20 @@ Các worker: `send_notification`, `bill_ocr`, `bill_bulk_finalize_item`, `settle
 
 `RIVER_POLL_ONLY` mặc định `false` (River vẫn giữ notifier `LISTEN`). Khi bật `true`, River không giữ session `LISTEN`; job mới được tìm bằng polling (`RIVER_FETCH_POLL_INTERVAL_MS`, mặc định 1s). Enqueue của thư viện vẫn có thể gửi `NOTIFY`. Rollback: đặt lại `false` rồi restart process, không cần migration. Chi tiết: spec [0010](../docs/specs/0010-connection-efficient-events/index.md).
 
-### 5. Shared PostgreSQL listener (Bill SSE + Group SSE)
-Mỗi backend instance giữ **một** connection `LISTEN bill_events` và `LISTEN group_events` (`internal/platform/database/notification_listener.go`), không còn hai vòng `StartPostgresListener` trên Hub. Hub chỉ decode, validate envelope, rồi publish vào subscriber local (Bill buffer 16, Group buffer 32).
+### 5. Shared PostgreSQL listener (Bill SSE + Group SSE + User stream)
+Mỗi backend instance giữ **một** connection `LISTEN` cho cả ba channel `bill_events`, `group_events`, `user_events` (`internal/platform/database/notification_listener.go`), không còn vòng `StartPostgresListener` riêng trên từng Hub. Hub chỉ decode, validate envelope, rồi publish vào subscriber local (Bill buffer 16, Group buffer 32, User buffer 64).
 
-- `/health/ready` chỉ `200` khi listener đã đăng ký đủ hai channel; mất connection → `503 degraded`, reconnect backoff, rồi mới healthy lại.
-- Khi listener đứt, server **đóng mọi SSE local**. Client Bill mở lại stream để lấy `snapshot`. Client Group dùng version fencing và `GET /groups/{id}/sync`.
+Kênh `user_events` là nền của **một kết nối SSE duy nhất cho mỗi phiên đăng nhập** — chi tiết đầy đủ ở [`08-realtime.md`](08-realtime.md).
+
+- `/health/ready` chỉ `200` khi listener đã đăng ký đủ cả ba channel; mất connection → `503 degraded`, reconnect backoff, rồi mới healthy lại.
+- Khi listener đứt, server **đóng mọi SSE local**. App mặc định đang ở user stream: kết nối lại `GET /users/me/events`, `ready` hàn dữ liệu (xem 08). `REALTIME_MODE=legacy`: Bill mở lại `/bills/{id}/events` lấy `snapshot`; Group dùng version fencing và `GET /groups/{id}/sync`.
 - Tắt process: đóng SSE trước, rồi HTTP, River, `UNLISTEN *`, rồi pool.
 
 ### 6. Edge case xuyên suốt (mọi màn hình)
 
 | Tình huống | Xử lý |
 |---|---|
-| Access token hết hạn (15 phút) | FE Mobile (`AuthInterceptor`) và Web Admin (`tryRefreshToken`) bắt `401` → refresh single-flight → retry request tự động |
+| Access token hết hạn (15 phút) | FE Mobile: `AuthInterceptor` + `SessionRefresher` single-flight (REST và SSE dùng chung). Web Admin `tryRefreshToken` **thiếu `device_id`** nên không xoay được — xem 06-admin |
 | Refresh token bị tái sử dụng | BE coi là gian lận → revoke toàn bộ session + token, `SESSION_REVOKED` → xóa token cục bộ, điều hướng về đăng nhập |
 | Mất mạng / timeout | FE map `connectionError/timeout` → `NetworkFailure` "Không thể kết nối tới máy chủ" |
 | Server lỗi 5xx | FE → `ServerFailure`, hiển thị SnackBar/banner kèm nút retry (tùy màn) |
@@ -94,6 +96,6 @@ Mỗi backend instance giữ **một** connection `LISTEN bill_events` và `LIST
 | Hạng mục | Trạng thái triển khai | Chi tiết |
 |---|:---:|---|
 | Push Notification (FCM) | ✅ **Đã hoàn thành** | Đã tích hợp trọn vẹn cả BE (River worker) và FE Mobile (`fcm_token_manager`, `push_notification_handler`, `notification_route_resolver`) |
-| Web Admin Portal | ✅ **Đã hoàn thành** | Đã tích hợp web app nhúng tĩnh tại `/admin-portal/` kèm visual charts, live probes, token auto-refresh |
-| Deep Link / App Link | ⚠️ *Đang phát triển* | Lời mời dạng link hiện dán tay; QR scanner hỗ trợ chọn ảnh từ gallery decode `zxing2` (xem 02-group) |
-| Logout Revocation API | ⚠️ *Đang hoàn thiện* | FE Mobile đang gọi clear local storage; khuyến nghị gọi `POST /api/v1/auth/sign-out` để thu hồi tức thời session phía BE |
+| Web Admin Portal | ✅ **Đã hoàn thành** | Nhúng tĩnh `/admin-portal/` kèm chart và probe `/health*`. Auto-refresh token portal đang gãy (thiếu `device_id`, xem 06-admin) |
+| Deep Link / App Link | ⚠️ *Đang phát triển* | Lời mời dán tay; QR camera + gallery `zxing2` (xem 02-group). Manifest chưa có App Link |
+| Logout Revocation API | ✅ **Đã hoàn thành** | FE gọi `POST /api/v1/auth/sign-out` (TokenAuth), nuốt lỗi mạng, rồi FCM logout + xóa local (xem 01-auth, 07) |

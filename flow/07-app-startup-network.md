@@ -1,221 +1,317 @@
-# 07 — App Startup, Routing Guards & Network Layer (FE)
+# 07 — Khởi động app: ai được vào đâu, và 401 đi chung một cửa refresh
 
-> **Phạm vi**: `bootstrap.dart`, Splash, GoRouter (redirect guards), Dio + `AuthInterceptor`, error mapping — lớp nền quyết định "ai được vào đâu" và "hết token thì sao".
+> **Phạm vi**: `bootstrap.dart`, Splash, GoRouter redirect, Dio + `AuthInterceptor` + `SessionRefresher`, map lỗi — lớp nền của mọi màn hình.
 >
-> Code tham chiếu chính: `PaySplit-FE/lib/bootstrap.dart`, `lib/app/router/**`, `lib/core/network/**`, `lib/features/splash/**`, `lib/features/auth/presentation/providers/auth_controller.dart`.
+> Code tham chiếu chính: `PaySplit-FE/lib/bootstrap.dart`, `lib/app/router/**`, `lib/app/app.dart`, `lib/core/network/**`, `lib/features/splash/**`, `lib/features/auth/presentation/providers/auth_controller.dart`.
+>
+> Đọc cùng: [`01-auth.md`](01-auth.md) mục 5.3 (rotation), [`08-realtime.md`](08-realtime.md) mục 5.5 (SSE dùng cùng refresher), [`05-notification.md`](05-notification.md) (Firebase trước EnvConfig).
 
 ---
 
-## 1. Tổng quan
+## 1. Vấn đề, và ý tưởng để giải quyết
 
-| Thành phần | Vai trò |
+### 1.1 Splash không được chứa điều hướng
+
+Animation 2.5 giây và "đã có user chưa" là hai việc. Nhét redirect vào SplashPage thì mỗi flavor, mỗi deep link sau này phải copy. 
+
+> Splash **chỉ vẽ**. `AuthController.build()` hỏi `/users/me` **song song** với delay 2500ms. GoRouter **một** hàm redirect nghe `authState`. Hết.
+
+### 1.2 Mọi 401 phải đi một cửa
+
+Interceptor REST và SSE cùng hết hạn cùng lúc. Hai lần `POST /auth/refresh` = reuse detection = mất phiên. Xem [`01-auth.md`](01-auth.md).
+
+> Một `@lazySingleton SessionRefresher` với `_inFlight`. Interceptor **không** còn field `_refreshing`. SSE gọi cùng `refresh()`. Fail → `endSession()` → `SessionEvents.notifyExpired` → `AuthController = null` → redirect `/welcome` **ngay**, không chờ lần build sau.
+
+### 1.3 Không có token vẫn gọi `/users/me`
+
+`getCurrentUser` **không** short-circuit. Storage trống → request không Bearer → 401 → refresh fail (không có refresh) → `endSession` → user null. Một đường, không nhánh "nếu trống thì skip".
+
+---
+
+## 2. Bảng tổng quan
+
+| Thành phần | Việc |
 |---|---|
-| `bootstrap()` | `ensureInitialized` → `EnvConfig.init(flavor, apiBaseUrl)` → `configureDependencies()` (get_it/injectable) → `ProviderScope(App())`. **Không check token ở đây** |
-| SplashPage | **Chỉ là animation** (glow/shimmer) — mọi logic điều hướng nằm ở router redirect + `AuthController.build()` |
-| `AuthController.build()` | Chạy song song: `GetCurrentUserUseCase` (GET `/users/me` với token trong secure storage) **và** delay 2.5s (giữ splash đủ lâu). Kết quả: `UserEntity?` |
-| Global redirect | Quyết định duy nhất điều hướng splash ↔ auth ↔ home |
-| `AuthInterceptor` | Gắn Bearer; khi 401 → refresh single-flight → retry 1 lần; fail → clear token |
+| `bootstrap()` | Binding → (dev/staging) TLS override → **Firebase + background FCM** → `EnvConfig.init(flavor, apiBaseUrl, appName, realtimeMode)` → GetIt → `ProviderScope` (override `realtimeSignedInProvider`) |
+| SplashPage | Animation glow/shimmer. **Không** check token, **không** `context.go` |
+| `AuthController.build()` | Subscribe `SessionEvents.onExpired`; `Future.wait([GetCurrentUser, delay 2500])`; **mọi** failure → `null` (Welcome), không kẹt splash |
+| Redirect | Một hàm. `isLoading` → ở lại (thường `/splash`) |
+| `AuthInterceptor` | Gắn Bearer; 401 → `SessionRefresher.refresh()`; flag retried một lần |
+| `SessionRefresher` | Dio trần, body `{refresh_token, device_id}` path `/auth/refresh` |
+| Timeout Dio | Connect/send/receive **90s** |
+| Logger | `PrettyDioLogger` khi **không** production |
+| `NetworkInfo` | Có trong GetIt, **không feature nào gọi**. Offline = `DioException.connectionError` / timeout |
+| Device id | UUIDv4 secure storage, **sống sót** `clear()` (chỉ xóa access/refresh) |
+| Logout | `POST /auth/sign-out` (nuốt lỗi) → FCM `onLogout` → `clear()` |
+| Deep link | **Chưa có**. Manifest chỉ LAUNCHER |
 
-## 2. Bảng routing & guard
+---
 
-### Path → Page (`app_routes.dart`, `app_router.dart`)
+## 3. Flavor và URL
+
+| Entry | API mặc định | REALTIME_MODE |
+|---|---|---|
+| `main.dart` / development | `http://localhost:8080/api/v1` | dart-define `auto` |
+| staging / production | `https://paysplitbe.vercel.app/api/v1` | `auto` |
+
+Override: `--dart-define=API_BASE_URL=...` và `REALTIME_MODE=legacy|user`. Staging LAN thường `http://<IP>:8080/api/v1`.
+
+Dev/staging: `_DevHttpOverrides` chấp nhận chứng chỉ xấu (máy local). Production không.
+
+---
+
+## 4. Routing
+
+### Path
 
 | Path | Page | Vùng |
 |---|---|---|
 | `/splash` | SplashPage | ngoài shell |
-| `/welcome` | WelcomePage | ngoài shell |
-| `/login` (extra: resetSuccess) · `/register` · `/verify-otp` (extra: email) · `/forgot-password` · `/reset-password` (extra: email) | Auth pages | ngoài shell |
-| `/home` · `/groups` · `/bills`, `/settlement` (extra tab) · `/profile`, `/edit-profile`, `/bank-settings`, `/change-password` | MainNavigationShell (4 branch, giữ state từng tab) | bottom nav |
-| `/groups/:groupId` (extra GroupEntity) · `/groups/:groupId/add-members` | GroupDetail / AddMembers | full-screen |
-| `/scan-bill` (extra {groupId, groupName}) | BillCapturePage | redirect về `/bills` nếu thiếu groupId |
-| `/bill-detail` (extra BillDetailEntity hoặc Map{bill/billId/...}) | BillDetailPage (`autoStartOcr` nếu có photos, không items) | validate extra kỹ |
+| `/welcome` `/login` `/register` `/verify-otp` `/forgot-password` `/reset-password` | Auth | ngoài shell |
+| `/home` `/groups` `/bills` `/settlement` `/profile`… | MainNavigationShell 4 nhánh, giữ state | bottom nav |
+| `/groups/:groupId` | GroupDetail. Extra `GroupDetailRouteArgs` **hoặc** `GroupEntity`. Thiếu → tên `'Chi tiết nhóm'`, lastActivity `'Đang tải thông tin...'` | full-screen |
+| `/groups/:groupId/add-members` | AddMembers | |
+| `/scan-group-qr` | ScanQrJoinPage | **không có trong tài liệu cũ** |
+| `/scan-bill` | BillCapture. Thiếu `groupId` → `/bills` | |
+| `/bill-detail` | Extra entity hoặc Map; sai → `/bills` | |
 | `/notifications` | NotificationsPage | full-screen |
 
-### Guard: chỉ MỘT global redirect (không guard riêng theo route con)
+`/bills` và `/settlement` **cùng** `SettlementPage`, extra tab khác nhau.
 
-| Điều kiện tại thời điểm redirect | Hành động |
+### Guard — chỉ một redirect
+
+| Điều kiện | Hành động |
 |---|---|
-| `authState.isLoading` | `return null` — ở lại `/splash` chờ `/users/me` trả lời |
-| Chưa auth + đang ở `/splash` | → `/welcome` |
-| Chưa auth + route protected bất kỳ | → `/welcome` |
-| Đã auth + đang ở `/splash` hoặc route auth | → `/home` |
+| `authState.isLoading` | `null` — ở lại, thường splash |
+| Chưa auth + `/splash` hoặc route protected | `/welcome` |
+| Chưa auth + route auth | ở lại |
+| Đã auth + splash hoặc route auth | `/home` |
+| Đã auth + chỗ khác | ở lại |
 
-> Router lắng nghe thay đổi auth qua `_GoRouterRefreshNotifier` → mỗi lần state AuthController đổi, redirect chạy lại.
->
-> ⚠️ **Không có deep link/app link**: AndroidManifest chỉ MAIN/LAUNCHER; link mời phải dán tay.
+Route auth: welcome, login, register, verify-otp, forgot-password, reset-password.
+
+`_GoRouterRefreshNotifier` lắng `AuthController`. `endSession` set `AsyncData(null)` → redirect chạy ngay.
 
 ---
 
-## 3. Sequence Diagrams
+## 5. Sequence Diagrams
 
-### 3.1 Cold start — người dùng ĐÃ đăng nhập
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as User
-    participant FE as Flutter App
-    participant SS as Secure Storage
-    participant BE as Backend
-
-    U->>FE: Mở app (flavor dev/staging/prod)
-    FE->>FE: bootstrap: EnvConfig.init → configureDependencies → runApp
-    FE->>U: Hiện SplashPage (animation)
-    par Song song trong AuthController.build()
-        FE->>SS: Đọc access_token + refresh_token
-        alt Có token
-            FE->>BE: GET /users/me (Bearer)
-            alt Access còn hạn
-                BE-->>FE: 200 user → AsyncData(user)
-            else 401 hết hạn
-                Note over FE: AuthInterceptor refresh single-flight<br/>POST /auth/refresh → token mới → retry
-                BE-->>FE: 200 user
-            end
-        else Không có token
-            Note over FE: getCurrentUser trả null ngay (không gọi API)
-        end
-    and
-        FE->>FE: Delay 2.5s giữ splash
-    end
-    FE->>U: Router redirect → /home (MainNavigationShell)
-```
-
-### 3.2 Cold start — khách / token chết
+### 5.1 Cold start đã từng đăng nhập
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor U as User
-    participant FE as Flutter App
+    participant FE as Flutter
     participant SS as Secure Storage
     participant BE as Backend
 
     U->>FE: Mở app
-    FE->>SS: Đọc token → rỗng HOẶC GET /users/me thất bại
-    opt Token có nhưng refresh cũng fail (reuse/hết hạn)
-        FE->>SS: clear() cả 2 token (trong interceptor)
-    end
-    FE->>FE: AuthController = AsyncData(null)
-    FE->>U: Redirect → /welcome (onboarding carousel)
-    U->>FE: Arrow cuối carousel → context.push(/login)
-```
-
-### 3.3 Request lifecycle khi gặp 401 giữa phiên (single-flight refresh)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant A as Request A (401)
-    participant I as AuthInterceptor
-    participant R as Request B (401 đồng thời)
-    participant BE as POST /auth/refresh
-    participant API as API gốc
-
-    A->>I: onError(401)
-    R->>I: onError(401)
-    
-    Note over I: Kiểm tra: path ∈ skip-list?<br/>(login, register, refresh, forgot/reset-password,<br/>verify-email, resend-verification) → KHÔNG refresh
-    I->>I: _retriedFlag? đã retry rồi → không loop vô hạn
-    
-    par Single-flight
-        A->>BE: _refreshing future (lần đầu tạo)
+    FE->>FE: Firebase + FCM background handler
+    FE->>FE: EnvConfig (kèm REALTIME_MODE) → DI → runApp
+    FE->>U: Splash animation
+    par AuthController.build
+        FE->>SS: đọc token
+        FE->>BE: GET /users/me (luôn gọi)
+        alt Access còn hạn
+            BE-->>FE: 200 user
+        else 401
+            FE->>FE: SessionRefresher single-flight
+            BE-->>FE: 200 user
+        end
     and
-        R->>I: await CÙNG future _refreshing (không bắn refresh thứ 2)
-        Note over I,BE: Nếu 2 request tự refresh song song thật →<br/>BE rotation coi cái sau là REUSE → mất toàn bộ phiên!
+        FE->>FE: Delay 2500ms
+    and
+        FE->>FE: App.initState post-frame: FCM setupListeners + UserRealtimeOwner nếu signed in
     end
-    
-    BE-->>A: 200 {access_token mới, refresh_token mới}
-    I->>I: Ghi đè secure storage
-    I->>API: Retry request A với Bearer mới (flag retried)
-    API-->>A: 200 ✓
-    I->>API: Retry request B tương tự
-    API-->>R: 200 ✓
+    FE->>U: Redirect /home
 ```
 
-### 3.4 Logout & phiên chết giữa chừng
+`Future.wait` đợi **cả hai**. User về sớm vẫn đứng splash đủ 2.5s. `/users/me` chậm hơn 2.5s thì splash dài hơn.
+
+### 5.2 Cold start khách / token chết
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor U as User
-    participant FE as ProfilePage / Interceptor
-    participant SS as Secure Storage
-    participant Router as GoRouter
+    participant FE as Flutter
+    participant BE as Backend
 
-    alt Logout chủ động
-        U->>FE: Dialog xác nhận "Đăng xuất?"
-        FE->>SS: clear() access + refresh
-        Note over FE: ⚠️ CHƯA gọi POST /auth/sign-out —<br/>session BE còn sống đến hết hạn (khoảng trống)
-        FE->>FE: AuthController = AsyncData(null)
-        FE-->>Router: refreshListenable kích hoạt
-        Router-->>U: Redirect → /welcome
-    else Phiên bị revoke (đăng nhập máy khác / admin khóa / reuse detection)
-        FE->>FE: Refresh nhận SESSION_REVOKED → clear storage
-        Note over FE: KHÔNG force-navigate tức thời từ interceptor;<br/>logout hiển thị khi AuthController build/read tiếp theo fail
-        Router-->>U: Redirect → /welcome (ở lần chuyển màn/khởi động kế)
+    U->>FE: Mở app
+    FE->>BE: GET /users/me
+    alt Không token / refresh fail / mạng (AuthController nuốt thành null)
+        FE->>FE: AsyncData(null) sau max(2.5s, request)
+        FE->>U: /welcome → carousel → push /login
     end
 ```
 
-## 4. Activity Diagrams
+Mất mạng lúc mở: timeout 90s. Splash có thể đứng ~90s rồi Welcome (vì failure → null). Home về sau không: chưa auth. Đó là trade-off đã biết.
 
-### 4.1 Global redirect logic (GoRouter)
+### 5.3 401 giữa phiên
 
 ```mermaid
-flowchart TD
-    A["Navigator báo đổi location / auth state đổi"] --> B{"authState.isLoading?"}
-    B -->|"Có"| C["return null — ở lại /splash"]
-    B -->|"Không"| D{"Đã đăng nhập? (user ≠ null)"}
-    D -->|"Chưa"| E{"Location hiện tại?"}
-    E -->|"/splash"| F["→ /welcome"]
-    E -->|"Route protected"| F
-    E -->|"Route auth (/login, /register...)"| G["Cho ở lại (vd xem lại login)"]
-    D -->|"Rồi"| H{"Location?"}
-    H -->|"/splash"| I["→ /home"]
-    H -->|"Route auth"| I
-    H -->|"Route app thường"| J["Gi nguyên vị trí"]
+sequenceDiagram
+    autonumber
+    participant A as REST A
+    participant I as AuthInterceptor
+    participant S as SSE
+    participant SR as SessionRefresher
+    participant BE as POST /auth/refresh
+
+    A->>I: 401
+    S->>SR: 401 stream
+    I->>I: path skip-list? → không refresh, không endSession
+    I->>I: đã retried? → endSession
+    I->>SR: refresh()
+    S->>SR: refresh() cùng _inFlight
+    SR->>BE: Dio trần {refresh_token, device_id}
+    alt 200
+        SR->>SR: ghi storage
+        I->>I: retry một lần flag retried
+        S->>S: mở stream một lần với token mới
+    else fail
+        SR->>SR: clear + notifyExpired
+        I-->>A: lỗi gốc
+        Note over FE: AuthController null → /welcome ngay
+    end
 ```
 
-### 4.2 Decision tree của AuthInterceptor
+Skip-list (path **thật**): `/auth/sign-in`, sign-up/register, `/auth/refresh`, forgot, reset, verify-email, resend. **Không** có `/auth/login` hay `/auth/refresh-token`. **Không** có sign-out: logout lúc access hết hạn sẽ refresh rồi mới sign-out.
+
+### 5.4 Logout chủ động
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Profile
+    participant FE as AuthController
+    participant BE as POST /auth/sign-out
+    participant SS as Secure Storage
+
+    U->>FE: Dialog Đăng xuất
+    FE->>BE: Bearer (TokenAuth). Hết hạn → interceptor refresh trước
+    alt Mạng lỗi
+        Note over FE: catch nuốt — vẫn tiếp
+    end
+    FE->>FE: FCMTokenManager.onLogout
+    FE->>SS: xóa access + refresh, GIỮ device_id
+    FE->>FE: AsyncData(null) → /welcome
+```
+
+Khác máy bị đá / admin khóa: không đi Profile. Interceptor refresh fail → cùng `endSession`.
+
+---
+
+## 6. Activity Diagrams
+
+### 6.1 Redirect
 
 ```mermaid
 flowchart TD
-    A["DioException onError"] --> B{"statusCode == 401?"}
-    B -->|"Không"| Z["mapDioError → Failure tương ứng"]
-    B -->|"Có"| C{"Path thuộc skip-list auth?<br/>login/register/refresh/forgot/<br/>reset/verify-email/resend"}
+    A["Location hoặc auth đổi"] --> B{"isLoading?"}
+    B -->|"Có"| C["null — splash"]
+    B -->|"Không"| D{"user ≠ null?"}
+    D -->|"Chưa"| E{"Location"}
+    E -->|"/splash hoặc protected"| F["/welcome"]
+    E -->|"auth routes"| G["Ở lại"]
+    D -->|"Rồi"| H{"Location"}
+    H -->|"splash hoặc auth"| I["/home"]
+    H -->|"khác"| J["Ở lại"]
+```
+
+### 6.2 Interceptor
+
+```mermaid
+flowchart TD
+    A["DioException"] --> B{"401?"}
+    B -->|"Không"| Z["mapDioError → Failure"]
+    B -->|"Có"| C{"Path skip-list auth?"}
     C -->|"Có"| Z
-    C -->|"Không"| D{"Đã retry request này chưa?<br/>(_retriedFlag)"}
-    D -->|"Có"| E["clear() storage → next(err)<br/>chống vòng lặp vô hạn"]
-    D -->|"Không"| F{"Có future _refreshing đang chạy?"}
-    F -->|"Có"| G["await chung future (single-flight)"]
-    F -->|"Không"| H["Tạo future refresh:<br/>POST /auth/refresh qua Dio RIÊNG<br/>body {refresh_token, device_id}"]
-    H --> I{"Refresh OK?"}
-    G --> I
-    I -->|"OK — lưu token mới"| J["Retry request gốc với Bearer mới"]
-    I -->|"Fail (revoked/hết hạn/mạng)"| K["clear() storage → next(err)<br/>→ AuthController fail sau đó → redirect /welcome"]
-    J --> L{"Retry thành công?"}
-    L -->|"Có"| M["Trả response cho caller"]
-    L -->|"Vẫn lỗi"| Z
+    C -->|"Không"| D{"Flag retried?"}
+    D -->|"Có"| E["endSession → next(err)"]
+    D -->|"Không"| F["await SessionRefresher.refresh"]
+    F --> G{"OK?"}
+    G -->|"Có"| H["Retry Bearer mới"]
+    G -->|"Không"| E
+    H --> I{"Retry 200?"}
+    I -->|"Có"| J["Trả caller"]
+    I -->|"Không"| Z
 ```
 
 ---
 
-## 5. Edge Cases
+## 7. Map lỗi mạng
 
-| # | Tình huống | Xử lý | Vị trí code (tham chiếu) |
+| Tín hiệu | Failure | Message hướng user |
+|---|---|---|
+| `connectionError` / timeout | `NetworkFailure` | Không thể kết nối tới máy chủ |
+| 5xx | `ServerFailure` | |
+| 2xx sai shape | `invalidResponseFailure` | `ApiResponse` khoan dung: thiếu `success` thì coi cả body là data |
+| 401 sau refresh | session hết → Welcome | |
+| `RATE_LIMITED` | parse `Retry-After` vào message | LoginPage **bỏ qua**, khóa 900s — [`01`](01-auth.md) |
+
+Envelope chuẩn: [`README.md`](README.md).
+
+---
+
+## 8. Realtime lúc khởi động
+
+`realtimeSignedInProvider` override = `authController != null`. `UserRealtimeOwner` không mở stream khi signed out, khi app nền, khi `REALTIME_MODE=legacy`. Chi tiết vòng đời: [`08-realtime.md`](08-realtime.md) mục 8.
+
+FCM listeners đăng ký post-frame **song song** splash — có thể PUT token trước khi `/users/me` xong nếu storage còn access. Manager bỏ sync khi chưa có access.
+
+---
+
+## 9. Edge Cases
+
+| # | Tình huống | Xử lý | Chỗ |
 |---|---|---|---|
-| 1 | Nhiều request 401 đồng thời bắn refresh song song | Single-flight `_refreshing` Future chung — nếu để song song thật, BE reuse-detection sẽ hủy cả phiên | `auth_interceptor.dart:25-30` |
-| 2 | Request đến chính endpoint refresh bị 401 | Skip-list `_skipRefreshPaths` — không tự refresh chính nó | `:38-46` |
-| 3 | Retry xong vẫn 401 (token vừa cấp đã chết) | Flag `_retried` chặn vòng lặp; clear storage | `:34`, `:66-71` |
-| 4 | Refresh trả SESSION_REVOKED (máy khác đăng nhập / admin khóa) | Clear cả 2 token → AuthController fail → router về `/welcome` ở lần build kế | `:77-81` |
-| 5 | Logout chủ động nhưng quên gọi sign-out API | Session BE sống đến hết hạn tự nhiên — khoảng trống đã biết | `auth_repository_impl.dart:216-219` |
-| 6 | Mất mạng lúc mở app (splash treo?) | `/users/me` connectionTimeout 90s → map `NetworkFailure`; AuthController resolve null/user-lỗi → vẫn thoát splash về welcome/home tương ứng; Home providers swallow lỗi → empty state thân thiện | `dio_failure_mapper.dart:59-111` |
-| 7 | Server trả 2xx nhưng body sai shape | `ApiResponse<T>` parse khoan dung: thiếu key `success` coi nguyên body là data; sai hẳn → `invalidResponseFailure` | `api_response.dart:14-37` |
-| 8 | Timeout 90s quá dài với UX? | Cả connect/send/receive đều 90s (config chung); lỗi timeout map `NetworkFailure` message tiếng Việt | `dio_client.dart:12-30` |
-| 9 | `NetworkInfo` (connectivity) đã DI nhưng không ai dùng | Offline detection thực tế dựa trên `DioException.connectionError` | khoảng trống đã biết |
-| 10 | Route `/bill-detail` thiếu/giá trị extra sai kiểu | Validate kỹ từng trường hợp extra; fallback an toàn thay vì crash | `app_router.dart:232-293` |
-| 11 | Route `/scan-bill` thiếu groupId | Redirect về `/bills` | `:215-222` |
-| 12 | GroupDetail thiếu extra GroupEntity | Fallback group placeholder "Đang tải..." | `:187-212` |
-| 13 | Đổi tab bottom nav | StatefulShellRoute giữ Stack + AnimatedOpacity từng branch → không rebuild/mất state tab cũ | `main_navigation_shell.dart` |
-| 14 | PrettyDioLogger in token ở production | Logger tắt khi `EnvConfig.isProduction` | env_config |
-| 15 | Device ID cần cho sign-in/refresh | `getOrCreateDeviceId()` UUIDv4 lưu secure storage lần đầu | `token_storage.dart:18-26` |
-| 16 | Flavor sai API_BASE_URL | dart-define `API_BASE_URL`, default `http://localhost:8080/api/v1`; staging thường truyền `http://<IP-LAN>:8080` | main_*.dart |
+| 1 | Nhiều 401 cùng lúc | Một `_inFlight` | `session_refresher.dart` |
+| 2 | 401 đúng endpoint refresh | Skip-list | không tự refresh mình |
+| 3 | Retry vẫn 401 | `endSession` | flag retried |
+| 4 | `SESSION_REVOKED` / mọi refresh fail | `endSession` ngay | không đợi màn sau |
+| 5 | Logout mạng chết | Vẫn clear local + FCM | `auth_repository_impl.dart` |
+| 6 | Mất mạng lúc splash | Failure → null → Welcome sau timeout 90s | có thể đứng splash lâu |
+| 7 | Body 2xx lệch | Parse khoan dung / `invalidResponseFailure` | `api_response.dart` |
+| 8 | Timeout 90s | Chung connect/send/receive | `dio_client.dart` |
+| 9 | `NetworkInfo` không ai dùng | Offline = Dio | khoảng trống đã biết |
+| 10 | `/bill-detail` extra sai | `/bills` | `app_router.dart` |
+| 11 | `/scan-bill` thiếu groupId | `/bills` | |
+| 12 | GroupDetail thiếu extra | Placeholder copy mới (không còn "Đang tải...") | |
+| 13 | Đổi tab bottom nav | StatefulShell giữ state | `main_navigation_shell.dart` |
+| 14 | Logger token production | Tắt PrettyDioLogger | `EnvConfig.isProduction` |
+| 15 | Device id | Tạo một lần, giữ lúc logout | refresh/sign-in cần |
+| 16 | Flavor sai URL | dart-define | |
+| 17 | SSE 401 | Cùng refresher, thử stream đúng một lần | [`08`](08-realtime.md) |
+| 18 | `/scan-group-qr` | Route thật, không deep link OS | |
+
+---
+
+## 10. Ghi chú triển khai đáng chú ý
+
+1. **`yield*` trong SSE không bắt 401.** Vòng retry phải `await for` trong `while`. Chi tiết [`08-realtime.md`](08-realtime.md) ghi chú 8.
+
+2. **`clear()` không xóa `device_id`.** Đúng: refresh/sign-in sau logout vẫn cùng máy. Xóa nhầm = mọi refresh `INVALID_OR_EXPIRED_TOKEN`.
+
+3. **Sign-out không skip interceptor.** Access chết lúc bấm Đăng xuất → refresh (session còn) rồi sign-out. Session đã chết → refresh fail → `endSession` — vẫn về Welcome, sign-out BE có thể chưa gọi. TokenAuth lẽ ra nhận JWT hết hạn? JWT hết `exp` thì Verify fail trước handler — nên refresh trước là hữu ích khi session còn.
+
+4. **AuthController nuốt mọi lỗi `/users/me` thành null.** 500 lúc cold start = user bị đẩy Welcome dù token tốt. Có chủ đích "không kẹt splash", giá là false logout.
+
+5. **Firebase trước EnvConfig.** Background isolate không đọc flavor. Sai order = FCM cold start mất.
+
+6. **Không mở realtime trước khi signed in provider true.** Override ở `runApp` bám AuthController.
+
+7. **Portal không dùng stack này.** `app.js` tự refresh (đang thiếu device_id). Đừng "thống nhất" bằng cách copy interceptor Dart sang JS mà quên body.
+
+---
+
+## 11. Trạng thái hiện tại
+
+| Hạng mục | Trạng thái | Ghi chú |
+|---|---|---|
+| Splash + redirect + single-flight refresh | ✅ | Shared với SSE |
+| Logout gọi sign-out | ✅ | Nuốt lỗi mạng |
+| Deep link | ⏸ | Dán tay / QR |
+| NetworkInfo | ⏸ Đăng ký không dùng | |
+| Splash 90s khi offline | ⚠️ Đã biết | Failure → Welcome, không hang vô hạn |

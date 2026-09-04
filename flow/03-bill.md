@@ -1,253 +1,296 @@
-# 03 — Bill: Hóa đơn, OCR & Chia tiền
+# 03 — Bill: chia tiền khớp từng đồng, OCR chạy nền, và khóa phiên bản
 
-> **Phạm vi**: BE module `bill` (`/api/v1/bills` + group close routes) ↔ FE màn hình Bill Capture (camera) và Bill Detail (chia tiền).
+> **Phạm vi**: BE module `bill` (`/api/v1/bills` + group close) ↔ FE Bill Capture / Bill Detail / modal OCR.
 >
 > Code tham chiếu chính: `PaySplit-BE/internal/modules/bill/**`, `PaySplit-FE/lib/features/bills/**`.
+>
+> Đọc cùng: [`08-realtime.md`](08-realtime.md) (`ocr.updated`, `bill.*` invalidate), [`02-group.md`](02-group.md) (lock/unlock nộp bill trên Group Detail), [`04-settlement.md`](04-settlement.md) (void vs QR intent).
 
 ---
 
-## 1. Tổng quan mô hình
+## 1. Vấn đề, và ý tưởng để giải quyết
 
-### 1.1 Vòng đời hóa đơn (optimistic locking bằng `version`)
+### 1.1 Ba người sửa một hóa đơn
+
+Hai máy mở cùng nháp, một người chốt, một người còn gõ. Nếu không có số phiên bản, người gõ đè mất bản đã chốt, hoặc chốt đè mất món vừa thêm.
+
+> Mọi mutation gửi `version` (không phải `expected_version`). Lệch → `409 VERSION_CONFLICT`. Sửa bill `reviewed` thì SQL **hạ về `draft`** và xóa mốc review.
+
+### 1.2 Tổng tiền phải khớp tuyệt đối, không tin field `total` từ client
+
+OCR hay khai sai tổng. Nếu chia theo `total` client gửi, phần lệch dồn lên người trả. Server tính `allocTotal` từ **tổng thành phần**: `Σ line_total + phí + VAT − giảm giá`.
+
+### 1.3 OCR không được giữ request HTTP
+
+Ghép ảnh, gọi LlamaExtract, timeout nhà cung cấp — nếu nằm trong request thì 15 giây middleware cắt. Tạo bill có ảnh trả **202**, job `bill_ocr` nằm **cùng transaction** (BeforeCommit). App chờ trên kênh realtime, không poll 1.5 giây.
+
+### 1.4 Nguyên tắc quyền
+
+Tạo bill: **mọi member active** — người tạo thành creditor. Sửa / xóa nháp / review / OCR: **Captain hoặc creditor**. Finalize / void / khóa nộp / finalize-all: **chỉ Captain**. Xem: member active.
+
+Single-bill finalize/void khi không phải Captain → `403 FORBIDDEN` (không phải `CAPTAIN_REQUIRED`). `CAPTAIN_REQUIRED` chỉ đi với group-close.
+
+---
+
+## 2. Bảng tổng quan
+
+| Khái niệm | Giá trị |
+|---|---|
+| Vòng đời | `draft` → `reviewed` → `finalized` → `voided`. Xóa cứng chỉ `draft` |
+| Khóa lạc quan | Cột `version`, CAS trong SQL |
+| Ảnh | 1–5, ≤10MB. FE magic JPEG/PNG/WebP/HEIC. BE processor **jpeg/png/HEIC** (WebP FE nhận, BE không) |
+| Tạo có ảnh | **202**. Tạo JSON không ảnh | **201** |
+| OCR | LlamaExtract. 1 job active / bill. Retry tay mặc định **5 / 24h** (đếm **mọi** job trong cửa sổ, kể cả job lúc tạo). River `BILL_OCR_MAX_ATTEMPTS` mặc định **3** (20 chỉ là trần bit-shift backoff) |
+| Chia tiền | Số hữu tỷ `big.Rat` + **largest remainder**, hòa UUID tăng dần. **Không** dồn phần lẻ cho creditor |
+| Review/finalize lệch số | `422 BILL_NOT_READY` — **không** kèm danh sách code. GET detail mới nhét code vào `mismatch_codes` |
+| Idempotency | Bảng `bill_idempotency_keys`, TTL 24h. Unlock submissions **không** dùng key |
+| Khóa nộp bill | Có **unlock**. Finalize-all tự bật khóa |
+| `replaces_bill_id` | Tạo bill mới trỏ bill **voided** cùng nhóm. FE chưa gửi |
+| Realtime mặc định | `invalidate` + `ocr.updated` trên user stream. `GET /bills/{id}/events` là legacy |
+
+---
+
+## 3. Vòng đời
 
 ```mermaid
 flowchart LR
-    D["draft<br/>(Nháp)"] -->|"POST /review<br/>pass blockers"| R["reviewed<br/>(Chờ chốt)"]
-    R -->|"sửa → PUT /{id}"| D
-    R -->|"POST /finalize<br/>(CHỈ Captain)"| F["finalized<br/>(Đã chốt)"]
-    F -->|"POST /void + lý do<br/>(CHỈ Captain)"| V["voided"]
-    D -->|"DELETE /{id}"| X["Xóa cứng"]
-    F -.->|"replaces_bill_id<br/>chỉ trỏ tới bill voided"| D
+    D["draft"] -->|"POST /review<br/>pass blockers"| R["reviewed"]
+    R -->|"PUT / PATCH"| D
+    R -->|"POST /finalize<br/>chỉ Captain"| F["finalized"]
+    F -->|"POST /void + lý do<br/>chỉ Captain"| V["voided"]
+    D -->|"DELETE"| X["Xóa cứng"]
+    F -.->|"replaces_bill_id<br/>chỉ trỏ voided"| D
 ```
 
-- Mọi mutation phải gửi `expected_version` — lệch → `409 VERSION_CONFLICT` ("Dữ liệu đã bị thay đổi").
-- Sửa bill `reviewed` → tự hạ về `draft`.
-
-### 1.2 Quyền thao tác
-
-| Hành động | Ai được làm |
-|---|---|
-| Tạo bill, sửa draft, xóa draft, retry OCR, apply candidate | **Creditor** (người trả) hoặc **Captain** |
-| Review | Creditor/Captain |
-| **Finalize, Void, khóa nộp bill, finalize-all, xem batch finalize** | **CHỈ Captain** |
-| Xem chi tiết/SSE | Member active của nhóm |
-
-### 1.3 Thuật toán chia tiền (Floor Allocation 2 lượt)
-
-Nguyên tắc: tổng tiền phân bổ luôn khớp **tuyệt đối**, phần lẻ dồn về Creditor; `allocTotal` tính từ **tổng các thành phần** chứ không tin field `total` client khai (tránh OCR sai đẩy chênh lệch lên người dùng).
-
-```mermaid
-flowchart TD
-    A["Input: items + assignments(weight) + serviceCharge + VAT + discounts"] --> B["Chuẩn hóa weight lên thang 1e8<br/>thiếu weight/ratio → mặc định 1"]
-    B --> C["Lượt 1 — chia SÀN:<br/>• Tiền món chia theo weight từng assignment<br/>• Phí dịch vụ/VAT/giảm giá CHUNG chia theo tỷ lệ tiền hàng mỗi người"]
-    C --> D{"Có giảm giá chung?"}
-    D -->|"Có"| E["Kẹp discount share từng người KHÔNG vượt số tiền họ phải trả<br/>(FinalAmount ≥ 0)"]
-    D -->|"Không"| F
-    E --> F["Lượt 2 — Creditor hấp thụ remainder:<br/>FinalAmount_creditor = allocTotal − Σ FinalAmount_người khác<br/>RoundingAdjustment = final − tổng 4 thành phần sàn của Creditor"]
-    F --> G{"FinalAmount creditor < 0?"}
-    G -->|"Có — giảm giá quá lớn"| H["422 DISCOUNT_NOT_ALLOCATABLE<br/>(KHÔNG tự kẹp)"]
-    G -->|"Không"| I{"Σ FinalAmount == allocTotal?"}
-    I -->|"Không (lỗi bất biến)"| J["500 — invariant check fail"]
-    I -->|"Có"| K["Breakdown hợp lệ ✓"]
-```
-
-Giảm giá 2 lớp: `final_price = line_total − discount_amount` (từng món); chỉ phần `general_discount = discount − total_item_discount` được chia tỷ lệ. Server tự tính, **không nhận** `final_price` từ client (DB CHECK `check_bills_discount_composition`).
-
-## 2. Endpoint & màn hình
-
-### BE endpoints (tất cả `liveAuth`, mount `/api/v1/bills`)
-
-| Method + Path | Chức năng |
-|---|---|
-| POST `/bills` | Tạo bill — multipart 1–5 ảnh (OCR) hoặc JSON thủ công |
-| GET `/bills` · GET `/bills/{id}` | Danh sách (offset legacy) / chi tiết (signed URL ảnh 5 phút + preview breakdown + mismatch_codes) |
-| GET `/bills/{id}/events` | **SSE** realtime OCR events (chung listener PostgreSQL với Group, xem `flow/README.md` mục 5) |
-| POST `/bills/{id}/ocr-retry` | Chạy lại OCR (≤5 lần thủ công/24h; 1 job active/bill) |
-| POST `/bills/{id}/apply-candidate` | Áp kết quả OCR (check version kép) |
-| POST `/bills/calculate` · POST `/bills/{id}/calculate` | Tính breakdown stateless (yêu cầu creditor_member_id) |
-| PUT/PATCH `/bills/{id}` | Sửa draft (version conflict qua expected_version) |
-| POST `/bills/{id}/review` | draft → reviewed (chạy blocker check) |
-| POST `/bills/{id}/finalize` | reviewed → finalized (**Captain**) |
-| POST `/bills/{id}/void` | finalized → voided + lý do bắt buộc (**Captain**) |
-| DELETE `/bills/{id}` | Xóa draft |
-
-**Group close routes** (mount `/api/v1/groups`, Captain only):
-`POST /{groupId}/bills/lock-submissions` (khóa 1 chiều) · `POST /{groupId}/bills/finalize-all` (batch) · `GET /{groupId}/bill-finalize-batches/{batchId}`.
-
-### FE màn hình
-
-| Page | Nội dung |
-|---|---|
-| BillCapturePage (`/scan-bill`) | Camera tối; chụp/chọn ≤5 ảnh; tray kéo-thả sắp xếp, xoay, crop, xóa; header button động: 0 ảnh → "Nhập thủ công", ≥1 ảnh → "Chia tiền (N)" |
-| BillDetailPage (`/bill-detail`) | Danh sách món (gán người per-item, assign-all), switch Chia đều + chọn người, Thuế/Phí/Khuyến mãi, badge trạng thái, sticky bottom bar gating theo role × status |
-| OcrCandidateReviewModal | Hiện tiến trình OCR, kết quả candidate, Retry khi fail |
+Review đã `reviewed` và `version` khớp → trả nguyên (idempotent). `version` lệch trên bill reviewed → `BILL_IMMUTABLE`.
 
 ---
 
-## 3. Sequence Diagrams
+## 4. Thuật toán chia tiền (largest remainder)
 
-### 3.1 Tạo hóa đơn thủ công (không ảnh)
+Đây là chỗ tài liệu cũ sai, nên nói thẳng.
+
+> **Không** phải "lượt 2 creditor hấp thụ remainder". Code hiện tại: tính **đúng số hữu tỷ**, floor từng người, phần lẻ +1 đồng chia theo **phần thập phân lớn nhất**. Hòa → UUID membership **tăng dần**. Creditor không được ưu tiên. Test `100_000 / 3`: remainder có thể về member khác, creditor adjustment = 0.
+
+```mermaid
+flowchart TD
+    A["items FinalPrice + SC + VAT + general_discount"] --> B["allocTotal = Σ line + SC + VAT − discount<br/>bỏ qua field total client"]
+    B --> C["Share món = line × weight / Σweight. Thiếu weight → 1. Thang 1e8"]
+    C --> D["SC / VAT / discount tỷ lệ theo tiền hàng.<br/>itemsTotal=0 → cả cục về creditor"]
+    D --> E["Cap: discount non-creditor vượt số họ nợ → phần dư dồn discount của creditor"]
+    E --> F{"Ai exact final < 0?"}
+    F -->|"Creditor"| G["422 DISCOUNT_NOT_ALLOCATABLE — không tự kẹp"]
+    F -->|"Người khác"| H["Lỗi invariant"]
+    F -->|"Không"| I["Floor từng người. remaining = allocTotal − Σ floor ∈ [0, n)"]
+    I --> J["+1 đồng cho ai fractional lớn nhất, hòa UUID tăng"]
+    J --> K["RoundingAdjustment = Final − (item+SC+VAT−discount floors) — có thể ở BẤT KỲ ai"]
+    K --> L{"Σ Final == allocTotal?"}
+    L -->|"Không"| M["Lỗi invariant"]
+    L -->|"Có"| N["Hợp lệ"]
+```
+
+Giảm giá 2 lớp: `final_price = line_total − discount_amount` do **server** tính, client gửi `final_price` bị bỏ. `general_discount = discount − total_item_discount`. DB CHECK `check_bills_discount_composition`.
+
+`/bills/calculate` parse weight **nghiêm** (không default 1). Thiếu `creditor_member_id` → `ErrCreditorRequired`. Trên HTTP review/finalize, lỗi này bị gói thành `BILL_NOT_READY`.
+
+---
+
+## 5. Endpoint và màn hình
+
+Tất cả `liveAuth`, mount `/api/v1/bills`.
+
+| Method + Path | Việc |
+|---|---|
+| POST `/bills` | Multipart `images[]` hoặc JSON. Có ảnh → **202** |
+| GET `/bills` | `group_id` bắt buộc. Cursor + `status` là đường chính. Offset legacy **cấm** kèm status |
+| GET `/bills/{id}` | `group_id` query. Signed URL 5 phút. Preview breakdown chỉ draft/reviewed. `mismatch_codes` |
+| GET `/bills/{id}/events` | SSE legacy OCR |
+| POST `/bills/{id}/ocr-retry` | **202**. FE **không gọi** |
+| POST `/bills/{id}/apply-candidate` | Body `{job_id, version}` — **không** `candidate_id` / `client_version`. FE **không gọi**; apply = merge local + PUT draft |
+| POST `/bills/calculate` và `/{id}/calculate` | Cùng handler; `{id}` không dùng |
+| PUT/PATCH `/bills/{id}` | Body `version` |
+| POST `/bills/{id}/review` | `{version}` |
+| POST `/bills/{id}/finalize` | `{version}` — Captain, 403 FORBIDDEN nếu không |
+| POST `/bills/{id}/void` | `{version, reason}` 1–500 |
+| DELETE `/bills/{id}` | **204**, chỉ draft |
+
+Group close (`/api/v1/groups`, Captain; non-member → `GROUP_NOT_FOUND`):
+
+| Method | Path |
+|---|---|
+| POST | `/{groupId}/bills/lock-submissions` (Idempotency-Key tùy chọn) |
+| POST | `/{groupId}/bills/unlock-submissions` (**không** idempotency) |
+| POST | `/{groupId}/bills/finalize-all` → **202** |
+| GET | `/{groupId}/bill-finalize-batches/{batchId}` |
+
+FE: `/scan-bill` (extra groupId, groupName) — thiếu groupId redirect `/bills`. `/bill-detail` extra entity hoặc Map.
+
+---
+
+## 6. Sequence Diagrams
+
+### 6.1 Tạo thủ công
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor U as Creditor/Captain
-    participant FE as BillCapturePage → BillDetailPage
+    actor U as Member (sẽ thành creditor)
+    participant FE as Capture → Detail
     participant BE as Bill API
     participant DB as PostgreSQL
 
-    U->>FE: Bấm "Nhập thủ công" (0 ảnh)
-    FE->>U: BillDetailPage với bill rỗng id='' status=draft
-    U->>FE: Nhập tên quán, món, gán người, thuế/phí/khuyến mãi
-    FE->>BE: POST /bills (JSON manual)
-    BE->>DB: Check member active của caller trong nhóm
-    BE->>DB: Pre-check bill_submission_locked_at (rẻ, TRƯỚC khi xử lý)
-    alt Nhóm đã khóa nộp bill
+    U->>FE: Nhập thủ công (0 ảnh)
+    FE->>U: BillDetail id='' status=draft
+    U->>FE: Món, gán người, thuế/phí/KM
+    FE->>BE: POST /bills JSON
+    BE->>DB: Caller phải member active
+    BE->>DB: Pre-check bill_submission_locked_at TRƯỚC xử lý nặng
+    alt Đã khóa
         BE-->>FE: 409 BILL_SUBMISSION_LOCKED
     end
-    BE->>BE: Validate: ≤100 items, discount ≥ 0, item discounts hợp lệ
-    Note over DB: INSERT bills(draft, version=1) + items + assignments
+    BE->>BE: ≤100 items, discount ≥ 0
+    Note over DB: INSERT draft version=1 + items + assignments. Creditor = caller
     BE-->>FE: 201 {bill}
-    FE->>U: Làm tiếp trên BillDetailPage
 ```
 
-### 3.2 Quét ảnh OCR (async job + SSE + polling fallback)
+### 6.2 OCR: 202, worker, user stream — không poll 1.5s
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor U as User
-    participant FE as BillCapturePage → BillDetailPage
-    participant BE as Bill API + SSE Hub
+    participant FE as Capture → Detail
+    participant BE as Bill API
     participant DB as PostgreSQL
-    participant Q as River Queue
+    participant Q as River
     participant W as OCRWorker
     participant AI as LlamaExtract
     participant CDN as Cloudinary
 
-    U->>FE: Chụp/chọn 1–5 ảnh → "Chia tiền (N)"
-    FE->>FE: ImageValidator từng ảnh: magic bytes JPEG/PNG/WebP/HEIC (chống đổi đuôi file), ≤10MB
-    FE->>BE: POST /bills (multipart: group_id, merchant_name, files=images[])
-    BE->>DB: Pre-check submission lock + member active
-    BE->>CDN: Upload ảnh (rollback xóa nếu fail sau đó)
-    alt Bị chặn lock GIỮA chừng (sau khi upload)
-        BE->>Q: Enqueue media_cleanup bền vững cho ảnh đã upload (fallback direct delete)
+    U->>FE: 1–5 ảnh → Chia tiền N
+    FE->>FE: ImageValidator magic + ≤10MB
+    FE->>BE: POST /bills multipart group_id, merchant_name, images[]
+    BE->>DB: Pre-check lock + member
+    BE->>CDN: Upload; fail sau đó → rollback xóa
+    alt Khóa giữa chừng sau upload
+        BE->>Q: Enqueue media_cleanup (fallback delete thẳng)
         BE-->>FE: 409 BILL_SUBMISSION_LOCKED
     end
-    BE->>BE: Validate ≤5 ảnh, ≤100 items
-    Note over DB: INSERT bill(draft) + images + OCRJob(queued) + ENQUEUE River job 'bill_ocr' trong cùng tx (BeforeCommit hook)
-    BE-->>FE: 201 {bill chưa có items}
-    FE->>BE: Mở SSE GET /bills/{id}/events (auth: member active)
-    
-    par Worker xử lý nền
-        Q-->>W: Deliver job 'bill_ocr'
-        W->>DB: Idempotent skip nếu succeeded/failed; CAS queued→processing (worker khác nhận thì thoát)
-        W->>CDN: Download ảnh private → ghép DỌC 1–5 trang thành JPEG 90% (resize >1200px)
-        W->>AI: Gọi extract (timeout riêng)
-        alt Lỗi schema/tạm thời
-            W->>Q: Retry exp backoff base×2^(attempt−1), cap attempt 20
-            alt Hết MaxAttempts
-                W->>DB: Job failed với mã đóng: provider_timeout/provider_unavailable/provider_error/download_failed/no_images/bill_not_found/schema_invalid
-                W->>BE: SSE 'ocr.updated' failed
-            end
-        else Thành công
-            W->>DB: Lưu candidate JSONB + version bill lúc OCR
-            W->>BE: SSE 'ocr.updated' succeeded
+    Note over DB: bill draft + images + OCRJob queued + ENQUEUE bill_ocr cùng tx
+    BE-->>FE: 202 {bill chưa có items}
+    FE->>FE: Đăng ký ocr.waiter + bill.detail. Mặc định KHÔNG mở /bills/{id}/events
+
+    par Worker
+        Q-->>W: bill_ocr
+        W->>DB: Skip nếu succeeded/failed. CAS queued→processing
+        W->>CDN: Tải private → ghép DỌC, resize >1200px, JPEG 90%. Ghép fail → ảnh đầu
+        W->>AI: Extract (timeout cấu hình, mặc định 8s)
+        alt schema_invalid
+            W->>DB: failed, KHÔNG River retry
+        else Lỗi tạm, Attempt < MaxAttempts (mặc định 3)
+            W-->>Q: backoff base×2^(attempt−1)
+        else Hết lần
+            W->>DB: failed mã đóng provider_timeout/unavailable/error/download_failed/no_images/bill_not_found
+            W->>BE: ocr.updated failed
+        else OK
+            W->>DB: candidate JSONB + version bill lúc OCR
+            W->>BE: ocr.updated succeeded
         end
-    and FE nhận kết quả
-        alt SSE hoạt động (heartbeat 15s; đa replica qua shared LISTEN bill_events; max age 15 phút)
-            BE-->>FE: event snapshot lúc connect, rồi ocr.updated
-        else Listener đứt hoặc SSE hỏng/mất mạng
-            Note over BE: Đóng stream local; FE reconnect lấy snapshot mới<br/>hoặc poll GET /bills/{id} mỗi 1.5s, tối đa 40 lần (~60s)
-            FE->>BE: Reconnect SSE / poll chi tiết bill
+    and FE chờ
+        alt User stream (mặc định)
+            BE-->>FE: ocr.updated khớp bill_id → GET /bills/{id}
+        else Legacy REALTIME_MODE
+            FE->>BE: GET /bills/{id}/events snapshot rồi ocr.updated
         end
+        Note over FE: Timeout 60s. GET ngay, GET mỗi frame liên quan, GET lần nữa khi hết giờ.<br/>Không có vòng 1.5s × 40
     end
-    
-    FE->>U: Modal candidate: món đọc được + mismatch warnings (SUBTOTAL_MISMATCH/TOTAL_MISMATCH nếu có)
-    alt Apply candidate
-        FE->>BE: POST /bills/{id}/apply-candidate {candidate_id, client_version}
-        BE->>BE: Check kép: client_version == version hiện tại AND == version lúc chạy OCR
-        BE-->>FE: 200 — items mới, mặc định gán đều weight 1.0 cho mọi member active (hoặc bỏ gán nếu item_ratio)
-    else User bấm "Nhập tay" / hết 60s không có kết quả
-        FE->>U: Cho nhập thủ công trên bill rỗng
-    else User bấm Retry
-        FE->>BE: POST /bills/{id}/ocr-retry
-        BE-->>FE: 202 hoặc 409 OCR_ALREADY_RUNNING hoặc 429 OCR_LIMIT_REACHED (>5 lần/24h)
+
+    FE->>U: Modal candidate + mismatch nếu có
+    alt User áp
+        FE->>FE: Merge local + PUT draft {version}
+        Note over FE: Không gọi apply-candidate
+    else Retry
+        FE->>BE: POST /bills multipart LẠI — bill mới, bill cũ có thể thành nháp mồ côi
+        Note over FE: Không gọi /ocr-retry
+    else Nhập tay / hết 60s
+        FE->>U: Form thủ công trên bill hiện có
     end
 ```
 
-### 3.3 Lưu nháp → Review → Finalize (kèm fan-out thông báo)
+Apply-candidate phía BE (nếu client khác gọi): Captain/creditor; job succeeded; **kép version**: `bill.Version == request.version` không thì `VERSION_CONFLICT`; `bill.Version == ocrJob.Version` không thì `OCR_RESULT_STALE`. Gán **mọi** member active weight `1.0000` — không bỏ qua khi `item_ratio`.
+
+### 6.3 Lưu → Review → Finalize
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor U as Creditor (hoặc Captain)
-    participant FE as BillDetailPage (sticky bar)
+    actor U as Creditor hoặc Captain
+    participant FE as BillDetail sticky bar
     participant BE as Bill API
     participant DB as PostgreSQL
-    participant Q as River Queue
+    participant Q as River
 
-    U->>FE: Bấm "Gửi đối soát" (reviewed flow: saveDraft trước nếu isDirty)
-    FE->>BE: PUT/PATCH /bills/{id} {..., expected_version}
-    alt Version lệch (người khác vừa sửa)
-        BE-->>FE: 409 VERSION_CONFLICT → FE: "Dữ liệu đã bị thay đổi, tải lại"
+    U->>FE: Gửi đối soát / Chốt (Captain draft: save → review → finalize một mạch)
+    FE->>BE: PUT {..., version}
+    alt Version lệch
+        BE-->>FE: 409 VERSION_CONFLICT — FE: dữ liệu đã bị thay đổi, tải lại
     end
-    BE->>BE: Nếu status=reviewed mà sửa → hạ về draft
-    FE->>BE: POST /bills/{id}/review
-    BE->>BE: evaluateAllocation → RECONCILIATION BLOCKERS:
-    alt Có blocker (ITEM_UNASSIGNED / INACTIVE_MEMBER_ASSIGNED / DISCOUNT_EXCEEDS_BILL / DISCOUNT_NOT_ALLOCATABLE / CREDITOR_REQUIRED) hoặc warning SUBTOTAL/TOTAL_MISMATCH nghiêm trọng
-        BE-->>FE: 422 kèm codes → FE hiện dialog liệt kê món chưa gán / bảng so sánh tổng tính toán vs tổng bill
+    FE->>BE: POST /review {version}
+    BE->>BE: evaluateAllocation
+    alt Có blocker
+        BE-->>FE: 422 BILL_NOT_READY — không kèm codes
+        Note over FE: Disable nút dựa trên tính local (unassigned, mismatch). Dialog món chưa gán là FE tự liệt kê
     else Pass
-        BE->>DB: status='reviewed', reviewed_by/at
+        BE->>DB: reviewed
         BE-->>FE: 200
     end
 
-    U->>FE: Captain bấm "Chốt chia tiền"
-    FE->>FE: Chuỗi: saveDraft → review → finalize (nút disable nếu !hasBankAccount || hasNoItems || hasUnassignedItems || isTotalMismatch)
-    FE->>BE: POST /bills/{id}/finalize {expected_version}
-    alt Caller không phải Captain
-        BE-->>FE: 403 CAPTAIN_REQUIRED
-    else Bill chưa reviewed / version lệch
-        BE-->>FE: 400/409
-    else Creditor chưa cấu hình tài khoản ngân hàng
+    U->>FE: Captain Chốt chia tiền
+    FE->>FE: Nút disable nếu !hasBankAccount || hasNoItems || hasUnassignedItems || isTotalMismatch
+    Note over FE: hasBankAccount nhìn STK USER ĐĂNG NHẬP, không phải creditor
+    FE->>BE: POST /finalize {version} + Idempotency-Key UUID
+    alt Không phải Captain
+        BE-->>FE: 403 FORBIDDEN
+    else Creditor chưa đủ STK
         BE-->>FE: 422 BANK_ACCOUNT_REQUIRED
     else OK
-        Note over DB: 1 tx (finalizeCore): status='finalized' + snapshot bill_shares (xóa-ghi) + INSERT debts awaiting (amount>0, non-creditor) + INSERT notifications + activity 'finalized_bill'
-        BE->>Q: Enqueue push 'send_notification' × N member (hook trong tx)
-        Q-->>Q: Worker FCM: "Hóa đơn X đã chốt — phần bạn là Y đ" (creditor nhận tổng)
-        BE-->>FE: 200 {bill finalized}
-        FE->>U: Badge "Đã chốt", bottom bar chuyển [Huỷ hoá đơn][Xem phân bổ]
+        Note over DB: 1 tx: finalized + snapshot bill_shares + debts awaiting (amount>0, non-creditor) + notifications + activity
+        BE->>Q: send_notification × N cùng tx
+        BE-->>FE: 200
+        FE->>U: Badge Đã chốt, bar [Huỷ][Xem phân bổ]
     end
 ```
 
-### 3.4 Void hóa đơn (Captain)
+Blockers thu thập **trước** allocation: `ITEM_UNASSIGNED`, `INACTIVE_MEMBER_ASSIGNED`, `CREDITOR_REQUIRED`, `DISCOUNT_EXCEEDS_BILL`, `SUBTOTAL_MISMATCH` (subtotal ≠ Σ LineTotal), `TOTAL_MISMATCH`. **Mismatch chặn review** — không còn là warning. GET detail mới merge chúng vào `mismatch_codes`.
+
+### 6.4 Void — QR intent không giữ nợ
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor C as Captain
-    participant FE as BillDetailPage
+    participant FE as BillDetail
     participant BE as Bill API
     participant DB as PostgreSQL
 
-    C->>FE: "Huỷ hoá đơn" → dialog nhập lý do (FE yêu cầu ≥3 ký tự, BE 1–500)
-    FE->>BE: POST /bills/{id}/void {reason, expected_version}
-    BE->>DB: Lock theo thứ tự: group → bill → debts (UUID order — invariant chống deadlock)
-    alt Caller ≠ Captain / bill ≠ finalized / version lệch
-        BE-->>FE: 403 CAPTAIN_REQUIRED / 400 / 409 VERSION_CONFLICT
-    else Tồn tại debt KHÔNG còn awaiting (đang pending_confirmation/settled...)
+    C->>FE: Huỷ — dialog lý do FE ≥3, BE 1–500
+    FE->>BE: POST /void {reason, version}
+    BE->>DB: Lock group → bill FOR UPDATE → debts ORDER BY id ASC FOR UPDATE
+    alt Không phải Captain / chưa finalized / version lệch
+        BE-->>FE: 403 FORBIDDEN / 400 / 409 VERSION_CONFLICT
+    else Debt không còn awaiting HOẶC payment_id đã set
         BE-->>FE: 409 PAYMENT_ALREADY_STARTED
-        Note over BE: Không được xóa nợ khi ai đó đã thanh toán/nộp biên lai
+        Note over BE: pending_proof chỉ là QR intent, chưa gán payment_id → vẫn void được, payment → superseded
     else OK
-        BE->>DB: Payment pending_proof liên quan (QR intent, chưa giữ nợ) → 'superseded'
-        BE->>DB: Void toàn bộ debts của bill + bills.status='voided', voided_at
-        BE->>DB: Activity 'voided_bill'
+        BE->>DB: pending_proof liên quan → superseded; void debts; bill voided; activity voided_bill; invalidate bill.voided
         BE-->>FE: 200
-        FE->>U: Badge "Đã hủy", màn read-only
+        FE->>U: Badge Đã hủy. Bar vẫn có Xem phân bổ
     end
 ```
 
-### 3.5 Khóa nộp bill & Finalize-all hàng loạt (Spec Group Bill Close)
+### 6.5 Khóa nộp và finalize-all
+
+Khóa **không còn một chiều**. Unlock: `POST .../unlock-submissions`.
 
 ```mermaid
 sequenceDiagram
@@ -256,143 +299,207 @@ sequenceDiagram
     participant FE as Group Detail
     participant BE as Bill Close API
     participant DB as PostgreSQL
-    participant Q as River Queue
+    participant Q as River
 
-    C->>BE: POST /groups/{gid}/bills/lock-submissions
-    BE->>DB: Lock group → verify Captain → COALESCE set bill_submission_locked_at
-    Note over BE: Khóa MỘT CHIỀU trong V1 (không có unlock). Idempotent: đã khóa → 200 cùng mốc, không ghi activity trùng
+    C->>BE: POST lock-submissions
+    BE->>DB: Lock group → Captain → COALESCE bill_submission_locked_at
+    Note over BE: Đã khóa → 200 cùng mốc, không ghi activity trùng
 
-    C->>BE: POST /groups/{gid}/bills/finalize-all (Idempotency-Key tùy chọn, complete trong cùng tx)
-    BE->>DB: 1 tx: lock group → verify Captain → bật khóa submissions
-    alt Đã có batch active (partial unique 1 batch/group)
+    C->>BE: POST finalize-all (Idempotency-Key tùy chọn, complete trong tx)
+    BE->>DB: Lock → Captain → BẬT khóa submissions
+    alt Đã có batch active
         BE-->>C: 409 BULK_FINALIZE_IN_PROGRESS {active_batch_id}
     else OK
-        BE->>DB: Capture mọi bill draft/reviewed KÈM version hiện tại → tạo batch + items
-        BE->>Q: Enqueue 'bill_bulk_finalize_item' × N (hook beforeCommit — không giữ lock khi gọi mạng)
+        BE->>DB: Capture mọi draft/reviewed KÈM version → batch + items
+        BE->>Q: bill_bulk_finalize_item × N cùng tx
         alt Batch rỗng
-            BE-->>C: Batch completed ngay + notification Captain
+            BE-->>C: completed ngay + notify Captain
         end
     end
 
-    loop Mỗi bill = 1 transaction RIÊNG (1 bill fail không rollback bill khác)
-        Q-->>Q: Worker: lock group → batch → item → bill
-        alt Item không còn pending (River giao lại — at-least-once)
-            Note over Q: Skip an toàn, no-op
-        else Bill đã bị xóa giữa chừng (bill_id cố ý KHÔNG có FK)
-            BE->>DB: Item failed DELETED (commit ngay)
-        else Bill đã finalized với captured_version+1 (ai đó finalize tay)
-            BE->>DB: Đánh dấu finalized, KHÔNG ghi trùng
-        else Version lệch / voided / thiếu bank / discount lỗi
-            BE->>DB: Item failed ổn định (commit ngay, không retry vô ích)
-        else draft → review + finalize trong cùng tx OK
-            BE->>DB: Item finalized; thử TryCompleteBatch → completed + notification Captain
+    loop Mỗi bill = 1 tx riêng
+        Q-->>Q: lock group → batch → item → bill
+        alt Item không còn pending
+            Note over Q: Skip, at-least-once
+        else Bill đã xóa (bill_id cố ý không FK)
+            BE->>DB: failed BILL_DELETED, commit ngay
+        else Finalized với captured_version+1 (ai đó chốt tay)
+            BE->>DB: Đánh dấu finalized, không ghi trùng shares/nợ
+        else Version lệch / voided / thiếu bank / allocation
+            BE->>DB: failed ổn định, không River retry
+        else draft: review + finalize trong tx
+            BE->>DB: Item finalized; TryCompleteBatch → notify Captain
         end
     end
-    C->>BE: GET /groups/{gid}/bill-finalize-batches/{batchId}   [CHỈ Captain được đọc]
-    BE-->>C: Trạng thái từng bill
 ```
-
-## 4. Activity Diagrams
-
-### 4.1 Luồng màn hình Bill Capture (FE)
-
-```mermaid
-flowchart TD
-    A["BillCapturePage (extra: groupId, groupName)"] --> B["Chụp camera (quality 88, max 1920px)<br/>hoặc chọn nhiều ảnh thư viện"]
-    B --> C{"Số ảnh > 5?"}
-    C -->|"Có"| D["SnackBar lỗi vượt giới hạn"] --> B
-    C -->|"Không"| E["Validate từng ảnh:<br/>magic bytes JPEG/PNG/WebP/HEIC + ≤10MB"]
-    E --> F{"Ảnh hợp lệ?"}
-    F -->|"Không"| G["Loại ảnh lỗi"] --> B
-    F -->|"Có"| H["Tray: kéo-thả đổi thứ tự, xoay 90°, crop, xóa"]
-    H --> I{"Header button"}
-    I -->|"0 ảnh → 'Nhập thủ công'"| J["Push BillDetail: bill rỗng, id='', draft"]
-    I -->|"≥1 ảnh → 'Chia tiền N'"| K["Push BillDetail: photos + autoStartOcr=true"]
-    J --> L["User nhập tay món + gán người"]
-    K --> M["Tự mở OcrCandidateReviewModal + POST /bills multipart"]
-    M --> N{"OCR?"}
-    N -->|"succeeded"| O["Hiện candidate → user áp dụng/sửa"]
-    N -->|"failed / timeout 60s poll"| P["Modal: Retry OCR hoặc Nhập tay"]
-    P -->|"Retry"| M
-    P -->|"Nhập tay"| J
-    L --> Q["Tiếp tục ở Bill Detail"]
-    O --> Q
-```
-
-### 4.2 Gating sticky bottom bar theo trạng thái × vai trò (FE)
-
-```mermaid
-flowchart TD
-    A["BillDetailPage render sticky bar"] --> B{"Có warning?<br/>!hasBankAccount || hasNoItems ||<br/>hasUnassignedItems || isTotalMismatch"}
-    B -->|"Có warning"| C["Hàng cảnh báo vàng + nút chính DISABLE (outline thay gradient)"]
-    B -->|"Sạch"| D["Nút chính enable"]
-
-    D --> E{"status?"}
-    E -->|"draft"| F{"role?"}
-    F -->|"Captain"| F1["Lưu nháp (disable khi !isDirty) + Chốt hoá đơn"]
-    F -->|"Creditor"| F2["Lưu nháp + Gửi đối soát"]
-    F -->|"Member"| F3["Xem phân bổ (read-only)"]
-    E -->|"reviewed"| G{"role?"}
-    G -->|"Captain"| G1["Sửa lại + Chốt chia tiền"]
-    G -->|"Creditor"| G2["Gửi đối soát — disable khi !isDirty ('Chưa có thay đổi mới')"]
-    G -->|"Member"| G3["Read-only"]
-    E -->|"finalized"| H{"Captain?"}
-    H -->|"Có"| H1["Huỷ hoá đơn + Xem phân bổ"]
-    H -->|"Không"| H2["Xem phân bổ"]
-    E -->|"voided"| I["Read-only hoàn toàn"]
-```
-
-> Quy quyền FE: `isEditable = !readOnly && (isCaptain || isCreditor || members empty)`; khi chưa rõ role thì **mặc định true** để tránh khóa nhầm UI (BE vẫn là nguồn sự thật cuối).
 
 ---
 
-## 5. Edge Cases
+## 7. Activity Diagrams
 
-### 5.1 Chia tiền & dữ liệu
+### 7.1 Capture
 
-| # | Tình huống | Xử lý | Mã lỗi | Vị trí |
-|---|---|---|---|---|
-| 1 | Tổng tiền lẻ không chia đều (VD 100k / 3 người) | Floor allocation 2 lượt — phần dư Creditor hấp thụ, ghi `RoundingAdjustment`; invariant Σ = allocTotal kiểm tra cấu trúc | — | `usecase/allocation.go:93-230` |
-| 2 | Field `total` client khai sai (do OCR) | Bỏ qua — `allocTotal` tính từ tổng thành phần | tránh chênh lệch oan cho Creditor | `allocation.go:160-167` |
-| 3 | Giảm giá lớn hơn khả năng hấp thụ | Trần per-member ở lượt 1; nếu Creditor vẫn âm → lỗi, **không tự kẹp** | `422 DISCOUNT_NOT_ALLOCATABLE` | `allocation.go:192-210` |
-| 4 | Discount > tổng bill | Blocker chặn review/finalize | `DISCOUNT_EXCEEDS_BILL` | `reconciliation.go:14-114` |
-| 5 | Còn món chưa gán ai | Blocker + FE dialog liệt kê cụ thể món nào | `ITEM_UNASSIGNED` | như trên |
-| 6 | Gán món cho member đã rời nhóm | Blocker | `INACTIVE_MEMBER_ASSIGNED` | như trên |
-| 7 | Thiếu creditor_member_id khi calculate | Từ chối | `422 CREDITOR_REQUIRED` | `service.go:476-563` |
-| 8 | Warning tổng phụ/tổng không khớp OCR | Không chặn review nhưng lưu `mismatch_codes`, FE hiện bảng so sánh và disable nút chính | `SUBTOTAL_MISMATCH` / `TOTAL_MISMATCH` | FE `_showMismatchDetailDialog` |
+```mermaid
+flowchart TD
+    A["BillCapture extra groupId"] --> B["Camera q88 max 1920 hoặc thư viện. Camera fail → PNG dummy 1×1"]
+    B --> C{"Số ảnh > 5?"}
+    C -->|"Có"| D["SnackBar"] --> B
+    C -->|"Không"| E["Magic JPEG/PNG/WebP/HEIC + ≤10MB"]
+    E --> F{"Hợp lệ?"}
+    F -->|"Không"| G["Loại"] --> B
+    F -->|"Có"| H["Tray: kéo, xoay 90°, crop, xóa"]
+    H --> I{"Nút header"}
+    I -->|"0 ảnh Nhập thủ công"| J["BillDetail id='' draft"]
+    I -->|">=1 Chia tiền N"| K["BillDetail photos autoStartOcr"]
+    K --> L["POST multipart 202 + chờ ocr.updated 60s"]
+    L --> M{"OCR?"}
+    M -->|"succeeded"| N["Modal → merge local + PUT"]
+    M -->|"fail / hết giờ"| P["Retry = POST /bills mới, hoặc nhập tay"]
+    J --> Q["Bill Detail"]
+    N --> Q
+    P --> Q
+```
 
-### 5.2 Đồng thời & phiên bản
+### 7.2 Sticky bar theo status × role
 
-| # | Tình huống | Xử lý | Mã lỗi |
+Cảnh báo vàng disable nút chính: `!hasBankAccount || hasNoItems || hasUnassignedItems || isTotalMismatch`.
+
+```mermaid
+flowchart TD
+    A["Sticky bar"] --> B{"Warning?"}
+    B -->|"Có"| C["Outline, disable"]
+    B -->|"Không"| D{"status"}
+    D -->|"draft"| E{"role"}
+    E -->|"Captain"| E1["Lưu nháp (disable !dirty) + Chốt hoá đơn"]
+    E -->|"Creditor"| E2["Lưu nháp + Gửi đối soát"]
+    E -->|"Member"| E3["Xem phân bổ"]
+    D -->|"reviewed"| F{"role"}
+    F -->|"Captain"| F1["Sửa lại + Chốt chia tiền"]
+    F -->|"Creditor"| F2["Gửi đối soát disable !dirty"]
+    F -->|"Member"| F3["Xem phân bổ"]
+    D -->|"finalized"| G{"Captain?"}
+    G -->|"Có"| G1["Huỷ + Xem phân bổ"]
+    G -->|"Không"| G2["Xem phân bổ"]
+    D -->|"voided"| H["Xem phân bổ outline — không ẩn hết"]
+```
+
+`isCaptain` / `isCreditor` **mặc định true** khi chưa có `currentUserId` hoặc `members` rỗng — tránh khóa UI nhầm. BE vẫn chặn.
+
+---
+
+## 8. Realtime
+
+| Loại | Khi | Surface đánh thức |
+|---|---|---|
+| `bill.created` / `content_changed` / `reviewed` | create / PUT / review | `bill.detail`, `group.bills`, hai list nhóm, `home.activities` |
+| `bill.deleted` / `finalized` / `voided` | | thêm `group.debts`, `group.detail`, `settlement.overview` |
+| `bill.settlement_changed` | proof/confirm/reject | `bill.detail`, `group.bills` |
+| `ocr.updated` | worker | `ocr.waiter`, `bill.detail` khớp đúng id |
+| `group.bill_submission_locked` | lock/unlock | `group.detail`, `group.roster`, hai list nhóm |
+
+Không có event `bill.updated`. FE đăng ký `ocr.waiter` cạnh `bill.detail` trong notifier.
+
+---
+
+## 9. Edge Cases
+
+### 9.1 Chia tiền
+
+| # | Tình huống | Xử lý | Mã |
 |---|---|---|---|
-| 9 | 2 thiết bị sửa cùng draft | Optimistic locking `expected_version` | `409 VERSION_CONFLICT` |
-| 10 | Apply candidate khi bill đã đổi sau khi OCR chạy | Check kép: version hiện tại **và** version lúc OCR (stale apply có metric riêng) | `409 VERSION_CONFLICT` / `OCR_RESULT_STALE` |
-| 11 | 2 lệnh retry OCR đồng thời | Partial unique index `uq_ocr_jobs_active_bill` — chỉ 1 job active/bill + CAS processing trong worker | `409 OCR_ALREADY_RUNNING` |
-| 12 | Spam retry OCR | Giới hạn 5 lần thủ công/24h (configurable `BILL_OCR_MANUAL_LIMIT`) | `429 OCR_LIMIT_REACHED` |
-| 13 | Nộp bill khi Captain đã khóa submissions | Pre-check rẻ trước upload; re-check trong tx là nguồn sự thật cuối; ảnh upload lỡ dâng → queue media cleanup | `409 BILL_SUBMISSION_LOCKED` |
-| 14 | Void bill khi có người đang thanh toán | Debts phải toàn awaiting; QR intent (pending_proof) mới được superseded | `409 PAYMENT_ALREADY_STARTED` |
-| 15 | Idempotency-Key tái sử dụng với payload khác | So hash payload | `409 IDEMPOTENCY_KEY_REUSED` |
-| 16 | Key đang in_progress của op khác | Từ chối | `409 IDEMPOTENCY_IN_PROGRESS` |
-| 17 | Mutation fail sau khi reserve key | Release key để lần retry không kẹt 409 | — |
-| 18 | Bill bị xóa giữa chừng batch finalize-all | Item failed DELETED (bill_id cố ý không FK để xóa được); batch vẫn chạy tiếp bill khác | — |
+| 1 | 100k / 3 người | Largest remainder + UUID tie, không dồn creditor | — |
+| 2 | `total` OCR sai | Bỏ qua, dùng allocTotal thành phần | — |
+| 3 | Discount lớn quá | Cap non-creditor; creditor vẫn âm → không kẹp | `DISCOUNT_NOT_ALLOCATABLE` (review: gói `BILL_NOT_READY`) |
+| 4 | Discount > bill | Blocker | `DISCOUNT_EXCEEDS_BILL` → `BILL_NOT_READY` |
+| 5 | Món chưa gán | Blocker; FE tự liệt kê | `ITEM_UNASSIGNED` chỉ trên GET `mismatch_codes` |
+| 6 | Gán member đã rời | Blocker | `INACTIVE_MEMBER_ASSIGNED` |
+| 7 | Calculate thiếu creditor | | usecase `CREDITOR_REQUIRED`; HTTP review `BILL_NOT_READY` |
+| 8 | SUBTOTAL/TOTAL_MISMATCH | **Chặn review**, không còn warning | `BILL_NOT_READY` |
 
-### 5.3 OCR worker
+### 9.2 Đồng thời
+
+| # | Tình huống | Xử lý | Mã |
+|---|---|---|---|
+| 9 | 2 máy sửa nháp | CAS version | `409 VERSION_CONFLICT` |
+| 10 | Apply-candidate stale | Kép version | `VERSION_CONFLICT` / `OCR_RESULT_STALE` |
+| 11 | 2 retry OCR | Unique active job + CAS | `409 OCR_ALREADY_RUNNING` |
+| 12 | Spam retry tay | 5 / 24h kể cả job lúc tạo | `429 OCR_LIMIT_REACHED` |
+| 13 | Nộp khi đã khóa | Pre-check + re-check trong tx; ảnh lỡ → cleanup | `409 BILL_SUBMISSION_LOCKED` |
+| 14 | Void khi đã nộp proof | `payment_id` set hoặc không awaiting | `409 PAYMENT_ALREADY_STARTED` |
+| 15 | Void khi mới có QR | Debts còn awaiting, payment_id NULL → void được, QR superseded | `200` |
+| 16 | Key tái sử dụng payload khác | | `409 IDEMPOTENCY_KEY_REUSED` |
+| 17 | Key in_progress | | `409 IDEMPOTENCY_IN_PROGRESS` |
+| 18 | Mutation fail sau reserve | Release key | — |
+| 19 | Bill xóa giữa bulk | Item BILL_DELETED, batch chạy tiếp | — |
+
+### 9.3 OCR / FE
 
 | # | Tình huống | Xử lý |
 |---|---|---|
-| 19 | Provider timeout/lỗi tạm thời | Retry exp backoff `base × 2^(attempt−1)`, cap attempt 20 |
-| 20 | Lỗi vĩnh viễn (schema invalid, bill not found...) | Failed ngay với mã đóng `provider_timeout/provider_unavailable/provider_error/download_failed/no_images/bill_not_found/schema_invalid` — không retry |
-| 21 | River giao job trùng (at-least-once) | Idempotent skip nếu succeeded/failed; CAS `queued→processing` |
-| 22 | FE mất SSE hoặc shared listener đứt | BE đóng stream local; FE reconnect lấy `snapshot` hoặc poll 1.5s × 40 (~60s), stop sớm khi failed, lỗi poll từng lần ignore |
-| 23 | Camera unavailable (desktop/web test) | FE chèn ảnh dummy PNG fallback để luồng vẫn chạy được |
-| 24 | File giả đuôi `.jpg` | FE `ImageValidator` check magic bytes trước khi upload |
+| 20 | Provider tạm | River retry đến MaxAttempts (mặc định 3) |
+| 21 | schema_invalid | Fail ngay, không retry |
+| 22 | Job giao trùng | Skip terminal; CAS processing |
+| 23 | Mất SSE | User stream reconnect + `ready` hàn; waiter GET lại |
+| 24 | Camera desktop | PNG dummy |
+| 25 | File giả đuôi jpg | FE magic bytes |
+| 26 | WebP | FE nhận, BE processor từ chối |
+| 27 | FE Retry OCR | Tạo **bill mới**, không `/ocr-retry` |
+| 28 | FE Apply OCR | PUT draft, không `/apply-candidate` |
+| 29 | Finalize thiếu STK | BE nhìn **creditor**; FE nhìn **user đang login** — Captain không phải creditor có thể thấy nút khác BE |
+| 30 | Non-Captain finalize | `403 FORBIDDEN` |
+| 31 | Void không lý do | BE 1–500; FE ≥3 | `VALIDATION_FAILED` |
+| 32 | Finalize-all trùng batch | `409 BULK_FINALIZE_IN_PROGRESS` |
+| 33 | Member đoán batch id | `403 CAPTAIN_REQUIRED` |
+| 34 | Tạo bill | Mọi member active, không chỉ Captain/creditor |
 
-### 5.4 Finalize / Void
+---
 
-| # | Tình huống | Xử lý | Mã lỗi |
-|---|---|---|---|
-| 25 | Finalize khi Creditor chưa có STK | Chặn cả FE (warning vàng disable nút) lẫn BE | `422 BANK_ACCOUNT_REQUIRED` |
-| 26 | Non-Captain bấm finalize | BE từ chối dù FE có thể render nút | `403 CAPTAIN_REQUIRED` |
-| 27 | Void không có lý do | BE bắt buộc 1–500 ký tự (FE dialog ép ≥3) | `400 INVALID_INPUT` |
-| 28 | Finalize-all khi đang có batch chạy | Partial unique 1 active batch/group | `409 BULK_FINALIZE_IN_PROGRESS` |
-| 29 | Member thường đoán ID batch để xem kết quả | GetFinalizeBatch chỉ Captain | `403` |
+## 10. Cấu hình
+
+| Biến | Mặc định | Ý nghĩa |
+|---|---|---|
+| `BILL_OCR_MAX_ATTEMPTS` | `3` | River, không phải 20 |
+| `BILL_OCR_MANUAL_LIMIT` / `WINDOW_HOURS` | `5` / `24` | Retry tay |
+| `BILL_IMAGE_MAX_BYTES` / `COUNT` | 10MiB / 5 | |
+| OCR provider timeout | `8s` | LlamaExtract |
+| Signed URL ảnh / proof | 5 phút | |
+
+---
+
+## 11. Ghi chú triển khai đáng chú ý
+
+1. **`version` trong JSON, không `expected_version`.** Client cũ gửi sai tên field = validate fail, không phải conflict.
+
+2. **Largest remainder, không remainder-to-creditor.** Đổi "cho công bằng người trả" là đổi invariant đã có test.
+
+3. **Review trả `BILL_NOT_READY` trần.** Đừng vẽ sequence FE hiện code từ body 422. Code nằm ở GET `mismatch_codes` và tính local.
+
+4. **FE không gọi apply-candidate / ocr-retry.** Tài liệu endpoint vẫn đúng cho client khác. Mô tả app thì nói PUT và POST `/bills` lại.
+
+5. **Khóa nộp có unlock.** Migration comment V1 "một chiều" stale.
+
+6. **QR `pending_proof` không chặn void.** Chỉ proof (debts `pending_confirmation` + `payment_id`) mới `PAYMENT_ALREADY_STARTED`. Xem [`04-settlement.md`](04-settlement.md).
+
+7. **`hasBankAccount` FE ≠ creditor BE.** Nút Captain có thể enable rồi ăn 422, hoặc disable oan.
+
+8. **Idempotency fail phải Release.** Không thì retry kẹt 409 mãi.
+
+9. **Bulk: mỗi bill một tx.** Một bill fail không rollback bill khác. `bill_id` không FK để xóa draft vẫn được.
+
+10. **Job OCR enqueue cùng tx tạo bill.** Rollback → không có job mồ côi. Worker skip terminal vì River at-least-once.
+
+11. **Log OCR nhà cung cấp:** chỉ mã đã phân loại + mô tả cắt 120 ký tự. Không dump candidate, không dump ảnh.
+
+---
+
+## 12. Trạng thái hiện tại
+
+| Hạng mục | Trạng thái | Ghi chú |
+|---|---|---|
+| Thủ công / review / finalize / void | ✅ | Version CAS |
+| OCR LlamaExtract + user stream | ⚠️ Unit test đủ; runtime phụ thuộc nhà cung cấp thật | AC-21 |
+| Khóa / mở nộp bill | ✅ | FE Group Detail gọi API |
+| Finalize-all | ✅ | |
+| Apply-candidate / ocr-retry HTTP | ✅ BE | FE chưa dùng |
+| `replaces_bill_id` | ✅ BE | FE chưa gửi |
+| SSE `/bills/{id}/events` | ⚠️ Legacy | Cổng 410 chưa bật |

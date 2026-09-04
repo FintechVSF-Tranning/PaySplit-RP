@@ -1,213 +1,278 @@
-# 05 — Notification: Thông báo In-app & Push Notification (FCM)
+# 05 — Notification: chuông trong app và đẩy lúc điện thoại tắt
 
-> **Phạm vi**: 
-> - Backend module `notification` (`/api/v1/notifications`) + các điểm producer trong `bill`/`settlement`.
-> - Frontend Mobile App (`PaySplit-FE`): Quản lý FCM Token (`FCMTokenManager`), Lắng nghe Push (`PushNotificationHandler`), Điều hướng tự động (`NotificationRouteResolver`), Màn hình Notifications & Badge chuông tại Home.
+> **Phạm vi**: BE module `notification` (`/api/v1/notifications`) + producer trong bill/settlement ↔ FE `FCMTokenManager`, `PushNotificationHandler`, `NotificationRouteResolver`, màn Notifications + chấm chuông Home.
 >
-> Code tham chiếu chính: 
-> - Backend: `PaySplit-BE/internal/modules/notification/**`, `PaySplit-BE/internal/platform/notification/fcm/**`.
-> - Frontend: `PaySplit-FE/lib/core/network/fcm_token_manager.dart`, `PaySplit-FE/lib/core/network/push_notification_handler.dart`, `PaySplit-FE/lib/app/router/notification_route_resolver.dart`, `PaySplit-FE/lib/features/notifications/**`.
+> Code tham chiếu chính: `PaySplit-BE/internal/modules/notification/**`, `PaySplit-BE/internal/platform/notification/fcm/**`, `PaySplit-FE/lib/core/network/fcm_token_manager.dart`, `push_notification_handler.dart`, `lib/app/router/notification_route_resolver.dart`, `lib/features/notifications/**`.
+>
+> Đọc cùng: [`01-auth.md`](01-auth.md) (PUT FCM, session), [`07-app-startup-network.md`](07-app-startup-network.md) (init Firebase), [`08-realtime.md`](08-realtime.md) (SSE không thay push).
 
 ---
 
-## 1. Tổng quan mô hình
+## 1. Vấn đề, và ý tưởng để giải quyết
+
+### 1.1 Hai đường, một bản ghi
+
+Người dùng mở app thì thấy danh sách. Người dùng tắt app thì cần FCM. Nếu ghi DB xong mới enqueue, process chết giữa chừng = có chuông trong app nhưng không bao giờ đẩy. Nếu enqueue trước commit, rollback = đẩy tin ma.
+
+> Bản ghi `notifications` và job `send_notification` ra đời **trong cùng transaction nghiệp vụ** (finalize, proof, confirm…). Không có record mồ côi, không có job trùng. Job chỉ mang `notification_id`; worker đọc lại DB.
+
+### 1.2 Push là phụ, in-app là chính
+
+Chưa cấp quyền thông báo, chưa có token, chưa cấu hình Firebase credentials: **server vẫn chạy**, chuông trong app vẫn đủ. Worker không có notifier → return ngay, không retry vô ích.
+
+### 1.3 SSE không thay notification
+
+Realtime chỉ nói "dữ liệu bẩn, hãy GET lại". Notification nói "có chuyện xảy ra, hãy mở đúng màn". Hai kênh khác việc. Đừng định hướng từ frame `invalidate`.
+
+---
+
+## 2. Bảng tổng quan
 
 | Khái niệm | Giá trị |
 |---|---|
-| Tạo thông báo | **Atomic in-app + push**: ghi bản ghi `notifications` và enqueue River job `send_notification` **trong cùng transaction** (BeforeCommit hook) → không có record mồ côi, không có job trùng |
-| Push Hub | Firebase Cloud Messaging (FCM); Token lấy từ session active mới nhất của user |
-| Gắn Token FE | `FCMTokenManager` xin quyền notification sau khi login → lấy FCM Token → gọi `PUT /users/me/fcm-token` gắn vào session hiện tại |
-| Giới hạn nội dung | type ≤60, title ≤255, body ≤1000 ký tự (CHECK DB) — BE tự truncate theo RUNE thêm "..." thay vì trả 500 |
-| Lắng nghe Push FE | `PushNotificationHandler` (Foreground / Background / Terminated state) |
-| Điều hướng Push FE | `NotificationRouteResolver` phân tích payload (`bill_id`, `group_id`, `type`) để mở đúng màn hình chi tiết |
+| Tạo | Insert + enqueue **trong tx producer** (bill BeforeCommit, settlement `NotifyTx`). `SendToUser` có sẵn nhưng **không producer nào gọi** |
+| Push | FCM. Token = session active mới nhất `ORDER BY issued_at DESC` |
+| Gắn token | Login body `fcm_token?` + `PUT /users/me/fcm-token` sau `initialize()`. Cold start cũng `initialize()` nếu đã có access token |
+| Truncate | Chỉ `SendToUser` (rune + `...`). Producer viết câu ngắn, dựa CHECK `type≤60 title≤255 body≤1000` |
+| Foreground | **SnackBar** Material, nút Xem — không phải system heads-up |
+| Push tap | `context.go` theo resolver, **không** mark-read |
+| In-app tap | Optimistic mark-read rồi `context.push` |
+| Badge Home | Chấm đỏ, không hiện số. Nguồn `notificationsProvider.unreadCount` |
 
-### Các loại notification thực tế có producer
+Domain constants `payment_reminder`, `new_bill`, `group_invitation`… **không** được producer dùng. Resolver FE vẫn hiểu một số alias phòng payload cũ.
 
-| Type | Producer | Người nhận | Hành động điều hướng trên Mobile App |
+---
+
+## 3. Loại thật sự được sinh
+
+| Type | Producer | Người nhận | Payload |
 |---|---|---|---|
-| `bill_finalized` | FinalizeBill (cả bulk) | Từng member (phần tiền), Captain (tổng) | Mở `/bill-detail` (kèm `billId`, `groupId`) |
-| `payment_created` | GeneratePayment | Creditor | Mở `/settlement` tab Cần thu |
-| `payment_submitted` | SubmitProof | Creditor | Mở `/settlement` tab Cần thu & cuộn đến hàng minh chứng |
-| `payment_confirmed` / `payment_rejected` | Confirm / Reject | Debtor | Mở `/settlement` tab Cần trả / Lịch sử |
-| `debt_reminded` | RemindDebt thủ công + automated job | Debtor | Mở `/settlement` tab Cần trả |
-| `payment_stalled_confirmation` | Job quét payment treo >48h | Creditor | Mở `/settlement` tab Cần thu |
-| `bill_bulk_finalize_completed` | Batch finalize-all xong | Captain | Mở `GroupDetailPage` |
+| `bill_finalized` | Finalize (kể cả bulk item thành công) | Từng member có user id; Captain/creditor nhận câu tổng, người khác nhận phần mình | `bill_id`, `group_id`, `amount` |
+| `bill_bulk_finalize_completed` | Batch xong | Captain | `batch_id`, `group_id`, counts |
+| `payment_created` | Tạo QR | **Creditor** | `group_id`, `payment_id` |
+| `payment_submitted` | Nộp proof | Creditor | `group_id`, `payment_id` |
+| `payment_confirmed` / `payment_rejected` | Confirm / Reject | **Debtor** | `group_id`, `payment_id` |
+| `debt_reminded` | Remind tay + job 72h | Debtor | `group_id`, `debt_id` |
+| `payment_stalled_confirmation` | Job 48h | Creditor | `group_id`, `payment_id` |
 
 ---
 
-## 2. Endpoint & Màn hình
+## 4. Endpoint và màn hình
 
-### 2.1 BE Endpoints (Tất cả `liveAuth`, mount `/api/v1/notifications` và `/api/v1/users`)
-
-| Method + Path | Chức năng |
+| Method + Path | Việc |
 |---|---|
-| GET `/notifications?page&page_size` | Danh sách thông báo (phân trang offset pager) |
-| GET `/notifications/unread-count` | Số lượng thông báo chưa đọc (hiển thị badge) |
-| PATCH `/notifications/read-all` | Đánh dấu tất cả thông báo đã đọc |
-| PATCH `/notifications/{id}/read` | Đánh dấu 1 thông báo đã đọc |
-| PUT `/users/me/fcm-token` | Đăng ký / cập nhật FCM Device Token gắn với Session ID hiện tại |
+| GET `/notifications?page&page_size` | Offset pager `{items, meta}` |
+| GET `/notifications/unread-count` | `{unread_count}` — FE list đã lấy kèm, ít gọi lẻ |
+| PATCH `/notifications/read-all` | |
+| PATCH `/notifications/{id}/read` | `WHERE id AND user_id`; 0 hàng → `404 NOT_FOUND` |
+| PUT `/users/me/fcm-token` | Gắn vào **sid hiện tại**. Rỗng → `400 INVALID_FCM_TOKEN` |
 
-### 2.2 FE Màn hình (`/notifications`, full-screen ngoài shell)
+Auth fail trên notification handler: `UNAUTHORIZED` (không phải `AUTHENTICATION_REQUIRED`).
 
-- Filter tabs **Tất cả / Chưa đọc** (lọc client-side nhanh chóng).
-- Gom nhóm theo mốc thời gian: "Hôm nay" / "Trước đó".
-- Skeleton loading + Empty state thân thiện.
-- Infinite scroll trigger khi cuộn cách đáy danh sách ≤200px.
-- Badge dot đỏ trên icon chuông tại AppBar màn hình Home (`unreadNotificationCountProvider`).
+FE `/notifications` full-screen: tab Tất cả / Chưa đọc (lọc client), nhóm Hôm nay / Trước đó, skeleton, empty, infinite scroll ≤200px đáy, pull-to-refresh giữ list cũ + SnackBar khi mất mạng.
 
 ---
 
-## 3. Sequence Diagrams
+## 5. Sequence Diagrams
 
-### 3.1 Luồng Sản sinh, Enqueue & Bắn Push FCM
+### 5.1 Sinh trong tx nghiệp vụ rồi mới đẩy
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant P as Producer (FinalizeBill / Settlement)
-    participant DB as PostgreSQL 18
-    participant Q as River Queue Engine
+    participant P as Finalize / Settlement
+    participant DB as PostgreSQL
+    participant Q as River
     participant W as NotificationWorker
-    participant FCM as Firebase Cloud Messaging
-    participant FE as Flutter App (PushHandler)
+    participant FCM as Firebase
+    participant FE as PushHandler
 
-    P->>DB: BEGIN tx nghiệp vụ (vd: Finalize Bill)
-    Note over DB: Trong CÙNG tx: INSERT notifications (title/body truncate theo RUNE nếu dài)<br/>+ ENQUEUE job 'send_notification' mang NotificationID (BeforeCommit hook)
-    P->>DB: COMMIT — bản ghi và job ra đời cùng nhau (nguyên tử)
+    P->>DB: BEGIN tx (chốt bill, nộp proof, ...)
+    Note over DB: INSERT notifications + InsertTx job send_notification cùng tx
+    P->>DB: COMMIT — bản ghi và job cùng sống hoặc cùng mất
 
-    Q-->>W: Deliver job 'send_notification' (at-least-once)
-    W->>DB: Load lại notification theo NotificationID
-    alt Notification không còn tồn tại
-        W-->>Q: Hoàn tất job — KHÔNG retry vô ích
+    Q-->>W: Deliver (at-least-once), payload chỉ notification_id
+    alt pushNotifier == nil
+        W-->>Q: xong ngay, không load DB
     end
-    W->>DB: Lấy FCM token active mới nhất từ sessions<br/>WHERE revoked_at IS NULL AND expires_at > now()
-    alt Token rỗng / user chưa cấp quyền FCM
-        Note over W: Bỏ qua push — bản ghi in-app vẫn được lưu an toàn
-    else Có FCM Token hợp lệ
-        W->>FCM: Gửi push notification message (kèm data payload JSONB nil-safe)
-        alt Token invalid / Unregistered (User gỡ app / đổi thiết bị)
-            W->>DB: ClearFCMToken khỏi session (tự động dọn dẹp)
-        else Message invalid (nội dung lỗi)
-            Note over W: Chỉ log warning — KHÔNG xóa nhầm token
-        else Lỗi mạng tạm thời
-            W-->>Q: Return err -> River tự động retry với exponential backoff
-        else Gửi thành công
-            FCM-->>FE: Push thông báo đến thiết bị người dùng
-            FE->>FE: PushNotificationHandler hiển thị Heads-up Banner / cập nhật Badge
+    W->>DB: Load notification
+    alt Không còn row
+        W-->>Q: xong, không retry
+    end
+    W->>DB: FCM token session active mới nhất
+    alt Rỗng
+        Note over W: Bỏ push. In-app vẫn còn
+    else Token invalid / Unregistered
+        W->>FCM: gửi
+        FCM-->>W: Unregistered
+        W->>DB: ClearFCMToken theo (token, user_id)
+    else Message invalid
+        Note over W: Log, GIỮ token
+    else Lỗi mạng
+        W-->>Q: err → River backoff
+    else OK
+        FCM-->>FE: data.type = notif.Type luôn được nhét
+        alt App foreground
+            FE->>FE: SnackBar + nút Xem
+        else Background / terminated
+            FE->>FE: Hệ thống hiện notification. Tap → resolver, không mark-read
         end
     end
 ```
 
-### 3.2 Đăng ký FCM Token khi Khởi động & Đăng nhập
+### 5.2 Đăng ký token
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor U as Người dùng
-    participant FE as Flutter App (Bootstrap / Login)
+    participant App as bootstrap / App.initState / Login
     participant FTM as FCMTokenManager
     participant FCM as Firebase SDK
-    participant BE as Auth/Users API
+    participant BE as PUT /users/me/fcm-token
 
-    U->>FE: Đăng nhập thành công (Lưu AccessToken vào SecureStorage)
-    FE->>FTM: initialize() & registerToken()
-    FTM->>FCM: requestPermission() (Alert, Badge, Sound)
-    alt Người dùng từ chối cấp quyền
-        Note over FTM: Ghi log, bỏ qua — không cản trở luồng ứng dụng
-    else Cấp quyền thành công
-        FTM->>FCM: getToken()
-        FCM-->>FTM: Trả về fcmToken (chuỗi định danh thiết bị)
-        FTM->>BE: PUT /api/v1/users/me/fcm-token {fcm_token: "..."} (Bearer JWT)
-        BE->>BE: Lấy SessionID từ liveAuth context
-        BE->>BE: Lưu fcm_token vào session active tương ứng trong DB
-        BE-->>FTM: 200 OK
-        FTM->>FCM: Lắng nghe onTokenRefresh -> tự động PUT token mới nếu Firebase xoay token
+    Note over App: Firebase.initializeApp TRƯỚC EnvConfig. Background handler đăng ký lúc này
+    App->>FTM: initialize() (mỗi cold start nếu có token; và sau login)
+    FTM->>FCM: requestPermission
+    Note over FTM: Từ chối quyền vẫn gọi getToken() — không early return
+    FTM->>FCM: getToken
+    alt Không có access token
+        FTM->>FTM: bỏ sync
+    else Có
+        FTM->>BE: PUT {fcm_token} Bearer
+        Note over BE: Ghi vào sid liveAuth. Race revoke → handler 500 INTERNAL_ERROR
+        FTM->>FCM: onTokenRefresh → PUT lại, dedupe _lastSyncedToken
+        Note over FTM: Fail: retry 10s, 1 phút, 5 phút
     end
 ```
 
-### 3.3 Đọc danh sách & Điều hướng khi chạm vào thông báo
+Login còn gửi `fcm_token` trên `POST /auth/sign-in` nếu SDK đã có sẵn. Logout: `onLogout` hủy sub, tăng `_sessionEpoch`, `deleteToken()`, rồi mới clear storage.
+
+### 5.3 Chạm thông báo
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor U as Người dùng
-    participant FE as NotificationsPage / NotificationRouteResolver
-    participant BE as Notification API
+    participant FE as NotificationsPage hoặc PushHandler
+    participant R as NotificationRouteResolver
+    participant BE as PATCH .../read
 
-    U->>FE: Chạm vào 1 thông báo (hoặc bấm vào Push Banner)
-    FE->>FE: Optimistic update: readAt = now(), unreadCount = unreadCount - 1
-    FE->>BE: PATCH /api/v1/notifications/{id}/read (WHERE id=$1 AND user_id=$2)
-    
-    FE->>FE: NotificationRouteResolver.resolve(payload)
-    alt payload chứa bill_id và group_id
-        FE->>U: Điều hướng sang /bill-detail (kèm billId, groupId)
-    else payload chứa group_id (không có bill)
-        FE->>U: Điều hướng sang GroupDetailPage (groupId)
-    else payload type = payment_created / payment_submitted / debt_reminded
-        FE->>U: Điều hướng sang /settlement (tab tương ứng)
-    else Không khớp payload đặc thù
-        FE->>U: Giữ nguyên màn hình, chỉ đánh dấu đã đọc
+    alt Từ danh sách in-app
+        U->>FE: Tap hàng
+        FE->>FE: Optimistic readAt + unreadCount−1
+        FE->>BE: PATCH /notifications/{id}/read
+        FE->>R: resolve(type, payload)
+        FE->>U: context.push
+    else Từ banner FCM
+        U->>FE: Tap
+        FE->>R: resolve
+        FE->>U: context.go — không gọi mark-read
     end
 ```
 
 ---
 
-## 4. Activity Diagrams
+## 6. Activity Diagrams
 
-### 4.1 Vòng đời tạo & gửi thông báo
-
-```mermaid
-flowchart TD
-    A["Sự kiện nghiệp vụ phát sinh<br/>(Finalize Bill / Payment / Remind...)"] --> B["Producer gọi SendToUser trong tx nghiệp vụ"]
-    B --> C{"Nội dung vượt CHECK DB?"}
-    C -->|"Có"| D["Truncate theo RUNE + '...'"]
-    C -->|"Không"| E["INSERT notifications"]
-    D --> E
-    E --> F["Enqueue send_notification cùng tx (BeforeCommit)"]
-    F --> G{"FCM Configured?<br/>(Firebase Credentials có sẵn)"}
-    G -->|"Không cấu hình credentials"| H["Worker chỉ lưu in-app,<br/>server chạy bình thường"]
-    G -->|"Có"| I["Worker: load notification + lấy active session token"]
-    I --> J{"Trạng thái Token?"}
-    J -->|"Không có / Rỗng"| K["Bỏ qua push (chờ user mở app)"]
-    J -->|"Token invalid"| L["ClearFCMToken khỏi DB + kết thúc"]
-    J -->|"Hợp lệ"| M["Gửi FCM Message"]
-    M --> N{"Kết quả gửi?"}
-    N -->|"Message invalid"| O["Log warning, giữ token"]
-    N -->|"Lỗi mạng tạm thời"| P["River retry với backoff"]
-    N -->|"Thành công"| Q["Thiết bị nhận Push Notification"]
-    K --> R["User thấy trong danh sách In-app khi mở app"]
-    Q --> R
-```
-
-### 4.2 Điều hướng thông minh theo Payload (`NotificationRouteResolver`)
+### 6.1 Worker
 
 ```mermaid
 flowchart TD
-    A["Người dùng chạm vào Thông báo / Push Banner"] --> B{"readAt == null?"}
-    B -->|"Chưa đọc"| C["Optimistic markAsRead + unreadCount−1<br/>PATCH /api/v1/notifications/{id}/read"]
-    B -->|"Đã đọc"| D
-    C --> D["Phân tích Notification Payload"]
-    D --> E{"Loại Payload?"}
-    E -->|"bill_finalized / có bill_id"| F["Điều hướng: /bill-detail {billId, groupId}"]
-    E -->|"group_id (không có bill)"| G["Điều hướng: GroupDetailPage {groupId}"]
-    E -->|"payment_created / payment_submitted / debt_reminded"| H["Điều hướng: /settlement (Tab Cần thu / Cần trả)"]
-    E -->|"Khác / Không có metadata"| I["Chỉ hiển thị nội dung thông báo"]
+    A["Job send_notification"] --> B{"Notifier nil?"}
+    B -->|"Có (dev không credentials)"| Z["Xong"]
+    B -->|"Không"| C["Load notification"]
+    C --> D{"Còn row?"}
+    D -->|"Không"| Z
+    D -->|"Có"| E["Token session mới nhất"]
+    E --> F{"Token?"}
+    F -->|"Rỗng"| Z
+    F -->|"Có"| G["Send + data.type"]
+    G --> H{"Kết quả"}
+    H -->|"Unregistered"| I["ClearFCMToken"] --> Z
+    H -->|"Message invalid"| J["Log, giữ token"] --> Z
+    H -->|"Mạng"| K["River retry"]
+    H -->|"OK"| L["Thiết bị nhận"]
 ```
+
+### 6.2 Resolver — type trước, không phải bill_id trước
+
+Producer luôn gửi `group_id`, nên hầu hết payment **mở Group Detail tab Công nợ**, không phải tab Settlement.
+
+```mermaid
+flowchart TD
+    A["Tap"] --> T{"type"}
+    T -->|"bill_bulk_finalize_completed"| G1["/groups/:id tab bills + openBatchId"]
+    T -->|"payment_submitted / payment_stalled_confirmation / stalled_payment_reminder"| P1{"có group_id?"}
+    P1 -->|"Có"| G2["Group hub tab debts"]
+    P1 -->|"Không"| S1["/settlement tab receivable"]
+    T -->|"payment_confirmed"| P2{"group_id?"}
+    P2 -->|"Có"| G2
+    P2 -->|"Không"| S2["/settlement tab history"]
+    T -->|"payment_rejected / debt_reminded / payment_created / alias reminder"| P3{"group_id?"}
+    P3 -->|"Có"| G2
+    P3 -->|"Không"| S3["/settlement tab payable"]
+    T -->|"bill_finalized / new_bill / created_bill / bill_updated"| B1{"bill_id?"}
+    B1 -->|"Có"| BD["/bill-detail"]
+    B1 -->|"Không, có group"| GB["Group tab bills"]
+    B1 -->|"Không"| BL["/bills"]
+    T -->|"group_invitation / group_invite / member_joined"| GI{"group_id?"}
+    GI -->|"Có"| GB
+    GI -->|"Không"| GL["/groups"]
+    T -->|"fallback"| F["batch → group; bill_id → detail; payment_id → /settlement; group_id → group"]
+```
+
+`payment_created` → **payable** (người nhận tin là creditor, nhưng alias đi nhánh payable khi không có group — với producer hiện tại luôn có `group_id` nên vào group debts).
 
 ---
 
-## 5. Bảng Edge Cases & Cơ Chế Xử Lý
+## 7. Edge Cases
 
-| # | Tình huống | Xử lý hệ thống | Vị trí code tham chiếu |
+| # | Tình huống | Xử lý | Chỗ |
 |---|---|---|---|
-| 1 | Tx nghiệp vụ commit thành công nhưng enqueue job thất bại | Không thể xảy ra — Enqueue trong cùng tx (`BeforeCommit`); cả hai cùng commit hoặc cùng rollback | `usecase/service.go:54-132` |
-| 2 | River giao job lặp (at-least-once) | Job chỉ mang ID; worker query lại DB; nếu đã xử lý thì kết thúc an toàn, không sinh thông báo trùng | `jobs/send_notification.go:57-98` |
-| 3 | Notification bị xóa trước khi worker xử lý | Worker hoàn tất job an toàn, không retry lặp vô hạn | `jobs/send_notification.go` |
-| 4 | User gỡ app → FCM token không còn hiệu lực | Firebase trả lỗi Invalid/Unregistered Token → Worker tự động `ClearFCMToken` dọn rác session | `queries/notification.sql:41` |
-| 5 | Title/Body quá dài làm vỡ ràng buộc DB (CHECK) | Backend tự động truncate theo số lượng RUNE + "..." thay vì trả lỗi 500 | `service.go:136-146` |
-| 6 | Đánh dấu đã đọc hộ người khác | Query ràng buộc `WHERE id=$1 AND user_id=$2` — bắt buộc đúng ownership | `repository/postgres/repository.go` |
-| 7 | Payload JSONB null / sai cấu trúc | Tầng handler map nil-safe sang `map[string]string` phục vụ FCM data payload | `platform/notification/fcm/client.go` |
-| 8 | Chưa cấu hình Firebase credentials (môi trường dev) | `bootstrap/app.go` kiểm tra typed-nil client — server vẫn khởi động bình thường, lưu in-app đầy đủ | `bootstrap/app.go:123-160` |
-| 9 | Pull-to-refresh danh sách thông báo khi mất mạng | Giữ nguyên dữ liệu cũ trên giao diện, chỉ hiển thị SnackBar báo lỗi kết nối | `notifications_notifier.dart:185-187` |
-| 10 | Badge đếm chưa đọc bị lệch khi thao tác nhanh | `unread-count` được query độc lập song song; tự động trừ local khi đọc từng item | `unread_notification_count_provider.dart` |
-| 11 | Người dùng chạm vào thông báo khi app đang tắt (Terminated state) | `FirebaseMessaging.instance.getInitialMessage()` đón payload khi mở app và điều hướng qua `NotificationRouteResolver` | `push_notification_handler.dart` |
+| 1 | Tx rollback | Job không commit | producer tx |
+| 2 | River giao trùng | Worker load theo id, không nhân bản row | `send_notification.go` |
+| 3 | Row bị xóa trước worker | Job xong, không retry | |
+| 4 | Gỡ app / token chết | Unregistered → ClearFCMToken `(token, user_id)` | không xóa nhầm user khác cùng lúc rotate |
+| 5 | Title dài (nếu đi SendToUser) | Truncate rune | producer thật không truncate |
+| 6 | Đọc hộ người khác | WHERE user_id | 404 |
+| 7 | Payload JSONB null | Worker nhét `type`; FCM data map nil-safe | |
+| 8 | Không credentials | `fcm.New` nil; bootstrap tránh typed-nil; worker no-op | `bootstrap/app.go` |
+| 9 | Pull-to-refresh mất mạng | Giữ list + SnackBar | `notifications_notifier.dart` |
+| 10 | Badge lệch | unreadCount đi cùng list; optimistic ±1, rollback khi PATCH fail | không file `unread_notification_count_provider.dart` |
+| 11 | Terminated | `getInitialMessage` + post-frame `context.go` | không mark-read |
+| 12 | Background isolate | Chỉ log | không UI |
+| 13 | Foreground FCM | SnackBar, **không** refresh badge | phải mở màn / pull |
+| 14 | Từ chối quyền OS | Vẫn getToken; in-app đủ | |
+| 15 | PUT FCM lúc session vừa revoke | liveAuth 401; race → 500 | [`01`](01-auth.md) |
+| 16 | Login chưa có token FCM | Body bỏ trống; initialize sau bù PUT | |
+
+---
+
+## 8. Ghi chú triển khai đáng chú ý
+
+1. **Đừng gọi `SendToUser` rồi tưởng producer đang dùng.** Finalize tự build row; settlement `NotifyTx`. Sửa truncate ở `SendToUser` không bảo vệ câu finalize.
+
+2. **Resolver type-first.** Viết "nếu có bill_id thì luôn bill-detail" là sai với `bill_bulk_finalize_completed`.
+
+3. **Push tap không mark-read.** Chủ đích: user có thể thấy chuông chưa đọc khi vào app. Đừng "đồng bộ" với in-app tap.
+
+4. **Foreground không phải heads-up.** SnackBar có thể bị che bởi sheet. Đó là UX hiện tại.
+
+5. **Token lấy session mới nhất.** Single-session khiến điều này trùng sid đang sống. Nếu một ngày nới nhiều session, push chỉ tới máy login sau cùng.
+
+6. **`data.type` luôn được worker nhét.** Dù producer quên. Resolver sống nhờ field này.
+
+7. **ClearFCMToken theo cặp (token, user).** Xóa theo user không điều kiện sẽ cướp token máy mới nếu rotate chậm.
+
+8. **Không log title/body/token/payload.** 
+
+---
+
+## 9. Trạng thái hiện tại
+
+| Hạng mục | Trạng thái | Ghi chú |
+|---|---|---|
+| In-app list / read / badge | ✅ | |
+| FCM worker + register | ✅ | Dev không credentials vẫn boot |
+| Route từ in-app và push | ✅ | Ưu tiên Group Detail khi có `group_id` |
+| Badge realtime khi đang mở Home | ⏸ | Foreground FCM không đụng unreadCount; SSE cũng không |
