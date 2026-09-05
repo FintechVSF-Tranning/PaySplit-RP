@@ -1,0 +1,119 @@
+<!-- ==============================================
+         SLIDE 3: TỔNG QUAN HỆ THỐNG (SYSTEM CONTEXT)
+         ============================================== -->
+    <section class="slide" id="slide-3" data-index="2">
+      <div class="slide-content system-slide">
+
+        <h2 class="slide-title">Tổng Quan Hệ Thống</h2>
+
+        <div class="system-context-wrapper">
+          <div class="system-context-board">
+
+            <!-- SVG CANVAS VẼ TOÀN BỘ CÁC ĐƯỜNG MŨI TÊN KẾT NỐI -->
+            <svg class="context-svg-canvas" viewBox="0 0 1440 580" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                  <polygon points="0 0, 10 4, 0 8" fill="#64748B" />
+                </marker>
+              </defs>
+
+              <!-- Mũi tên 1: PaySplit User -> PaySplit System -->
+              <path class="flow-arrow-line" d="M 270 285 L 555 285" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 2: PaySplit System -> LlamaExtract (OCR) -->
+              <path class="flow-arrow-line" d="M 875 245 C 980 245, 1040 57, 1150 57" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 3: PaySplit System -> VietQR -->
+              <path class="flow-arrow-line" d="M 875 265 C 980 265, 1045 207, 1150 207" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 4: PaySplit System -> Cloudinary -->
+              <path class="flow-arrow-line" d="M 875 305 C 980 305, 1045 357, 1150 357" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 5: PaySplit System -> Firebase FCM -->
+              <path class="flow-arrow-line" d="M 875 325 C 980 325, 1040 507, 1150 507" marker-end="url(#arrowhead)" />
+            </svg>
+
+            <!-- CÁC NHÃN TRÊN MŨI TÊN (THEO ĐÚNG NỘI DUNG SƠ ĐỒ GỐC) -->
+            <div class="flow-badge badge-user-sys">
+              <span>manages groups, bills, and payments</span>
+            </div>
+
+            <div class="flow-badge badge-sys-ocr">
+              <span>extracts receipt information</span>
+            </div>
+
+            <div class="flow-badge badge-sys-qr">
+              <span>generates payment QR information</span>
+            </div>
+
+            <div class="flow-badge badge-sys-storage">
+              <span>stores receipt images</span>
+            </div>
+
+            <div class="flow-badge badge-sys-notif">
+              <span>sends reminders and updates</span>
+            </div>
+
+            <!-- NODE 1: PaySplit User (Trái) -->
+            <div class="context-node node-pill node-user">
+              <img src="assets/logos/user.svg" alt="User Icon" class="node-logo node-logo-user">
+              <div class="node-text">
+                <span class="node-name">PaySplit User</span>
+                <span class="node-type">Mobile App (Flutter)</span>
+              </div>
+            </div>
+
+            <!-- NODE 2: PaySplit System (Trung tâm) -->
+            <div class="context-node node-rect node-system">
+              <img src="assets/app_icon.png" alt="PaySplit Logo" class="node-logo node-logo-system">
+              <div class="node-text">
+                <span class="node-name-system">PaySplit System</span>
+                <span class="node-type-system">Go, PostgreSQL, River Queue</span>
+              </div>
+            </div>
+
+            <!-- NODE 3: LlamaExtract (Phải 1) -->
+            <div class="context-node node-pill node-provider node-ocr">
+              <img src="assets/logos/llama_square.png" alt="Llama Logo" class="node-logo node-logo-ocr">
+              <div class="node-text">
+                <span class="node-name">LlamaExtract</span>
+                <span class="node-type">OCR / Vision Provider</span>
+              </div>
+            </div>
+
+            <!-- NODE 4: VietQR / NAPAS (Phải 2) -->
+            <div class="context-node node-pill node-provider node-vietqr">
+              <div class="logo-box">
+                <img src="assets/logos/vietqr.svg" alt="VietQR Logo" class="node-logo-vietqr">
+              </div>
+              <div class="node-text">
+                <span class="node-name">VietQR / NAPAS</span>
+                <span class="node-type">Payment QR Gateway</span>
+              </div>
+            </div>
+
+            <!-- NODE 5: Cloudinary (Phải 3) -->
+            <div class="context-node node-pill node-provider node-storage">
+              <div class="logo-box">
+                <img src="assets/logos/cloudinary.svg" alt="Cloudinary Logo" class="node-logo-cloudinary">
+              </div>
+              <div class="node-text">
+                <span class="node-name">Cloudinary</span>
+                <span class="node-type">Object Storage</span>
+              </div>
+            </div>
+
+            <!-- NODE 6: Firebase FCM (Phải 4) -->
+            <div class="context-node node-pill node-provider node-fcm">
+              <img src="assets/logos/firebase.svg" alt="Firebase Logo" class="node-logo node-logo-fcm">
+              <div class="node-text">
+                <span class="node-name">Firebase FCM</span>
+                <span class="node-type">Push Notification</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>

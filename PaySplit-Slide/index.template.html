@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PaySplit — Giới thiệu dự án</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Main Presentation Deck -->
+  <main class="deck-viewport" id="deckViewport">
+<!-- {{SLIDES_CONTENT}} -->
+  </main>
+
+  <!-- Nút điều hướng & Đánh số trang slide -->
+  <nav class="nav-controls" aria-label="Điều hướng slide">
+    <button class="nav-btn" id="btnPrev" title="Slide trước" disabled>
+      <i class="fa-solid fa-arrow-left"></i>
+    </button>
+    <div class="slide-counter" id="slideCounter" aria-label="Số trang slide">
+      <span class="current-slide">01</span>
+      <span class="slide-sep">/</span>
+      <span class="total-slides">13</span>
+    </div>
+    <button class="nav-btn" id="btnNext" title="Slide tiếp theo">
+      <i class="fa-solid fa-arrow-right"></i>
+    </button>
+  </nav>
+
+  <!-- Script Logic -->
+  <script src="script.js"></script>
+</body>
+
+</html>

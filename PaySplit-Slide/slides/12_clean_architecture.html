@@ -1,0 +1,132 @@
+<!-- ==============================================
+     SLIDE 12: TỔNG QUAN HỆ THỐNG BACKEND
+     ============================================== -->
+<section class="slide" id="slide-12" data-index="11">
+  <div class="slide-content module-detail-slide">
+    <!-- TIÊU ĐỀ CHÍNH -->
+    <div class="module-detail-header">
+      <h2 class="slide-title">Tổng Quan Hệ Thống Backend</h2>
+    </div>
+
+    <!-- 4 KHỐI KỸ THUẬT BACKEND -->
+    <div class="be-arch-container">
+
+      <!-- KHỐI 1: KIẾN TRÚC PHÂN TẦNG -->
+      <div class="be-pillar-card">
+        <div class="be-pillar-header">
+          <div class="be-pillar-title-group">
+            <div class="be-pillar-icon icon-clean"><i class="fa-solid fa-layer-group"></i></div>
+            <h3 class="be-pillar-title">1. Kiến Trúc Phân Tầng (Clean Architecture)</h3>
+          </div>
+        </div>
+
+        <div class="be-pillar-list">
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Tách biệt rõ ràng các tầng:</strong> Chia riêng tầng nhận yêu cầu (HTTP), tầng xử lý nghiệp vụ (UseCase) và tầng dữ liệu (Database).</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Nghiệp vụ độc lập:</strong> Logic tính toán chia tiền và quản lý công nợ không bị phụ thuộc vào giao diện hay loại cơ sở dữ liệu.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Dễ dàng kiểm thử (Unit Test):</strong> Kiểm tra logic tính toán nhanh chóng, độc lập mà không cần kết nối cơ sở dữ liệu thật.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Dễ bảo trì &amp; mở rộng:</strong> Sửa đổi hoặc nâng cấp một chức năng mà không làm ảnh hưởng đến các phần còn lại của hệ thống.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KHỐI 2: THIẾT KẾ & CHUẨN HÓA API -->
+      <div class="be-pillar-card">
+        <div class="be-pillar-header">
+          <div class="be-pillar-title-group">
+            <div class="be-pillar-icon icon-api"><i class="fa-solid fa-network-wired"></i></div>
+            <h3 class="be-pillar-title">2. Thiết Kế &amp; Chuẩn Hóa API</h3>
+          </div>
+        </div>
+
+        <div class="be-pillar-list">
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Tài liệu API chuẩn mực:</strong> Có tài liệu đặc tả rõ ràng từng API, giúp phía Mobile và Backend phối hợp ăn khớp, không bị lệch dữ liệu.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Định dạng phản hồi thống nhất:</strong> Mọi API đều trả về cấu trúc chung, nêu rõ trạng thái thành công, dữ liệu hoặc mã lỗi dễ hiểu.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Xử lý và điều hướng nhanh:</strong> Sử dụng bộ định tuyến tối ưu giúp tiếp nhận và phản hồi yêu cầu của người dùng với độ trễ thấp.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Theo vết yêu cầu (Tracking ID):</strong> Mỗi lượt gọi API đều có mã định danh riêng để dễ dàng theo dõi và tra cứu khi có sự cố.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KHỐI 3: CƠ CHẾ BẢO MẬT & ĐĂNG NHẬP -->
+      <div class="be-pillar-card">
+        <div class="be-pillar-header">
+          <div class="be-pillar-title-group">
+            <div class="be-pillar-icon icon-security"><i class="fa-solid fa-shield-halved"></i></div>
+            <h3 class="be-pillar-title">3. Cơ Chế Bảo Mật &amp; Đăng Nhập</h3>
+          </div>
+        </div>
+
+        <div class="be-pillar-list">
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Đăng nhập an toàn qua Token:</strong> Phiên đăng nhập ngắn hạn kết hợp tự động làm mới, người dùng không phải nhập lại mật khẩu liên tục.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Thu hồi phiên ngay lập tức:</strong> Khi người dùng bấm Đăng xuất hoặc Đổi mật khẩu, phiên làm việc cũ bị hủy ngay trên hệ thống.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Mã hóa mật khẩu an toàn:</strong> Mật khẩu được mã hóa một chiều kèm chuỗi ngẫu nhiên bảo vệ, chống bị giải mã hoặc lộ lọt.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Bảo vệ hệ thống &amp; Chống sập:</strong> Tự động giới hạn số lần gọi tránh spam/tấn công và tự phục hồi khi có lỗi bất ngờ phát sinh.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KHỐI 4: QUẢN LÝ DỮ LIỆU & XỬ LÝ NGẦM -->
+      <div class="be-pillar-card">
+        <div class="be-pillar-header">
+          <div class="be-pillar-title-group">
+            <div class="be-pillar-icon icon-db"><i class="fa-solid fa-database"></i></div>
+            <h3 class="be-pillar-title">4. Quản Lý Dữ Liệu &amp; Xử Lý Ngầm</h3>
+          </div>
+        </div>
+
+        <div class="be-pillar-list">
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Cơ sở dữ liệu tin cậy (PostgreSQL):</strong> Sử dụng cơ sở dữ liệu mạnh mẽ, viết truy vấn chuẩn xác giúp dữ liệu luôn an toàn và tốc độ cao.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Đảm bảo tính toàn vẹn giao dịch:</strong> Các thao tác chốt bill và thanh toán tiền được xử lý nguyên khối, không xảy ra sai lệch hay mất dữ liệu.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Xử lý ngầm các tác vụ nặng:</strong> Gửi thông báo nhắc nợ được đưa vào hàng đợi xử lý ngầm, không làm gián đoạn trải nghiệm của người dùng.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Đồng bộ thông báo với dữ liệu:</strong> Chỉ khi giao dịch lưu thành công thì thông báo mới được phát đi, tránh gửi thông báo ảo hoặc sai lệch.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>

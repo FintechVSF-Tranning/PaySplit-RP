@@ -1,0 +1,121 @@
+<!-- ==============================================
+         SLIDE 9: CHI TIẾT CÁC MODULE: 5. BILL & EXPENSE ALLOCATION
+         ============================================== -->
+    <section class="slide" id="slide-9" data-index="8">
+      <div class="slide-content module-detail-slide">
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">5</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Bill &amp; Expense Allocation</span>
+          </div>
+        </div>
+
+        <!-- BỐ CỤC CHÍNH: SƠ ĐỒ TRÊN, CHI TIẾT DƯỚI -->
+        <div class="bill-layout-container">
+          
+          <!-- SƠ ĐỒ QUY TRÌNH TỔNG QUAN -->
+          <div class="bill-diagram-top">
+            <img src="assets/diagram_bill_allocation.png" alt="Sơ đồ quy trình phân bổ chia tiền Bill &amp; Expense Allocation" />
+          </div>
+
+          <!-- 2 CỘT: MA TRẬN PHÂN QUYỀN & CÔNG THỨC CHIA TIỀN -->
+          <div class="bill-detail-grid">
+            
+            <!-- CỘT 1: MA TRẬN PHÂN QUYỀN & LIFECYCLE GUARD -->
+            <div class="bill-card">
+              <div class="bill-card-header">
+                <div class="bill-card-icon icon-rbac"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3 class="bill-card-title">1. Phân Quyền &amp; Khóa Trạng Thái (RBAC &amp; Guard)</h3>
+              </div>
+              
+              <table class="rbac-table">
+                <thead>
+                  <tr>
+                    <th>Hành Động / Quyền Hạn</th>
+                    <th>Admin Nhóm</th>
+                    <th>Người Tạo / Ứng Tiền</th>
+                    <th>Thành Viên</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Tạo &amp; Quét Hóa Đơn</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                  </tr>
+                  <tr>
+                    <td>Gán Người Ăn &amp; Trọng Số Món</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-xmark check-no"></i></td>
+                  </tr>
+                  <tr>
+                    <td>Chốt Phân Bổ (Finalize Bill)</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-xmark check-no"></i></td>
+                  </tr>
+                  <tr>
+                    <td>Xem Chi Tiết Món &amp; Phần Nợ</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- CỘT 2: CÔNG THỨC CHIA TIỀN & LÀM TRÒN HAMILTON -->
+            <div class="bill-card">
+              <div class="bill-card-header">
+                <div class="bill-card-icon icon-calc"><i class="fa-solid fa-calculator"></i></div>
+                <h3 class="bill-card-title">2. Công Thức Chia Tiền &amp; Thuật Toán Hamilton</h3>
+              </div>
+
+              <!-- Bước 1 -->
+              <div class="formula-step">
+                <div class="formula-step-title">
+                  <span class="step-badge">Bước 1</span>
+                  <span>Tiền món theo người ăn (Item Share)</span>
+                </div>
+                <div class="formula-box">
+                  Tiền món = Giá món × (Trọng số phần ăn của bạn / Tổng trọng số món)
+                </div>
+                <p class="formula-desc">Ai ăn món gì trả món đó. Nếu ăn chung thì chia đều hoặc chia theo trọng số phần ăn.</p>
+              </div>
+
+              <!-- Bước 2 -->
+              <div class="formula-step">
+                <div class="formula-step-title">
+                  <span class="step-badge">Bước 2</span>
+                  <span>Phân bổ phụ phí (VAT, Phí DV, Giảm giá)</span>
+                </div>
+                <div class="formula-box">
+                  Phụ phí cá nhân = Tổng phụ phí × (Tiền món của bạn / Tổng tiền các món)
+                </div>
+                <p class="formula-desc">Chia sẻ phụ phí theo tỷ lệ tiêu dùng: Người ăn nhiều chịu phí nhiều, ăn ít chịu phí ít.</p>
+              </div>
+
+              <!-- Bước 3 -->
+              <div class="formula-step">
+                <div class="formula-step-title">
+                  <span class="step-badge">Bước 3</span>
+                  <span>Làm tròn Hamilton - Khớp 100% từng đồng</span>
+                </div>
+                <div class="formula-box">
+                  Lấy phần nguyên VND + Phân bổ số dư lẻ cho người có số thập phân lớn nhất
+                </div>
+                <p class="formula-desc">Tránh hoàn toàn lỗi lệch 1 đồng do làm tròn số lẻ. Tổng tiền thu về luôn khớp chuẩn xác 100%.</p>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>

@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PaySplit — Giới thiệu dự án</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Main Presentation Deck -->
+  <main class="deck-viewport" id="deckViewport">
+<!-- ==============================================
+         SLIDE 1: GIỚI THIỆU TỔNG QUAN DỰ ÁN
+         ============================================== -->
+    <section class="slide active" id="slide-1" data-index="0">
+      <div class="slide-content cover-slide">
+
+        <div class="cover-grid">
+
+          <!-- Cột bên trái: Tên dự án & Thông tin Thành viên / Mentor -->
+          <div class="cover-left">
+            <h1 class="project-title">
+              <img src="assets/app_icon.png" alt="PaySplit App Icon" class="title-app-icon">
+              <span>PaySplit</span>
+            </h1>
+            <h2 class="project-subtitle">Hệ Thống Chia Hóa Đơn Nhóm &amp; Nhắc nợ thông minh</h2>
+            <p class="project-desc">
+              Ứng dụng hỗ trợ quét hóa đơn, chia tiền chính xác cho từng thành viên trong nhóm, nhắc nợ thông minh và
+              thanh toán thông qua VietQR nhanh chóng.</p>
+
+            <!-- Khối thông tin Mentor & Thành viên -->
+            <div class="info-blocks">
+
+              <!-- Mentor hướng dẫn -->
+              <div class="info-card">
+                <div class="info-header">
+                  <i class="fa-solid fa-chalkboard-user"></i>
+                  <span>Mentor hướng dẫn:</span>
+                </div>
+                <ul class="info-list">
+                  <li><strong>1.</strong> Trần Quang Hiển</li>
+                  <li><strong>2.</strong> Bành Quốc Danh</li>
+                  <li><strong>3.</strong> Phan Công Huân</li>
+                  <li><strong>4.</strong> Nguyễn Mạnh Tể</li>
+                  <li><strong>5.</strong> Nguyễn Nam Trường</li>
+                </ul>
+              </div>
+
+              <!-- 3 Thành viên thực hiện -->
+              <div class="info-card">
+                <div class="info-header">
+                  <i class="fa-solid fa-users"></i>
+                  <span>Thành viên thực hiện:</span>
+                </div>
+                <ul class="info-list">
+                  <li><strong>1.</strong> Phạm Lê Hoàng Nam</li>
+                  <li><strong>2.</strong> Phạm Thanh Lam</li>
+                  <li><strong>3.</strong> Nguyễn Trọng Tín</li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Cột bên phải: Ảnh dự án thực tế tạo tò mò -->
+          <div class="cover-right">
+            <div class="phone-mockup">
+              <img src="assets/app_screenshot.png" alt="Giao diện thực tế PaySplit — Tổng số dư công nợ"
+                class="screenshot-img">
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 2: NỖI ĐAU & GIẢI PHÁP TỪ PAYSPLIT
+         ============================================== -->
+    <section class="slide" id="slide-2" data-index="1">
+      <div class="slide-content problem-slide">
+
+        <h2 class="slide-title" id="slide2Title">Nỗi Đau Thực Tế & Giải Pháp PaySplit</h2>
+
+        <!-- HÀNG 1: 3 Ô NỖI ĐAU THỰC TẾ (GIỮ NGUYÊN VĂN BẢN VÀ HÌNH ẢNH) -->
+        <div class="pain-cards-grid">
+
+          <!-- Thẻ Nỗi đau 1 -->
+          <div class="pain-card">
+            <div class="pain-img-box">
+              <img src="assets/pain_01_manual_calc.jpg" alt="Tính toán thủ công rối rắm" class="pain-img">
+            </div>
+            <div class="pain-body">
+              <h3 class="pain-card-title">Tính toán thủ công rối rắm</h3>
+              <p class="pain-card-desc">
+                Hóa đơn dài ngoằng, nhiều món chung riêng, cộng trừ thuế VAT và voucher giảm giá thủ công rất dễ sai sót và mất thời gian.
+              </p>
+            </div>
+          </div>
+
+          <!-- Thẻ Nỗi đau 2 -->
+          <div class="pain-card">
+            <div class="pain-img-box">
+              <img src="assets/pain_02_unfair_split.jpg" alt="Chia đều gây bất công" class="pain-img">
+            </div>
+            <div class="pain-body">
+              <h3 class="pain-card-title">Chia đều gây bất công</h3>
+              <p class="pain-card-desc">
+                Người chỉ uống nước lọc hay ăn nhẹ phải chịu chung tiền với người gọi món đắt đỏ hoặc đồ uống có cồn, tạo cảm giác thiếu sòng phẳng.
+              </p>
+            </div>
+          </div>
+
+          <!-- Thẻ Nỗi đau 3 -->
+          <div class="pain-card">
+            <div class="pain-img-box">
+              <img src="assets/pain_03_awkward_debt.png" alt="Tâm lý ngại ngùng khi nhắc nợ" class="pain-img">
+            </div>
+            <div class="pain-body">
+              <h3 class="pain-card-title">Tâm lý ngại mở lời nhắc nợ</h3>
+              <p class="pain-card-desc">
+                Khoản tiền nhỏ khó mở lời đòi, để lâu thì quên, nhập tay số tài khoản lắt nhắt dễ nhầm lẫn và gây ngại ngùng, sứt mẻ tình bạn bè.
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- NÚT MŨI TÊN CHUNG: BẤM ĐỂ HIỂN THỊ 3 Ô GIẢI PHÁP Ở DƯỚI -->
+        <div class="solution-action-bar">
+          <button id="btnToggleAllSolution" class="solution-arrow-btn" type="button" aria-label="Xem giải pháp PaySplit" title="Xem giải pháp PaySplit">
+            <i class="fa-solid fa-arrow-down"></i>
+          </button>
+        </div>
+
+        <!-- HÀNG 2: 3 Ô GIẢI PHÁP TƯƠNG ỨNG Ở PHÍA DƯỚI (XUẤT HIỆN KHI BẤM NÚT) -->
+        <div class="solution-cards-grid" id="solutionGrid">
+
+          <!-- Giải pháp 1: Đối ứng với Thẻ 1 -->
+          <div class="solution-card">
+            <div class="solution-header">
+              <i class="fa-solid fa-circle-check"></i>
+              <h3 class="solution-card-title">Quét OCR tự động 1 chạm</h3>
+            </div>
+            <p class="solution-card-desc">
+              Vision AI tự động trích xuất danh mục món, số lượng, đơn giá và thuế VAT trong vài giây. Khớp dữ liệu tự động, giảm thiểu tính toán thủ công.
+            </p>
+          </div>
+
+          <!-- Giải pháp 2: Đối ứng với Thẻ 2 -->
+          <div class="solution-card">
+            <div class="solution-header">
+              <i class="fa-solid fa-circle-check"></i>
+              <h3 class="solution-card-title">Phân bổ từng món (Làm tròn Hamilton)</h3>
+            </div>
+            <p class="solution-card-desc">
+              Ai ăn món gì trả món đó, hỗ trợ chia theo tỷ lệ/trọng số. Thuật toán làm tròn Hamilton bảo đảm khớp chính xác 100% từng đồng xu.
+            </p>
+          </div>
+
+          <!-- Giải pháp 3: Đối ứng với Thẻ 3 -->
+          <div class="solution-card">
+            <div class="solution-header">
+              <i class="fa-solid fa-circle-check"></i>
+              <h3 class="solution-card-title">VietQR &amp; Nhắc nợ</h3>
+            </div>
+            <p class="solution-card-desc">
+              Tự sinh mã VietQR NAPAS 247 điền sẵn số tiền nợ chính xác. Hệ thống tự gửi thông báo nhắc lịch sự.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 3: TỔNG QUAN HỆ THỐNG (SYSTEM CONTEXT)
+         ============================================== -->
+    <section class="slide" id="slide-3" data-index="2">
+      <div class="slide-content system-slide">
+
+        <h2 class="slide-title">Tổng Quan Hệ Thống</h2>
+
+        <div class="system-context-wrapper">
+          <div class="system-context-board">
+
+            <!-- SVG CANVAS VẼ TOÀN BỘ CÁC ĐƯỜNG MŨI TÊN KẾT NỐI -->
+            <svg class="context-svg-canvas" viewBox="0 0 1440 580" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                  <polygon points="0 0, 10 4, 0 8" fill="#64748B" />
+                </marker>
+              </defs>
+
+              <!-- Mũi tên 1: PaySplit User -> PaySplit System -->
+              <path class="flow-arrow-line" d="M 270 285 L 555 285" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 2: PaySplit System -> LlamaExtract (OCR) -->
+              <path class="flow-arrow-line" d="M 875 245 C 980 245, 1040 57, 1150 57" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 3: PaySplit System -> VietQR -->
+              <path class="flow-arrow-line" d="M 875 265 C 980 265, 1045 207, 1150 207" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 4: PaySplit System -> Cloudinary -->
+              <path class="flow-arrow-line" d="M 875 305 C 980 305, 1045 357, 1150 357" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 5: PaySplit System -> Firebase FCM -->
+              <path class="flow-arrow-line" d="M 875 325 C 980 325, 1040 507, 1150 507" marker-end="url(#arrowhead)" />
+            </svg>
+
+            <!-- CÁC NHÃN TRÊN MŨI TÊN (THEO ĐÚNG NỘI DUNG SƠ ĐỒ GỐC) -->
+            <div class="flow-badge badge-user-sys">
+              <span>manages groups, bills, and payments</span>
+            </div>
+
+            <div class="flow-badge badge-sys-ocr">
+              <span>extracts receipt information</span>
+            </div>
+
+            <div class="flow-badge badge-sys-qr">
+              <span>generates payment QR information</span>
+            </div>
+
+            <div class="flow-badge badge-sys-storage">
+              <span>stores receipt images</span>
+            </div>
+
+            <div class="flow-badge badge-sys-notif">
+              <span>sends reminders and updates</span>
+            </div>
+
+            <!-- NODE 1: PaySplit User (Trái) -->
+            <div class="context-node node-pill node-user">
+              <img src="assets/logos/user.svg" alt="User Icon" class="node-logo node-logo-user">
+              <div class="node-text">
+                <span class="node-name">PaySplit User</span>
+                <span class="node-type">Mobile App (Flutter)</span>
+              </div>
+            </div>
+
+            <!-- NODE 2: PaySplit System (Trung tâm) -->
+            <div class="context-node node-rect node-system">
+              <img src="assets/app_icon.png" alt="PaySplit Logo" class="node-logo node-logo-system">
+              <div class="node-text">
+                <span class="node-name-system">PaySplit System</span>
+                <span class="node-type-system">Go, PostgreSQL, River Queue</span>
+              </div>
+            </div>
+
+            <!-- NODE 3: LlamaExtract (Phải 1) -->
+            <div class="context-node node-pill node-provider node-ocr">
+              <img src="assets/logos/llama_square.png" alt="Llama Logo" class="node-logo node-logo-ocr">
+              <div class="node-text">
+                <span class="node-name">LlamaExtract</span>
+                <span class="node-type">OCR / Vision Provider</span>
+              </div>
+            </div>
+
+            <!-- NODE 4: VietQR / NAPAS (Phải 2) -->
+            <div class="context-node node-pill node-provider node-vietqr">
+              <div class="logo-box">
+                <img src="assets/logos/vietqr.svg" alt="VietQR Logo" class="node-logo-vietqr">
+              </div>
+              <div class="node-text">
+                <span class="node-name">VietQR / NAPAS</span>
+                <span class="node-type">Payment QR Gateway</span>
+              </div>
+            </div>
+
+            <!-- NODE 5: Cloudinary (Phải 3) -->
+            <div class="context-node node-pill node-provider node-storage">
+              <div class="logo-box">
+                <img src="assets/logos/cloudinary.svg" alt="Cloudinary Logo" class="node-logo-cloudinary">
+              </div>
+              <div class="node-text">
+                <span class="node-name">Cloudinary</span>
+                <span class="node-type">Object Storage</span>
+              </div>
+            </div>
+
+            <!-- NODE 6: Firebase FCM (Phải 4) -->
+            <div class="context-node node-pill node-provider node-fcm">
+              <img src="assets/logos/firebase.svg" alt="Firebase Logo" class="node-logo node-logo-fcm">
+              <div class="node-text">
+                <span class="node-name">Firebase FCM</span>
+                <span class="node-type">Push Notification</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 4: KIẾN TRÚC PHÂN RÃ MODULE & TÍCH HỢP
+         ============================================== -->
+    <section class="slide" id="slide-4" data-index="3">
+      <div class="slide-content internal-arch-slide">
+
+        <h2 class="slide-title">Kiến Trúc Hệ Thống  </h2>
+
+        <div class="internal-arch-wrapper">
+          <div class="internal-arch-board">
+
+            <!-- ================= KHUNG BỌC HỆ THỐNG CHÍNH (PAYSPLIT SYSTEM) ================= -->
+            <div class="system-boundary">
+              <div class="system-boundary-badge">
+                <i class="fa-solid fa-server"></i>
+                <span>PaySplit System</span>
+              </div>
+            </div>
+
+            <!-- SVG CANVAS VẼ CÁC ĐƯỜNG MŨI TÊN KẾT NỐI ĐỒNG BỘ, BẤT ĐỒNG BỘ VÀ PROVIDER NGOÀI -->
+            <svg class="arch-svg-canvas" viewBox="0 0 1600 620" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <!-- Marker Đồng bộ (Xám) -->
+                <marker id="arrow-sync" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#64748B" />
+                </marker>
+                <!-- Marker Bất đồng bộ (Slate) -->
+                <marker id="arrow-async" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#64748B" />
+                </marker>
+                <!-- Marker Provider Bên Ngoài (Slate nhạt) -->
+                <marker id="arrow-ext" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <!-- ================= INGRESS CALL (MOBILE [TOP] -> GATEWAY) ================= -->
+              <path class="arrow-sync-line" d="M 195 48 L 195 170" marker-end="url(#arrow-sync)" />
+
+              <!-- ================= SYNC CALLS (GATEWAY -> CỘT 2 CONTEXTS) ================= -->
+              <!-- 1. Gateway -> Auth -->
+              <path class="arrow-sync-line" d="d 295 240 C 350 240, 350 133, 400 133" marker-end="url(#arrow-sync)" />
+
+              <!-- 2. Gateway -> Group -->
+              <path class="arrow-sync-line" d="M 295 260 C 350 260, 350 223, 400 223" marker-end="url(#arrow-sync)" />
+
+              <!-- 3. Gateway -> Bill -->
+              <path class="arrow-sync-line" d="M 295 313 L 400 313" marker-end="url(#arrow-sync)" />
+
+              <!-- 4. Gateway -> Debt -->
+              <path class="arrow-sync-line" d="M 295 345 C 350 345, 350 403, 400 403" marker-end="url(#arrow-sync)" />
+
+              <!-- 5. Bill -> Group (Check Membership) -->
+              <path class="arrow-sync-line" d="M 520 285 L 520 256" marker-end="url(#arrow-sync)" />
+
+              <!-- ================= ASYNC EVENTS (CỘT 2 <-> RIVER QUEUE) ================= -->
+              <!-- A. Bill -> Queue ("receipt submitted") -->
+              <path class="arrow-async-line" d="M 635 295 C 700 295, 780 230, 840 230" marker-end="url(#arrow-async)" />
+
+              <!-- B. Queue -> Bill ("receipt extracted") -->
+              <path class="arrow-async-line" d="M 845 260 C 785 260, 705 315, 640 315" marker-end="url(#arrow-async)" />
+
+              <!-- C. Bill -> Queue ("bill finalized") -->
+              <path class="arrow-async-line" d="M 635 330 C 700 330, 780 290, 840 290" marker-end="url(#arrow-async)" />
+
+              <!-- D. Queue -> Debt ("bill finalized") -->
+              <path class="arrow-async-line" d="M 845 320 C 785 320, 705 390, 640 390" marker-end="url(#arrow-async)" />
+
+              <!-- E. Debt -> Queue ("payment action / reminder") -->
+              <path class="arrow-async-line" d="M 635 415 C 700 415, 780 350, 840 350" marker-end="url(#arrow-async)" />
+
+              <!-- ================= ASYNC EVENTS (RIVER QUEUE <-> CỘT 4 WORKERS) ================= -->
+              <!-- F. Queue -> OCR ("receipt submitted") -->
+              <path class="arrow-async-line" d="M 1075 230 C 1140 230, 1220 165, 1280 165" marker-end="url(#arrow-async)" />
+
+              <!-- G. OCR -> Queue ("receipt extracted") -->
+              <path class="arrow-async-line" d="M 1285 185 C 1225 185, 1145 260, 1080 260" marker-end="url(#arrow-async)" />
+
+              <!-- H. Queue -> Notification ("payment action / reminder") -->
+              <path class="arrow-async-line" d="M 1075 335 C 1140 335, 1220 363, 1280 363" marker-end="url(#arrow-async)" />
+
+              <!-- ================= EXTERNAL CALLS (TOP & BOTTOM PROVIDERS) ================= -->
+              <!-- 1. OCR -> LlamaExtract [TOP] -->
+              <path class="arrow-ext-line" d="M 1390 145 L 1390 54" marker-end="url(#arrow-ext)" />
+
+              <!-- 2. Notification -> Firebase FCM [BOTTOM] -->
+              <path class="arrow-ext-line" d="M 1390 391 L 1390 558" marker-end="url(#arrow-ext)" />
+
+              <!-- 3. Bill -> Cloudinary [BOTTOM] -->
+              <path class="arrow-ext-line" d="M 405 325 C 360 325, 368 460, 368 558" marker-end="url(#arrow-ext)" />
+
+              <!-- 4. Debt -> VietQR / NAPAS [BOTTOM] -->
+              <path class="arrow-ext-line" d="M 520 431 L 520 558" marker-end="url(#arrow-ext)" />
+            </svg>
+
+            <!-- ================= NHÃN SỰ KIỆN NỘI BỘ ================= -->
+            <!-- Ingress: Mobile -> Gateway -->
+            <div class="event-badge badge-mobile-gw">
+              <span>HTTPS / REST</span>
+            </div>
+
+            <!-- Đồng bộ: Bill -> Group -->
+            <div class="event-badge badge-bill-group">
+              <span>member check</span>
+            </div>
+
+            <!-- Bất đồng bộ Cột 2 <-> Cột 3 -->
+            <div class="event-badge badge-event-sub1">
+              <span>receipt submitted</span>
+            </div>
+
+            <div class="event-badge badge-event-ext1">
+              <span>receipt extracted</span>
+            </div>
+
+            <div class="event-badge badge-event-fin1">
+              <span>bill finalized</span>
+            </div>
+
+            <div class="event-badge badge-event-fin2">
+              <span>bill finalized</span>
+            </div>
+
+            <div class="event-badge badge-event-pay1">
+              <span>payment action / reminder</span>
+            </div>
+
+            <!-- Bất đồng bộ Cột 3 <-> Cột 4 -->
+            <div class="event-badge badge-event-sub2">
+              <span>receipt submitted</span>
+            </div>
+
+            <div class="event-badge badge-event-ext2">
+              <span>receipt extracted</span>
+            </div>
+
+            <div class="event-badge badge-event-pay2">
+              <span>payment action / reminder</span>
+            </div>
+
+            <!-- ================= NHÃN GỌI RA PROVIDER BÊN NGOÀI ================= -->
+            <div class="event-badge badge-ocr-ext">
+              <span>extract items</span>
+            </div>
+
+            <div class="event-badge badge-notif-ext">
+              <span>push notification</span>
+            </div>
+
+            <div class="event-badge badge-bill-storage">
+              <span>store receipts</span>
+            </div>
+
+            <div class="event-badge badge-debt-qr">
+              <span>generate QR</span>
+            </div>
+
+            <!-- ================= 8 KHỐI MODULES NỘI BỘ ================= -->
+
+            <!-- 1. API Gateway / HTTP Router (Cột 1) -->
+            <div class="arch-card card-gateway">
+              <div class="card-icon-box icon-gateway">
+                <i class="fa-solid fa-network-wired"></i>
+              </div>
+              <div class="card-title-gateway">API Gateway</div>
+              <div class="card-pills">
+                <span class="card-pill">JWT Auth Guard</span>
+                <span class="card-pill">Rate Limiter</span>
+                <span class="card-pill">CORS &amp; Recoverer</span>
+                <span class="card-pill">Sync Dispatch</span>
+              </div>
+            </div>
+
+            <!-- 2. Auth & User (Cột 2 - Hàng 1) -->
+            <div class="arch-card card-context card-auth">
+              <span class="card-name">Auth &amp; User</span>
+            </div>
+
+            <!-- 3. Group & Membership (Cột 2 - Hàng 2) -->
+            <div class="arch-card card-context card-group">
+              <span class="card-name">Group &amp; Membership</span>
+            </div>
+
+            <!-- 4. Bill & Expense Allocation (Cột 2 - Hàng 3) -->
+            <div class="arch-card card-context card-bill">
+              <span class="card-name">Bill &amp; Expense Allocation</span>
+            </div>
+
+            <!-- 5. Debt & Settlement (Cột 2 - Hàng 4) -->
+            <div class="arch-card card-context card-debt">
+              <span class="card-name">Debt &amp; Settlement</span>
+            </div>
+
+            <!-- 6. Job Queue / Event Bus (Cột 3 - Trục trung tâm) -->
+            <div class="arch-card card-queue">
+              <div class="card-icon-box icon-queue">
+                <i class="fa-solid fa-bolt"></i>
+              </div>
+              <div class="card-title-queue">Job Queue / Event Bus</div>
+              <div class="card-pills">
+                <span class="card-pill-queue">Transactional Enqueue (ACID)</span>
+                <span class="card-pill-queue">At-least-once Delivery</span>
+                <span class="card-pill-queue">Auto Retry &amp; Backoff</span>
+                <span class="card-pill-queue">Decouple Background Tasks</span>
+              </div>
+            </div>
+
+            <!-- 7. OCR Processing Worker (Cột 4 - Hàng 1) -->
+            <div class="arch-card card-worker card-ocr-worker">
+              <span class="card-name">OCR Processing</span>
+            </div>
+
+            <!-- 8. Notification Worker (Cột 4 - Hàng 2) -->
+            <div class="arch-card card-worker card-notif-worker">
+              <span class="card-name">Notification</span>
+            </div>
+
+            <!-- ================= 5 PROVIDER & CLIENT BÊN NGOÀI (PHỤ, KHÔNG SUBTITLE, NHỎ GỌN) ================= -->
+            <!-- 1. Mobile App (Client gọi vào API Gateway) -->
+            <div class="arch-card-ext ext-mobile">
+              <img src="assets/logos/flutter.svg" alt="Flutter" class="ext-logo">
+              <span class="ext-name">Mobile App</span>
+            </div>
+
+            <!-- 2. LlamaExtract (phục vụ OCR Processing) -->
+            <div class="arch-card-ext ext-llama">
+              <img src="assets/logos/llama.svg" alt="LlamaExtract" class="ext-logo">
+              <span class="ext-name">LlamaExtract</span>
+            </div>
+
+            <!-- 3. Firebase FCM (phục vụ Notification) -->
+            <div class="arch-card-ext ext-firebase">
+              <img src="assets/logos/firebase.svg" alt="Firebase FCM" class="ext-logo">
+              <span class="ext-name">Firebase FCM</span>
+            </div>
+
+            <!-- 4. Cloudinary (phục vụ Bill & Expense Allocation) -->
+            <div class="arch-card-ext ext-cloudinary">
+              <img src="assets/logos/cloudinary.svg" alt="Cloudinary" class="ext-logo">
+              <span class="ext-name">Cloudinary</span>
+            </div>
+
+            <!-- 5. VietQR / NAPAS (phục vụ Debt & Settlement) -->
+            <div class="arch-card-ext ext-vietqr">
+              <img src="assets/logos/vietqr.svg" alt="VietQR" class="ext-logo">
+              <span class="ext-name">VietQR / NAPAS</span>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 5: CHI TIẾT CÁC MODULE: 1. API GATEWAY & AUTH & USER
+         ============================================== -->
+    <section class="slide" id="slide-5" data-index="4">
+      <div class="slide-content module-detail-slide">
+
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">1</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">API Gateway</span>
+          </div>
+        </div>
+
+        <!-- KHUNG SƠ ĐỒ KIẾN TRÚC THỰC TẾ -->
+        <div class="module-diagram-wrapper">
+          <div class="module-diagram-card">
+            <img src="assets/diagram_api_gateway.png" alt="Sơ đồ kiến trúc PaySplit API Gateway" class="module-diagram-image" />
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 6: CHI TIẾT CÁC MODULE: 2. AUTH & USER SERVICE
+         ============================================== -->
+    <section class="slide" id="slide-6" data-index="5">
+      <div class="slide-content module-detail-slide">
+
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">2</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Auth &amp; User Service</span>
+          </div>
+        </div>
+
+        <!-- BẢNG TỔNG QUAN CƠ CHẾ BẢO MẬT (4 TRỤ CỘT) -->
+        <div class="tech-spec-grid">
+
+          <!-- KHỐI 1 -->
+          <div class="tech-spec-card">
+            <div class="tech-spec-card-header text-center">
+              <h3 class="tech-spec-card-title">1. Refresh Token Rotation (RTR)</h3>
+            </div>
+            <ul class="tech-spec-list">
+              <li>Sử dụng cặp Access Token ngắn hạn (15 phút) và Refresh Token dài hạn (7 ngày).</li>
+              <li>Tự động cấp cặp token mới và vô hiệu hóa token cũ sau mỗi lần làm mới phiên làm việc.</li>
+              <li>Phát hiện tái sử dụng (Reuse Detection): Lập tức thu hồi toàn bộ phiên nếu phát hiện token cũ bị gửi lại.</li>
+            </ul>
+          </div>
+
+          <!-- KHỐI 2 -->
+          <div class="tech-spec-card">
+            <div class="tech-spec-card-header text-center">
+              <h3 class="tech-spec-card-title">2. Single Active Device Policy</h3>
+            </div>
+            <ul class="tech-spec-list">
+              <li>Mỗi tài khoản người dùng chỉ được phép duy trì duy nhất một phiên hoạt động trên một thiết bị.</li>
+              <li>Tự động đánh dấu thu hồi phiên cũ trên hệ thống khi tài khoản đăng nhập từ một thiết bị mới.</li>
+              <li>API Gateway đối chiếu trực tiếp trạng thái phiên trong Database đối với mọi yêu cầu được bảo vệ.</li>
+            </ul>
+          </div>
+
+          <!-- KHỐI 3 -->
+          <div class="tech-spec-card">
+            <div class="tech-spec-card-header text-center">
+              <h3 class="tech-spec-card-title">3. Cơ Chế Xác Thực OTP</h3>
+            </div>
+            <ul class="tech-spec-list">
+              <li>Cung cấp mã OTP 6 chữ số ngẫu nhiên an toàn cho luồng đăng ký tài khoản và quên mật khẩu (hạn 5 phút).</li>
+              <li>Sử dụng thuật toán so sánh an toàn nhằm triệt tiêu nguy cơ tấn công phân tích thời gian phản hồi (Timing Attack).</li>
+              <li>Áp dụng giới hạn tần suất gửi yêu cầu và tự động khóa mã vĩnh viễn sau 5 lần nhập sai liên tiếp.</li>
+            </ul>
+          </div>
+
+          <!-- KHỐI 4 -->
+          <div class="tech-spec-card">
+            <div class="tech-spec-card-header text-center">
+              <h3 class="tech-spec-card-title">4. Bảo Mật Mật Khẩu &amp; Phân Tầng</h3>
+            </div>
+            <ul class="tech-spec-list">
+              <li>Mã hóa mật khẩu một chiều an toàn bằng thuật toán Bcrypt kèm muối ngẫu nhiên (salt).</li>
+              <li>Thiết kế theo Clean Architecture, tách biệt hoàn toàn nghiệp vụ xác thực khỏi hạ tầng lưu trữ Database.</li>
+              <li>Chuẩn hóa cơ chế phân loại lỗi nghiệp vụ và phản hồi theo cấu trúc REST JSON đồng nhất.</li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 7: CHI TIẾT CÁC MODULE: 3. GROUP & MEMBERSHIP
+         ============================================== -->
+    <section class="slide" id="slide-7" data-index="6">
+      <div class="slide-content module-detail-slide">
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">3</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Group &amp; Membership</span>
+          </div>
+        </div>
+
+        <div class="module-placeholder-box">
+          <div class="placeholder-icon"><i class="fa-solid fa-users"></i></div>
+          <p class="placeholder-text">Khung nội dung cho module 3. Group &amp; Membership</p>
+        </div>
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 8: CHI TIẾT CÁC MODULE: 4. OCR PROCESSING
+         ============================================== -->
+    <section class="slide" id="slide-8" data-index="7">
+      <div class="slide-content module-detail-slide">
+
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">4</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">OCR Processing</span>
+          </div>
+        </div>
+
+        <!-- KHUNG SƠ ĐỒ KIẾN TRÚC THỰC TẾ -->
+        <div class="module-diagram-wrapper">
+          <div class="module-diagram-card">
+            <img src="assets/diagram_ocr_processing.png" alt="Sơ đồ kiến trúc quy trình OCR Processing" class="module-diagram-image" />
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 9: CHI TIẾT CÁC MODULE: 5. BILL & EXPENSE ALLOCATION
+         ============================================== -->
+    <section class="slide" id="slide-9" data-index="8">
+      <div class="slide-content module-detail-slide">
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">5</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Bill &amp; Expense Allocation</span>
+          </div>
+        </div>
+
+        <!-- BỐ CỤC CHÍNH: SƠ ĐỒ TRÊN, CHI TIẾT DƯỚI -->
+        <div class="bill-layout-container">
+          
+          <!-- SƠ ĐỒ QUY TRÌNH TỔNG QUAN -->
+          <div class="bill-diagram-top">
+            <img src="assets/diagram_bill_allocation.png" alt="Sơ đồ quy trình phân bổ chia tiền Bill &amp; Expense Allocation" />
+          </div>
+
+          <!-- 2 CỘT: MA TRẬN PHÂN QUYỀN & CÔNG THỨC CHIA TIỀN -->
+          <div class="bill-detail-grid">
+            
+            <!-- CỘT 1: MA TRẬN PHÂN QUYỀN & LIFECYCLE GUARD -->
+            <div class="bill-card">
+              <div class="bill-card-header">
+                <div class="bill-card-icon icon-rbac"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3 class="bill-card-title">1. Phân Quyền &amp; Khóa Trạng Thái (RBAC &amp; Guard)</h3>
+              </div>
+              
+              <table class="rbac-table">
+                <thead>
+                  <tr>
+                    <th>Hành Động / Quyền Hạn</th>
+                    <th>Admin Nhóm</th>
+                    <th>Người Tạo / Ứng Tiền</th>
+                    <th>Thành Viên</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Tạo &amp; Quét Hóa Đơn</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                  </tr>
+                  <tr>
+                    <td>Gán Người Ăn &amp; Trọng Số Món</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-xmark check-no"></i></td>
+                  </tr>
+                  <tr>
+                    <td>Chốt Phân Bổ (Finalize Bill)</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-xmark check-no"></i></td>
+                  </tr>
+                  <tr>
+                    <td>Xem Chi Tiết Món &amp; Phần Nợ</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- CỘT 2: CÔNG THỨC CHIA TIỀN & LÀM TRÒN HAMILTON -->
+            <div class="bill-card">
+              <div class="bill-card-header">
+                <div class="bill-card-icon icon-calc"><i class="fa-solid fa-calculator"></i></div>
+                <h3 class="bill-card-title">2. Công Thức Chia Tiền &amp; Thuật Toán Hamilton</h3>
+              </div>
+
+              <!-- Bước 1 -->
+              <div class="formula-step">
+                <div class="formula-step-title">
+                  <span class="step-badge">Bước 1</span>
+                  <span>Tiền món theo người ăn (Item Share)</span>
+                </div>
+                <div class="formula-box">
+                  Tiền món = Giá món × (Trọng số phần ăn của bạn / Tổng trọng số món)
+                </div>
+                <p class="formula-desc">Ai ăn món gì trả món đó. Nếu ăn chung thì chia đều hoặc chia theo trọng số phần ăn.</p>
+              </div>
+
+              <!-- Bước 2 -->
+              <div class="formula-step">
+                <div class="formula-step-title">
+                  <span class="step-badge">Bước 2</span>
+                  <span>Phân bổ phụ phí (VAT, Phí DV, Giảm giá)</span>
+                </div>
+                <div class="formula-box">
+                  Phụ phí cá nhân = Tổng phụ phí × (Tiền món của bạn / Tổng tiền các món)
+                </div>
+                <p class="formula-desc">Chia sẻ phụ phí theo tỷ lệ tiêu dùng: Người ăn nhiều chịu phí nhiều, ăn ít chịu phí ít.</p>
+              </div>
+
+              <!-- Bước 3 -->
+              <div class="formula-step">
+                <div class="formula-step-title">
+                  <span class="step-badge">Bước 3</span>
+                  <span>Làm tròn Hamilton - Khớp 100% từng đồng</span>
+                </div>
+                <div class="formula-box">
+                  Lấy phần nguyên VND + Phân bổ số dư lẻ cho người có số thập phân lớn nhất
+                </div>
+                <p class="formula-desc">Tránh hoàn toàn lỗi lệch 1 đồng do làm tròn số lẻ. Tổng tiền thu về luôn khớp chuẩn xác 100%.</p>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 10: CHI TIẾT CÁC MODULE: 6. DEBT & SETTLEMENT
+         ============================================== -->
+    <section class="slide" id="slide-10" data-index="9">
+      <div class="slide-content module-detail-slide">
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">6</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Debt &amp; Settlement</span>
+          </div>
+        </div>
+
+        <div class="module-placeholder-box">
+          <div class="placeholder-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+          <p class="placeholder-text">Khung nội dung cho module 6. Debt &amp; Settlement</p>
+        </div>
+      </div>
+    </section>
+
+<!-- ==============================================
+         SLIDE 11: CHI TIẾT CÁC MODULE: 7. NOTIFICATION
+         ============================================== -->
+    <section class="slide" id="slide-11" data-index="10">
+      <div class="slide-content module-detail-slide">
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">7</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Notification</span>
+          </div>
+        </div>
+
+        <!-- BỐ CỤC CHÍNH: SƠ ĐỒ TRÊN, CHI TIẾT DƯỚI -->
+        <div class="notif-layout-container">
+          
+          <!-- SƠ ĐỒ QUY TRÌNH TỔNG QUAN -->
+          <div class="notif-diagram-top">
+            <img src="assets/diagram_notification.png" alt="Sơ đồ quy trình Notification" />
+          </div>
+
+          <!-- 2 CỘT: KỊCH BẢN THÔNG BÁO & CƠ CHẾ KỸ THUẬT -->
+          <div class="notif-detail-grid">
+            
+            <!-- CỘT 1: CÁC KỊCH BẢN THÔNG BÁO & DEEP LINK -->
+            <div class="notif-card">
+              <div class="notif-card-header">
+                <div class="notif-card-icon icon-notif-events"><i class="fa-solid fa-bell"></i></div>
+                <h3 class="notif-card-title">1. Kịch Bản Thông Báo &amp; Điều Hướng (Events &amp; Deep Link)</h3>
+              </div>
+              
+              <div class="notif-items-list">
+                <!-- Item 1: Nhắc nợ -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-comment-dollar" style="color: #D97706;"></i> Nhắc nợ thông minh (Smart Nudge)</span>
+                    <span class="notif-item-badge badge-reminder"><code>payment_reminder</code></span>
+                  </div>
+                  <p class="notif-item-desc">Chủ nợ gửi lời nhắc &rarr; Push thông báo hiện ngay trên máy con nợ. Nhấp vào mở trực tiếp popup <b>Dynamic VietQR</b> để chuyển khoản ngay.</p>
+                </div>
+
+                <!-- Item 2: Chốt hóa đơn -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-receipt" style="color: #4F46E5;"></i> Hóa đơn đã chốt chia tiền</span>
+                    <span class="notif-item-badge badge-bill"><code>bill_finalized</code></span>
+                  </div>
+                  <p class="notif-item-desc">Hóa đơn hoàn tất phân bổ &rarr; Bắn thông báo kèm chi tiết số tiền phải đóng của từng thành viên sau khi chạy thuật toán Hamilton.</p>
+                </div>
+
+                <!-- Item 3: Xác nhận thanh toán -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-circle-check" style="color: #16A34A;"></i> Xác nhận gạch nợ thành công</span>
+                    <span class="notif-item-badge badge-payment"><code>payment_confirmed</code></span>
+                  </div>
+                  <p class="notif-item-desc">Thông báo khi chủ nợ xác nhận đã nhận được tiền chuyển khoản, công nợ tự động được chuyển sang trạng thái tất toán (settled).</p>
+                </div>
+
+                <!-- Item 4: Mời tham gia nhóm -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-user-group" style="color: #64748B;"></i> Lời mời tham gia nhóm chi tiêu</span>
+                    <span class="notif-item-badge badge-group"><code>group_invitation</code></span>
+                  </div>
+                  <p class="notif-item-desc">Thông báo khi được thêm hoặc nhận link mời vào nhóm, chạm vào chuyển thẳng đến màn hình danh sách thành viên nhóm.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- CỘT 2: CƠ CHẾ KỸ THUẬT ĐẢM BẢO TIN CẬY -->
+            <div class="notif-card">
+              <div class="notif-card-header">
+                <div class="notif-card-icon icon-notif-tech"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3 class="notif-card-title">2. Kiến Trúc Xử Lý Ngầm &amp; Độ Tin Cậy (Architecture)</h3>
+              </div>
+
+              <div class="notif-items-list">
+                <!-- Tech 1: Transactional Enqueue -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-database" style="color: #DC2626;"></i> Transactional Enqueue (ACID Guaranteed)</span>
+                    <span class="notif-item-badge badge-acid">Atomic Tx</span>
+                  </div>
+                  <p class="notif-item-desc">Lưu bản ghi In-App và đẩy job River Queue trong <b>cùng 1 DB Transaction</b>. Loại bỏ 100% rủi ro <i>Ghost Push</i> khi thao tác nghiệp vụ bị rollback.</p>
+                </div>
+
+                <!-- Tech 2: Async & Auto Retry -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-arrows-rotate" style="color: #0284C7;"></i> Xử lý ngầm &amp; Tự động Retry Backoff</span>
+                    <span class="notif-item-badge badge-async">River Worker</span>
+                  </div>
+                  <p class="notif-item-desc">API trả lời HTTP 200 tức thời không phụ thuộc độ trễ Firebase. Worker bốc job chạy ngầm, tự động retry với Exponential Backoff nếu mạng lỗi.</p>
+                </div>
+
+                <!-- Tech 3: FCM Token Invalidation -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-broom" style="color: #15803D;"></i> Tự động dọn dẹp FCM Token rác</span>
+                    <span class="notif-item-badge badge-clean">Auto Clean</span>
+                  </div>
+                  <p class="notif-item-desc">Khi người dùng gỡ app hoặc đổi máy, Worker tự phát hiện mã lỗi <code>UNREGISTERED</code> từ Firebase và xóa token lỗi khỏi DB để tiết kiệm tài nguyên.</p>
+                </div>
+
+                <!-- Tech 4: Deep Link Payload -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-arrow-up-right-from-square" style="color: #7E22CE;"></i> Structured Payload &amp; Deep Link</span>
+                    <span class="notif-item-badge badge-link">Navigation</span>
+                  </div>
+                  <p class="notif-item-desc">Push payload mang các ID thực thể (<code>bill_id</code>, <code>group_id</code>), cho phép Flutter App kích hoạt router chuyển ngay đến trang thao tác tương ứng.</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+<!-- ==============================================
+     SLIDE 12: TỔNG QUAN HỆ THỐNG BACKEND
+     ============================================== -->
+<section class="slide" id="slide-12" data-index="11">
+  <div class="slide-content module-detail-slide">
+    <!-- TIÊU ĐỀ CHÍNH -->
+    <div class="module-detail-header">
+      <h2 class="slide-title">Tổng Quan Hệ Thống Backend</h2>
+    </div>
+
+    <!-- 4 KHỐI KỸ THUẬT BACKEND -->
+    <div class="be-arch-container">
+
+      <!-- KHỐI 1: KIẾN TRÚC PHÂN TẦNG -->
+      <div class="be-pillar-card">
+        <div class="be-pillar-header">
+          <div class="be-pillar-title-group">
+            <div class="be-pillar-icon icon-clean"><i class="fa-solid fa-layer-group"></i></div>
+            <h3 class="be-pillar-title">1. Kiến Trúc Phân Tầng (Clean Architecture)</h3>
+          </div>
+        </div>
+
+        <div class="be-pillar-list">
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Tách biệt rõ ràng các tầng:</strong> Chia riêng tầng nhận yêu cầu (HTTP), tầng xử lý nghiệp vụ (UseCase) và tầng dữ liệu (Database).</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Nghiệp vụ độc lập:</strong> Logic tính toán chia tiền và quản lý công nợ không bị phụ thuộc vào giao diện hay loại cơ sở dữ liệu.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Dễ dàng kiểm thử (Unit Test):</strong> Kiểm tra logic tính toán nhanh chóng, độc lập mà không cần kết nối cơ sở dữ liệu thật.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Dễ bảo trì &amp; mở rộng:</strong> Sửa đổi hoặc nâng cấp một chức năng mà không làm ảnh hưởng đến các phần còn lại của hệ thống.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KHỐI 2: THIẾT KẾ & CHUẨN HÓA API -->
+      <div class="be-pillar-card">
+        <div class="be-pillar-header">
+          <div class="be-pillar-title-group">
+            <div class="be-pillar-icon icon-api"><i class="fa-solid fa-network-wired"></i></div>
+            <h3 class="be-pillar-title">2. Thiết Kế &amp; Chuẩn Hóa API</h3>
+          </div>
+        </div>
+
+        <div class="be-pillar-list">
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Tài liệu API chuẩn mực:</strong> Có tài liệu đặc tả rõ ràng từng API, giúp phía Mobile và Backend phối hợp ăn khớp, không bị lệch dữ liệu.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Định dạng phản hồi thống nhất:</strong> Mọi API đều trả về cấu trúc chung, nêu rõ trạng thái thành công, dữ liệu hoặc mã lỗi dễ hiểu.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Xử lý và điều hướng nhanh:</strong> Sử dụng bộ định tuyến tối ưu giúp tiếp nhận và phản hồi yêu cầu của người dùng với độ trễ thấp.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Theo vết yêu cầu (Tracking ID):</strong> Mỗi lượt gọi API đều có mã định danh riêng để dễ dàng theo dõi và tra cứu khi có sự cố.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KHỐI 3: CƠ CHẾ BẢO MẬT & ĐĂNG NHẬP -->
+      <div class="be-pillar-card">
+        <div class="be-pillar-header">
+          <div class="be-pillar-title-group">
+            <div class="be-pillar-icon icon-security"><i class="fa-solid fa-shield-halved"></i></div>
+            <h3 class="be-pillar-title">3. Cơ Chế Bảo Mật &amp; Đăng Nhập</h3>
+          </div>
+        </div>
+
+        <div class="be-pillar-list">
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Đăng nhập an toàn qua Token:</strong> Phiên đăng nhập ngắn hạn kết hợp tự động làm mới, người dùng không phải nhập lại mật khẩu liên tục.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Thu hồi phiên ngay lập tức:</strong> Khi người dùng bấm Đăng xuất hoặc Đổi mật khẩu, phiên làm việc cũ bị hủy ngay trên hệ thống.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Mã hóa mật khẩu an toàn:</strong> Mật khẩu được mã hóa một chiều kèm chuỗi ngẫu nhiên bảo vệ, chống bị giải mã hoặc lộ lọt.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Bảo vệ hệ thống &amp; Chống sập:</strong> Tự động giới hạn số lần gọi tránh spam/tấn công và tự phục hồi khi có lỗi bất ngờ phát sinh.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KHỐI 4: QUẢN LÝ DỮ LIỆU & XỬ LÝ NGẦM -->
+      <div class="be-pillar-card">
+        <div class="be-pillar-header">
+          <div class="be-pillar-title-group">
+            <div class="be-pillar-icon icon-db"><i class="fa-solid fa-database"></i></div>
+            <h3 class="be-pillar-title">4. Quản Lý Dữ Liệu &amp; Xử Lý Ngầm</h3>
+          </div>
+        </div>
+
+        <div class="be-pillar-list">
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Cơ sở dữ liệu tin cậy (PostgreSQL):</strong> Sử dụng cơ sở dữ liệu mạnh mẽ, viết truy vấn chuẩn xác giúp dữ liệu luôn an toàn và tốc độ cao.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Đảm bảo tính toàn vẹn giao dịch:</strong> Các thao tác chốt bill và thanh toán tiền được xử lý nguyên khối, không xảy ra sai lệch hay mất dữ liệu.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Xử lý ngầm các tác vụ nặng:</strong> Gửi thông báo nhắc nợ được đưa vào hàng đợi xử lý ngầm, không làm gián đoạn trải nghiệm của người dùng.</div>
+          </div>
+          <div class="be-item">
+            <div class="be-bullet"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="be-text"><strong>Đồng bộ thông báo với dữ liệu:</strong> Chỉ khi giao dịch lưu thành công thì thông báo mới được phát đi, tránh gửi thông báo ảo hoặc sai lệch.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ==============================================
+     SLIDE 13: DEMO
+     ============================================== -->
+<section class="slide" id="slide-13" data-index="12">
+  <div class="slide-content module-detail-slide">
+    <!-- TIÊU ĐỀ CHÍNH -->
+    <div class="module-detail-header">
+      <h2 class="slide-title">Demo</h2>
+    </div>
+
+    <!-- KHUNG ĐỂ TRỐNG (PLACEHOLDER) -->
+    <div class="module-placeholder-box">
+      <div class="placeholder-icon"><i class="fa-solid fa-play"></i></div>
+      <p class="placeholder-text">Khu vực trình chiếu Video Demo hoặc Thực nghiệm ứng dụng trực tiếp</p>
+    </div>
+  </div>
+</section>
+  </main>
+
+  <!-- Nút điều hướng & Đánh số trang slide -->
+  <nav class="nav-controls" aria-label="Điều hướng slide">
+    <button class="nav-btn" id="btnPrev" title="Slide trước" disabled>
+      <i class="fa-solid fa-arrow-left"></i>
+    </button>
+    <div class="slide-counter" id="slideCounter" aria-label="Số trang slide">
+      <span class="current-slide">01</span>
+      <span class="slide-sep">/</span>
+      <span class="total-slides">13</span>
+    </div>
+    <button class="nav-btn" id="btnNext" title="Slide tiếp theo">
+      <i class="fa-solid fa-arrow-right"></i>
+    </button>
+  </nav>
+
+  <!-- Script Logic -->
+  <script src="script.js"></script>
+</body>
+
+</html>
