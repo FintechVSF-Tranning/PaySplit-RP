@@ -1,5 +1,7 @@
 # 05 — Notification: chuông trong app và đẩy lúc điện thoại tắt
 
+> Đối chiếu mã nguồn local ngày **06/09/2026** — BE `7f2b2a7`, FE `fb0cf0b`. [Phạm vi, bằng chứng và kiểm chứng](reports/2026-09-06-flow-sync.md). Các ghi chú AC/runtime cũ không có nghĩa đã chạy lại E2E trong lần này.
+
 > **Phạm vi**: BE module `notification` (`/api/v1/notifications`) + producer trong bill/settlement ↔ FE `FCMTokenManager`, `PushNotificationHandler`, `NotificationRouteResolver`, màn Notifications + chấm chuông Home.
 >
 > Code tham chiếu chính: `PaySplit-BE/internal/modules/notification/**`, `PaySplit-BE/internal/platform/notification/fcm/**`, `PaySplit-FE/lib/core/network/fcm_token_manager.dart`, `push_notification_handler.dart`, `lib/app/router/notification_route_resolver.dart`, `lib/features/notifications/**`.
@@ -39,7 +41,9 @@ Realtime chỉ nói "dữ liệu bẩn, hãy GET lại". Notification nói "có 
 | In-app tap | Optimistic mark-read rồi `context.push` |
 | Badge Home | Chấm đỏ, không hiện số. Nguồn `notificationsProvider.unreadCount` |
 
-Domain constants `payment_reminder`, `new_bill`, `group_invitation`… **không** được producer dùng. Resolver FE vẫn hiểu một số alias phòng payload cũ.
+Sự kiện `notification.created` dùng scope `notification`, chỉ gửi tới user vừa nhận bản ghi, trong transaction của bill review/finalize/bulk-complete và settlement notification. Nó không chứa nội dung thông báo, không thay FCM, và không phải sự kiện mark-read.
+
+Domain constants như `payment_reminder`, `group_invitation` chưa có producer trong luồng đã kiểm tra. **`new_bill` đã được sinh khi gửi đối soát** cho thành viên được gán món. Resolver FE vẫn hiểu một số alias phòng payload cũ.
 
 ---
 
@@ -47,6 +51,8 @@ Domain constants `payment_reminder`, `new_bill`, `group_invitation`… **không*
 
 | Type | Producer | Người nhận | Payload |
 |---|---|---|---|
+| `bill_review_requested` | Gửi đối soát | Captain, trừ khi chính Captain gửi | `bill_id`, `group_id`, `total` |
+| `new_bill` | Gửi đối soát | Thành viên active được gán món; dedupe member, bỏ creditor, người gửi và Captain | `bill_id`, `group_id`, `total` |
 | `bill_finalized` | Finalize (kể cả bulk item thành công) | Từng member có user id; Captain/creditor nhận câu tổng, người khác nhận phần mình | `bill_id`, `group_id`, `amount` |
 | `bill_bulk_finalize_completed` | Batch xong | Captain | `batch_id`, `group_id`, counts |
 | `payment_created` | Tạo QR | **Creditor** | `group_id`, `payment_id` |
@@ -62,7 +68,7 @@ Domain constants `payment_reminder`, `new_bill`, `group_invitation`… **không*
 | Method + Path | Việc |
 |---|---|
 | GET `/notifications?page&page_size` | Offset pager `{items, meta}` |
-| GET `/notifications/unread-count` | `{unread_count}` — FE list đã lấy kèm, ít gọi lẻ |
+| GET `/notifications/unread-count` | `{unread_count}` — FE gọi song song với list trang 1 khi load/refresh |
 | PATCH `/notifications/read-all` | |
 | PATCH `/notifications/{id}/read` | `WHERE id AND user_id`; 0 hàng → `404 NOT_FOUND` |
 | PUT `/users/me/fcm-token` | Gắn vào **sid hiện tại**. Rỗng → `400 INVALID_FCM_TOKEN` |
@@ -89,7 +95,8 @@ sequenceDiagram
 
     P->>DB: BEGIN tx (chốt bill, nộp proof, ...)
     Note over DB: INSERT notifications + InsertTx job send_notification cùng tx
-    P->>DB: COMMIT — bản ghi và job cùng sống hoặc cùng mất
+    P->>DB: pg_notify user_events: notification.created cho đúng người nhận
+    P->>DB: COMMIT — notification, job và sự kiện cùng transaction
 
     Q-->>W: Deliver (at-least-once), payload chỉ notification_id
     alt pushNotifier nil
@@ -232,7 +239,7 @@ Không credentials / notifier nil → xong. Không còn row → xong. Không tok
 
 Ba kết quả gửi: Unregistered = máy gỡ app hoặc rotate, xóa đúng token đó. Message invalid = nội dung lỗi, **giữ** token kẻo xóa nhầm máy tốt. Mạng = River thử lại. Thành công = thiết bị hiện thông báo.
 
-Badge Home **không** cập nhật khi FCM tới lúc app đang mở. Phải vào màn Notifications hoặc pull-to-refresh.
+Badge Home và danh sách tự cập nhật qua **SSE `notification.created`** khi user stream hoạt động. `notificationsProvider` đăng ký surface `notifications`; handler chỉ gọi `refresh()` của surface này, không gọi lại list nhóm. `refresh()` gọi song song list trang 1 và unread-count, giữ nội dung trong lúc chờ; sau thành công reset phân trang về trang 1. FCM foreground vẫn chỉ hiện SnackBar, không trực tiếp đổi badge. Khi user stream tắt/legacy, cần refresh hoặc mở lại màn để lấy dữ liệu mới.
 
 ### 6.2 Resolver — type trước, không phải bill_id trước
 
@@ -251,7 +258,7 @@ flowchart TD
     T -->|"payment_rejected / debt_reminded / payment_created / alias reminder"| P3{"group_id?"}
     P3 -->|"Có"| G2
     P3 -->|"Không"| S3["/settlement tab payable"]
-    T -->|"bill_finalized / new_bill / created_bill / bill_updated"| B1{"bill_id?"}
+    T -->|"bill_review_requested / bill_finalized / new_bill / created_bill / bill_updated"| B1{"bill_id?"}
     B1 -->|"Có"| BD["/bill-detail"]
     B1 -->|"Không, có group"| GB["Group tab bills"]
     B1 -->|"Không"| BL["/bills"]
@@ -288,10 +295,10 @@ Producer hiện tại **luôn** gửi `group_id`. Vì thế hầu hết payment 
 | 7 | Payload JSONB null | Worker nhét `type`; FCM data map nil-safe | |
 | 8 | Không credentials | `fcm.New` nil; bootstrap tránh typed-nil; worker no-op | `bootstrap/app.go` |
 | 9 | Pull-to-refresh mất mạng | Giữ list + SnackBar | `notifications_notifier.dart` |
-| 10 | Badge lệch | unreadCount đi cùng list; optimistic ±1, rollback khi PATCH fail | không file `unread_notification_count_provider.dart` |
+| 10 | Badge lệch | unreadCount lấy bằng request riêng cùng lượt refresh list; optimistic ±1, rollback khi PATCH fail | không file `unread_notification_count_provider.dart` |
 | 11 | Terminated | `getInitialMessage` + post-frame `context.go` | không mark-read |
 | 12 | Background isolate | Chỉ log | không UI |
-| 13 | Foreground FCM | SnackBar, **không** refresh badge | phải mở màn / pull |
+| 13 | Foreground FCM | SnackBar; badge/list cập nhật độc lập qua `notification.created` | nếu user stream đang hoạt động |
 | 14 | Từ chối quyền OS | Vẫn getToken; in-app đủ | |
 | 15 | PUT FCM lúc session vừa revoke | liveAuth 401; race → 500 | [`01`](01-auth.md) |
 | 16 | Login chưa có token FCM | Body bỏ trống; initialize sau bù PUT | |
@@ -325,4 +332,4 @@ Producer hiện tại **luôn** gửi `group_id`. Vì thế hầu hết payment 
 | In-app list / read / badge | ✅ | |
 | FCM worker + register | ✅ | Dev không credentials vẫn boot |
 | Route từ in-app và push | ✅ | Ưu tiên Group Detail khi có `group_id` |
-| Badge realtime khi đang mở Home | ⏸ | Foreground FCM không đụng unreadCount; SSE cũng không |
+| Badge/list realtime | ✅ Có code BE + FE | `notification.created` → surface `notifications` → refresh list + unread-count |

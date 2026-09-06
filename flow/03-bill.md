@@ -1,5 +1,7 @@
 # 03 — Bill: chia tiền khớp từng đồng, OCR chạy nền, và khóa phiên bản
 
+> Đối chiếu mã nguồn local ngày **06/09/2026** — BE `7f2b2a7`, FE `fb0cf0b`. [Phạm vi, bằng chứng và kiểm chứng](reports/2026-09-06-flow-sync.md). Các ghi chú AC/runtime cũ không có nghĩa đã chạy lại E2E trong lần này.
+
 > **Phạm vi**: BE module `bill` (`/api/v1/bills` + group close) ↔ FE Bill Capture / Bill Detail / modal OCR.
 >
 > Code tham chiếu chính: `PaySplit-BE/internal/modules/bill/**`, `PaySplit-FE/lib/features/bills/**`.
@@ -39,7 +41,7 @@ Single-bill finalize/void khi không phải Captain → `403 FORBIDDEN` (không 
 | Vòng đời | `draft` → `reviewed` → `finalized` → `voided`. Xóa cứng chỉ `draft` |
 | Khóa lạc quan | Cột `version`, CAS trong SQL |
 | Ảnh | 1–5, ≤10MB. FE magic JPEG/PNG/WebP/HEIC. BE processor **jpeg/png/HEIC** (WebP FE nhận, BE không) |
-| Tạo có ảnh | **202**. Tạo JSON không ảnh | **201** |
+| Tạo bill | Có ảnh: **202**. JSON không ảnh: **201** |
 | OCR | LlamaExtract. 1 job active / bill. Retry tay mặc định **5 / 24h** (đếm **mọi** job trong cửa sổ, kể cả job lúc tạo). River `BILL_OCR_MAX_ATTEMPTS` mặc định **3** (20 chỉ là trần bit-shift backoff) |
 | Chia tiền | Số hữu tỷ `big.Rat` + **largest remainder**, hòa UUID tăng dần. **Không** dồn phần lẻ cho creditor |
 | Review/finalize lệch số | `422 BILL_NOT_READY` — **không** kèm danh sách code. GET detail mới nhét code vào `mismatch_codes` |
@@ -255,7 +257,7 @@ Cách đọc:
 
 Có ảnh thì HTTP **202 Accepted**, không 201. Ý nghĩa: bill nháp đã có, items chưa có, OCR chạy nền. Job `bill_ocr` được enqueue **trong cùng transaction** tạo bill (BeforeCommit). Rollback thì không có job mồ côi.
 
-Nhánh trái (par Worker): CAS `queued` → `processing` để hai worker không chạy trùng. Ảnh ghép dọc, resize nếu rộng hơn 1200px, JPEG 90. LlamaExtract timeout mặc định 8 giây. `schema_invalid` fail ngay, không River retry. Lỗi tạm retry theo `BILL_OCR_MAX_ATTEMPTS` (mặc định **3**, không phải 20). 20 chỉ là trần bit-shift của công thức backoff.
+Nhánh trái (par Worker): CAS `queued` → `processing` để hai worker không chạy trùng. Ảnh ghép dọc, resize nếu rộng hơn 1200px, JPEG 90. LlamaExtract timeout mặc định 8 giây. Worker `ocr_stale_job_reaper` quét mỗi 2 phút + RunOnStart, đánh `failed`/`stale_timeout` cho job queued/processing không cập nhật quá `BILL_OCR_STALE_JOB_AGE_MINUTES` (mặc định 15). Dựa `updated_at`, không phải tuổi bill. Reaper phát `ocr.updated` trong transaction để Bill Detail và tab Hóa đơn nhóm thoát spinner. `schema_invalid` fail ngay, không River retry. Lỗi tạm retry theo `BILL_OCR_MAX_ATTEMPTS` (mặc định **3**, không phải 20). 20 chỉ là trần bit-shift của công thức backoff.
 
 Nhánh phải (FE chờ): mặc định **không** mở `GET /bills/id/events`. Đăng ký surface `ocr.waiter` + `bill.detail` trên user stream. Mỗi frame `ocr.updated` khớp `bill_id` thì GET lại chi tiết. Timeout 60 giây, GET lần nữa khi hết giờ. Không còn vòng poll 1.5s × 40.
 
@@ -316,6 +318,8 @@ PUT lệch `version` → 409, app hiện "dữ liệu đã bị thay đổi, t�
 Nút chính disable khi thiếu STK / không món / chưa gán / lệch tổng. `hasBankAccount` nhìn **user đang login**. BE finalize nhìn **creditor**. Captain không phải người trả có thể thấy nút khác với 422 `BANK_ACCOUNT_REQUIRED`.
 
 Non-captain gọi finalize → `403 FORBIDDEN` (không phải `CAPTAIN_REQUIRED`). `CAPTAIN_REQUIRED` chỉ đi với khóa nộp / finalize-all.
+
+Khi **gửi đối soát** thành công, BE ghi `bill_review_requested` cho Captain nếu khác người gửi; ghi `new_bill` cho member active được gán món, loại creditor/người gửi/Captain và dedupe. Insert notification, enqueue push và `notification.created` nằm cùng transaction review. Replay bill đã reviewed với version khớp không gửi lại. Sửa reviewed đưa về draft, nên lần review tiếp theo có thể tạo lượt thông báo mới; không được hiểu là chỉ một lần suốt đời bill. FE hiển thị reviewed là **chờ chốt sổ**, chưa tạo nợ cho tới finalize.
 
 Tx finalize: status `finalized`, snapshot `bill_shares`, INSERT debts `awaiting` (số > 0, không phải creditor), notification, activity, job FCM. Cùng một transaction.
 
@@ -404,6 +408,8 @@ sequenceDiagram
 Cách đọc:
 
 Khóa nộp **không còn một chiều**. `POST unlock-submissions` xóa mốc `bill_submission_locked_at`. Đã khóa rồi bấm khóa lại: 200 cùng timestamp, không ghi activity trùng (`COALESCE`).
+
+**Mở khóa nộp bill:** migration `000017_bill_submission_unlocked_activity.sql` bổ sung enum activity `bill_submission_unlocked`. Cần schema này để INSERT activity không làm rollback thao tác mở khóa. Down giữ enum để bảo toàn lịch sử.
 
 `finalize-all` trong cùng tx: khóa nhóm, xác Captain, **tự bật** khóa nộp, bắt mọi bill `draft`/`reviewed` kèm version lúc đó. Đã có batch active (partial unique 1 batch/nhóm) → 409 kèm `active_batch_id`. Batch rỗng (không còn bill) hoàn thành ngay + notify Captain.
 
@@ -551,7 +557,7 @@ Không có event `bill.updated`. FE đăng ký `ocr.waiter` cạnh `bill.detail`
 | 28 | FE Apply OCR | PUT draft, không `/apply-candidate` |
 | 29 | Finalize thiếu STK | BE nhìn **creditor**; FE nhìn **user đang login** — Captain không phải creditor có thể thấy nút khác BE |
 | 30 | Non-Captain finalize | `403 FORBIDDEN` |
-| 31 | Void không lý do | BE 1–500; FE ≥3 | `VALIDATION_FAILED` |
+| 31 | Void không lý do | BE 1–500; FE ≥3; `VALIDATION_FAILED` |
 | 32 | Finalize-all trùng batch | `409 BULK_FINALIZE_IN_PROGRESS` |
 | 33 | Member đoán batch id | `403 CAPTAIN_REQUIRED` |
 | 34 | Tạo bill | Mọi member active, không chỉ Captain/creditor |
@@ -562,6 +568,7 @@ Không có event `bill.updated`. FE đăng ký `ocr.waiter` cạnh `bill.detail`
 
 | Biến | Mặc định | Ý nghĩa |
 |---|---|---|
+| `BILL_OCR_STALE_JOB_AGE_MINUTES` | `15` | Reaper mỗi 2 phút thu dọn queued/processing mắc kẹt |
 | `BILL_OCR_MAX_ATTEMPTS` | `3` | River, không phải 20 |
 | `BILL_OCR_MANUAL_LIMIT` / `WINDOW_HOURS` | `5` / `24` | Retry tay |
 | `BILL_IMAGE_MAX_BYTES` / `COUNT` | 10MiB / 5 | |

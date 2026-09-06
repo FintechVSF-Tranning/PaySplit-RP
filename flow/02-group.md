@@ -1,5 +1,7 @@
 # 02 — Group: cửa nhóm, lời mời không lộ lý do, và một Captain
 
+> Đối chiếu mã nguồn local ngày **06/09/2026** — BE `7f2b2a7`, FE `fb0cf0b`. [Phạm vi, bằng chứng và kiểm chứng](reports/2026-09-06-flow-sync.md). Các ghi chú AC/runtime cũ không có nghĩa đã chạy lại E2E trong lần này.
+
 > **Phạm vi**: BE module `group` (`/api/v1/groups`) ↔ FE Groups / Scan QR / Join by Link / Create Group / Add Members / Group Detail Hub (4 tab).
 >
 > Code tham chiếu chính: `PaySplit-BE/internal/modules/group/**`, `PaySplit-BE/internal/platform/database/group_lock.go`, `PaySplit-FE/lib/features/groups/**`.
@@ -35,7 +37,7 @@ Ngoại lệ đã biết: `GET /groups/{id}/activities` khi không phải member
 | Vai trò | `captain` (đúng một người active / nhóm, partial unique), `member` |
 | Trạng thái thành viên | `active`, `inactive` (giữ row) |
 | Trạng thái nhóm | `active`, `archived` |
-| Trần | **50** thành viên active. Tên BE 1–100 rune (trim). Currency chỉ `VND` |
+| Trần | `GROUP_MAX_ACTIVE_MEMBERS`, mặc định **50** thành viên active, phải >0. Tên BE 1–100 rune (trim). Currency chỉ `VND` |
 | Lời mời | Base62 **8 ký tự, phân biệt hoa thường**. Hạn mặc định 24h, nhận 1–168h. `max_uses` tùy chọn 1–50; **NULL = không giới hạn** |
 | URL invite BE | `url.JoinPath(APP_INVITE_BASE_URL, code)` — mặc định `https://paysplit.app/join/{code}` |
 | URL helper FE | `https://paysplit.app/j/{code}` — extractor lấy **segment cuối**, nhận cả `/j/` và `/join/` |
@@ -43,6 +45,8 @@ Ngoại lệ đã biết: `GET /groups/{id}/activities` khi không phải member
 | Khóa hàng nhóm | `LockActiveGroup`: `SELECT ... FOR UPDATE` (transfer dùng `NOWAIT`) |
 | Preview / Join | `liveAuth` + `RateLimitByAccountAndIP` (mặc định 30/phút, budget kép account + IP) |
 | Realtime mặc định | Một kênh `GET /users/me/events`. `/groups/{id}/events` còn sống, **deprecated**, là đường lùi. `/sync` vẫn dùng cho legacy |
+
+**Giới hạn chưa đồng bộ:** OpenAPI vẫn mô tả `GroupMemberLimitReached` là 50, trong khi BE lấy từ cấu hình. `NormalizeAudience` realtime vẫn cắt tối đa 50 user; cấu hình nhóm >50 có thể làm một số người không nhận invalidation. `max_uses` của invite vẫn 1–50, không tự tăng theo cấu hình nhóm.
 
 FE tạo nhóm: min 3 ký tự, `maxLength` 50 — chặt hơn BE. Đừng copy số FE vào tài liệu BE.
 
@@ -165,7 +169,7 @@ sequenceDiagram
         BE-->>FE: 200 join result already_active
     else Invite không available
         BE-->>FE: 404 INVITE_NOT_FOUND
-    else Đủ 50
+    else Đạt giới hạn thành viên cấu hình
         BE-->>FE: 409 GROUP_MEMBER_LIMIT_REACHED
     else Từng rời (row inactive)
         BE->>DB: RE-ACTIVATE, role member, joined_at now, giữ member_id
@@ -187,7 +191,7 @@ Mọi invite chết (sai format, hết hạn, bị thu hồi, hết lượt, nh�
 
 Sau khi xác nhận, backend `LOCK groups FOR UPDATE` rồi mới xét. Thứ tự trong hình quan trọng: **đã là member active thì 200 ngay**, không kiểm tra invite, không tăng `use_count`. Không thì Captain bấm lại link của chính nhóm mình có thể bị 404 vì mã đã hết lượt.
 
-Trần 50 đếm dưới khóa hàng: hai người bấm cùng lúc khi còn 1 chỗ, chỉ một người thắng. Người từng rời nhóm được **reactivate** hàng cũ (`UNIQUE group_id, user_id`), giữ `member_id` để hóa đơn/nợ không đứt, role reset về `member`.
+Trần `GROUP_MAX_ACTIVE_MEMBERS` (mặc định 50) được đếm dưới khóa hàng: hai người bấm cùng lúc khi còn 1 chỗ, chỉ một người thắng. Người từng rời nhóm được **reactivate** hàng cũ (`UNIQUE group_id, user_id`), giữ `member_id` để hóa đơn/nợ không đứt, role reset về `member`.
 
 Join xong chỉ `refresh()` list + SnackBar. **Không** tự mở Group Detail.
 
@@ -365,7 +369,7 @@ flowchart TD
     M --> N["GroupsPage POST /groups/join"]
     N --> O{"Kết quả?"}
     O -->|"already_active / joined / reactivated"| P["refresh() list + SnackBar"]
-    O -->|"409 GROUP_MEMBER_LIMIT_REACHED"| Q["Nhóm đủ 50"] --> A
+    O -->|"409 GROUP_MEMBER_LIMIT_REACHED"| Q["Nhóm đạt giới hạn thành viên"] --> A
     O -->|"Lỗi khác"| R["SnackBar"] --> A
     P --> A
 ```
@@ -376,7 +380,7 @@ Hai cửa vào, một điểm hội tụ. Nhập link lấy **segment cuối** c
 
 Code phải đúng 8 ký tự Base62, **không** lower-case. Sai hoa thường là mã khác, 404.
 
-Mọi invite chết cùng 404, SnackBar "liên kết không hợp lệ". Preview OK thì sheet tên nhóm / số member / Captain. Xác nhận xong `GroupsPage` mới POST join. `already_active`, `joined`, `reactivated` đều chỉ refresh list + SnackBar. User tự bấm vào nhóm. Trần 50 hiện câu riêng.
+Mọi invite chết cùng 404, SnackBar "liên kết không hợp lệ". Preview OK thì sheet tên nhóm / số member / Captain. Xác nhận xong `GroupsPage` mới POST join. `already_active`, `joined`, `reactivated` đều chỉ refresh list + SnackBar. User tự bấm vào nhóm. Chạm trần thành viên hiện câu lỗi riêng.
 
 ### 6.2 Cài đặt nhóm
 
@@ -450,6 +454,7 @@ Rời: UI chặn `myBalance khác 0`. Captain số dư 0 vẫn 409 chuyển quy�
 |---|---|---|
 | `APP_INVITE_BASE_URL` | `https://paysplit.app/join` | JoinPath + code |
 | `HTTP_INVITE_ATTEMPTS_PER_MINUTE` | `30` | Limiter kép preview/join |
+| `GROUP_MAX_ACTIVE_MEMBERS` | `50`, phải >0 | Trần thành viên active; độc lập với `max_uses` của invite |
 | `USER_SSE_ENABLED` / `REALTIME_MODE` | xem [`08`](08-realtime.md) | |
 
 ---

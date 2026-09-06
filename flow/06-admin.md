@@ -1,5 +1,7 @@
 # 06 — Admin: khóa tài khoản là khóa phiên, không phải đợi JWT chết
 
+> Đối chiếu mã nguồn local ngày **06/09/2026** — BE `7f2b2a7`, FE `fb0cf0b`. [Phạm vi, bằng chứng và kiểm chứng](reports/2026-09-06-flow-sync.md). Các ghi chú AC/runtime cũ không có nghĩa đã chạy lại E2E trong lần này.
+
 > **Phạm vi**: BE module `admin` (`/api/v1/admin`, `liveAuth` + `RequireRole("admin")`) ↔ Web Admin Portal nhúng `//go:embed` tại `/admin-portal/`.
 >
 > Code tham chiếu chính: `PaySplit-BE/internal/modules/admin/**`, `PaySplit-BE/web/admin/**`, `PaySplit-BE/web/web.go`, `PaySplit-BE/cmd/seedadmin/**`.
@@ -109,9 +111,7 @@ Một transaction, thứ tự trong hình: đọc account (**không** `FOR UPDAT
 
 Hợp lệ: đổi `users.status`, `UPDATE sessions ... RETURNING id WHERE revoked_at IS NULL` (lý do `admin_suspended` / `admin_locked`), thu hồi refresh, `NotifySessionEnded` chia lô 100 sid, INSERT audit (`reason NOT NULL`), đếm nợ/công outstanding trả về `warning`.
 
-Nạn nhân: JWT còn hạn 15 phút nhưng `liveAuth` hỏi DB → 401 ngay. App `endSession`. SSE `close: session_ended` **không** tự logout, REST mới đá. Xem [`01-auth.md`](01-auth.md).
-
-Nạn nhân: JWT còn hạn nhưng `liveAuth` 401. Refresh thấy session chết → `INVALID_OR_EXPIRED_TOKEN` → app `endSession`. SSE (nếu bật) `close: session_ended` — app **không** logout từ frame đó, REST mới đá. Xem [`01-auth.md`](01-auth.md) mục 4.
+Nạn nhân: JWT còn hạn nhưng `liveAuth` 401. Refresh thấy session chết → `INVALID_OR_EXPIRED_TOKEN` → app `endSession`. SSE (nếu bật) `close: session_ended` — app đóng stream, gọi `endSession` ngay và về Login có cảnh báo. REST 401 là đường dự phòng khi không có user stream. Xem [`01-auth.md`](01-auth.md) mục 4.
 
 ### 4.2 Reactivate
 

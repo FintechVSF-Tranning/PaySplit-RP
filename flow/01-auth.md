@@ -1,5 +1,7 @@
 # 01 — Auth: một người, một phiên, và cửa khóa trước khi nhìn mật khẩu
 
+> Đối chiếu mã nguồn local ngày **06/09/2026** — BE `7f2b2a7`, FE `fb0cf0b`. [Phạm vi, bằng chứng và kiểm chứng](reports/2026-09-06-flow-sync.md). Các ghi chú AC/runtime cũ không có nghĩa đã chạy lại E2E trong lần này.
+
 > **Phạm vi**: BE module `auth` (`/api/v1/auth`, `/api/v1/users`) ↔ FE Welcome / Register / Verify OTP / Login / Forgot & Reset Password / Change Password / Profile / Bank Settings.
 >
 > Code tham chiếu chính: `PaySplit-BE/internal/modules/auth/**`, `PaySplit-BE/internal/transport/http/middleware/auth.go`, `PaySplit-FE/lib/features/auth/**`, `PaySplit-FE/lib/features/profile/**`, `PaySplit-FE/lib/core/network/session_refresher.dart`.
@@ -69,13 +71,13 @@ Chuỗi middleware toàn cục (mọi request, kể cả public): xem [`README.m
 
 ---
 
-## 4. Các loại frame phiên, nói ngắn
+## 4. Thu hồi phiên và phản ứng của app
 
-Không có "frame" như SSE. Có bốn lý do `revoked_reason` hay gặp:
+Các lý do `revoked_reason` thường gặp:
 
 | Lý do | Khi nào | Máy đang mở làm gì |
 |---|---|---|
-| `replaced_by_sign_in` | Đăng nhập máy khác | Request kế `401` → refresh fail → về Welcome |
+| `replaced_by_sign_in` | Đăng nhập máy khác | SSE `session_ended` → Login có cảnh báo; nếu không có SSE thì REST 401 → refresh fail |
 | `refresh_reuse` | Refresh token cũ bị dùng lại | `401 SESSION_REVOKED` → xóa token ngay |
 | `password_reset` | Đặt lại MK bằng OTP | **Mọi** phiên chết, kể cả máy đang reset |
 | `password_changed` | Đổi MK khi đã đăng nhập | Chỉ đá **máy khác**, máy đang đổi được giữ |
@@ -85,7 +87,7 @@ Không có "frame" như SSE. Có bốn lý do `revoked_reason` hay gặp:
 
 Khi `USER_SSE_ENABLED`, mỗi lần revoke còn `pg_notify` `session.ended` (chia lô 100 sid). Chi tiết trọng tài và cái bẫy cắt trần 50: [`08-realtime.md`](08-realtime.md) mục 5.3.
 
-> **App không logout từ frame `close: session_ended`.** `UserRealtimeOwner` coi mọi `close` khác `max_connection_age` là "thử kết nối lại". Máy bị đá thật sự chết ở lần REST 401 kế tiếp. Đây là chủ đích: SSE không phải nguồn sự thật của phiên.
+> **App kết thúc phiên ngay từ frame `close: session_ended`.** `UserRealtimeOwner` đóng stream rồi gọi `SessionRefresher.endSession()`. Hàm này gom các lần kết thúc đồng thời, xóa token, chỉ phát `notifyExpired` nếu trước đó còn token. `AuthController` đặt `sessionExpiredProvider=true`, user về null; router đưa route protected/Splash/Welcome tới `/login`, hiện cảnh báo phiên đã kết thúc. Đăng nhập thành công xóa cảnh báo. Cold start không có token vẫn về Welcome và không báo hết phiên.
 
 ---
 
@@ -244,7 +246,7 @@ Access JWT sống 15 phút. REST (`AuthInterceptor`) và kênh realtime (`SseTra
 
 Vì sao phải chung một cửa: refresh token là loại **dùng một lần** (rotation). Lần gọi thành công đánh `used_at` rồi cấp token mới. Lần gọi thứ hai cầm token cũ đã `used_at` bị coi là **reuse** (nghi đánh cắp) → thu hồi cả phiên, `401 SESSION_REVOKED`. Người dùng bị đá mà không hiểu vì sao.
 
-Các nhánh khác **không** ra `SESSION_REVOKED`: token không tìm thấy, hết hạn, sai `device_id` đều `400 INVALID_OR_EXPIRED_TOKEN`; user không còn `active` thì `403 ACCOUNT_UNAVAILABLE`. App vẫn `endSession()` trên mọi refresh fail, nên UX về Welcome giống nhau. Đừng viết client chỉ bắt mã `SESSION_REVOKED`.
+Các nhánh khác **không** ra `SESSION_REVOKED`: token không tìm thấy, hết hạn, sai `device_id` đều `400 INVALID_OR_EXPIRED_TOKEN`; user không còn `active` thì `403 ACCOUNT_UNAVAILABLE`. App vẫn `endSession()` trên mọi refresh fail, nên UX hết phiên về Login có cảnh báo. Đừng viết client chỉ bắt mã `SESSION_REVOKED`.
 
 Thành công: REST retry request gốc đúng một lần (cờ `retried` chống vòng lặp). SSE mở lại stream đúng một lần với token mới.
 
@@ -446,7 +448,7 @@ Ba cột là ba **phạm vi đá phiên**, không phải ba cách đổi mật k
 - **Đổi MK đã đăng nhập:** chính chủ đang cầm → giữ sid hiện tại, chỉ đá máy khác → ở lại app.
 - **Đăng nhập máy mới:** unique index một session active/user → máy cũ `replaced_by_sign_in`. JWT cũ còn hạn 15 phút nhưng `liveAuth` hỏi DB mỗi request nên máy cũ chết ở lần gọi kế.
 
-Admin khóa tài khoản đi nhánh giống reset (đá hết) cộng `session.ended` trên SSE. App **không** logout từ frame SSE đó, REST 401 mới đá. Xem [`08-realtime.md`](08-realtime.md) mục 5.3.
+Admin khóa tài khoản đi nhánh giống reset (đá hết) cộng `session.ended` trên SSE. App kết thúc phiên ngay từ frame SSE đó, về Login kèm cảnh báo; nếu không có stream thì REST 401 là đường dự phòng. Xem [`08-realtime.md`](08-realtime.md) mục 5.3.
 
 ---
 
@@ -506,7 +508,7 @@ FE routes: `/welcome` (carousel 3 slide → `/login`), `/register`, `/verify-otp
 | 26 | FE logout | `POST /auth/sign-out` (TokenAuth), nuốt lỗi → `FCMTokenManager.onLogout()` → `clear()` | `204` hoặc logout cục bộ | `auth_repository_impl.dart` |
 | 27 | Login 429 từ limiter IP toàn cục 300/phút | Cùng code `RATE_LIMITED` | FE vẫn khóa **900 giây** | `login_page.dart` |
 | 28 | Register không ép hoa/số | Checklist chỉ trang trí | BE `400 VALIDATION_FAILED` | |
-| 29 | `session.ended` trên SSE | App reconnect, **không** logout | chết ở REST 401 | `08` mục 5.3 |
+| 29 | `session.ended` trên SSE | Đóng stream, xóa token, Login + cảnh báo | không chờ REST 401 | `08` mục 5.3 |
 | 30 | Forgot OTP cho user pending | Vẫn gửi; reset từ chối non-active | `400 INVALID_OR_EXPIRED_TOKEN` lúc reset | |
 | 31 | Sign-in `device_id` không phải UUID | | `400 VALIDATION_FAILED` | Refresh sai device → mã token, **khác code** |
 | 32 | PUT FCM token rỗng | | `400 INVALID_FCM_TOKEN` | không qua `writeDomainError` |
@@ -579,6 +581,6 @@ Những chỗ trông nhỏ nhưng nếu làm sai thì hỏng lặng lẽ:
 | Sign-out từ app | ✅ Chạy | FE gọi API, nuốt lỗi mạng |
 | Avatar WebP | ✅ JPEG/PNG/GIF/WebP | HEIC hay 502 vì Cloudinary đòi webp |
 | FCM gắn session | ✅ Chạy | Login body + PUT sau initialize |
-| `session.ended` đẩy SSE | ✅ Khi `USER_SSE_ENABLED` | App không logout từ frame close; REST 401 mới đá |
+| `session.ended` đẩy SSE | ✅ Khi `USER_SSE_ENABLED` | App kết thúc phiên từ frame close, Login + cảnh báo |
 | Admin portal auto-refresh | ⚠️ Gãy | Portal gửi refresh **không** `device_id` — xem [`06-admin.md`](06-admin.md) |
 | Deep link mời | ⏸ Chưa có | Link dán tay / QR — [`02-group.md`](02-group.md) |

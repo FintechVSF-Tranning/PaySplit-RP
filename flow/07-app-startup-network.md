@@ -1,5 +1,7 @@
 # 07 — Khởi động app: ai được vào đâu, và 401 đi chung một cửa refresh
 
+> Đối chiếu mã nguồn local ngày **06/09/2026** — BE `7f2b2a7`, FE `fb0cf0b`. [Phạm vi, bằng chứng và kiểm chứng](reports/2026-09-06-flow-sync.md). Các ghi chú AC/runtime cũ không có nghĩa đã chạy lại E2E trong lần này.
+
 > **Phạm vi**: `bootstrap.dart`, Splash, GoRouter redirect, Dio + `AuthInterceptor` + `SessionRefresher`, map lỗi — lớp nền của mọi màn hình.
 >
 > Code tham chiếu chính: `PaySplit-FE/lib/bootstrap.dart`, `lib/app/router/**`, `lib/app/app.dart`, `lib/core/network/**`, `lib/features/splash/**`, `lib/features/auth/presentation/providers/auth_controller.dart`.
@@ -20,7 +22,7 @@ Animation 2.5 giây và "đã có user chưa" là hai việc. Nhét redirect và
 
 Interceptor REST và SSE cùng hết hạn cùng lúc. Hai lần `POST /auth/refresh` = reuse detection = mất phiên. Xem [`01-auth.md`](01-auth.md).
 
-> Một `@lazySingleton SessionRefresher` với `_inFlight`. Interceptor **không** còn field `_refreshing`. SSE gọi cùng `refresh()`. Fail → `endSession()` → `SessionEvents.notifyExpired` → `AuthController = null` → redirect `/welcome` **ngay**, không chờ lần build sau.
+> Một `SessionRefresher` được đăng ký singleton qua `NetworkModule` với `_inFlight`. Interceptor **không** còn field `_refreshing`. SSE gọi cùng `refresh()`. Fail → `endSession()` → `SessionEvents.notifyExpired` → `AuthController = null` → redirect `/login` kèm cảnh báo hết phiên (khi trước đó còn token), không chờ lần build sau.
 
 ### 1.3 Không có token vẫn gọi `/users/me`
 
@@ -34,7 +36,7 @@ Interceptor REST và SSE cùng hết hạn cùng lúc. Hai lần `POST /auth/ref
 |---|---|
 | `bootstrap()` | Binding → (dev/staging) TLS override → **Firebase + background FCM** → `EnvConfig.init(flavor, apiBaseUrl, appName, realtimeMode)` → GetIt → `ProviderScope` (override `realtimeSignedInProvider`) |
 | SplashPage | Animation glow/shimmer. **Không** check token, **không** `context.go` |
-| `AuthController.build()` | Subscribe `SessionEvents.onExpired`; `Future.wait([GetCurrentUser, delay 2500])`; **mọi** failure → `null` (Welcome), không kẹt splash |
+| `AuthController.build()` | Subscribe `SessionEvents.onExpired`; `Future.wait([GetCurrentUser, delay 2500])`; **mọi** failure → `null` (Login nếu có cờ hết phiên, còn lại Welcome), không kẹt splash |
 | Redirect | Một hàm. `isLoading` → ở lại (thường `/splash`) |
 | `AuthInterceptor` | Gắn Bearer; 401 → `SessionRefresher.refresh()`; flag retried một lần |
 | `SessionRefresher` | Dio trần, body `{refresh_token, device_id}` path `/auth/refresh` |
@@ -83,7 +85,8 @@ Dev/staging: `_DevHttpOverrides` chấp nhận chứng chỉ xấu (máy local).
 | Điều kiện | Hành động |
 |---|---|
 | `authState.isLoading` | `null` — ở lại, thường splash |
-| Chưa auth + `/splash` hoặc route protected | `/welcome` |
+| Chưa auth, `sessionExpired=true`, đang protected / Splash / Welcome | `/login` kèm cảnh báo |
+| Chưa auth, không có cờ hết phiên, `/splash` hoặc route protected | `/welcome` |
 | Chưa auth + route auth | ở lại |
 | Đã auth + splash hoặc route auth | `/home` |
 | Đã auth + chỗ khác | ở lại |
@@ -153,7 +156,7 @@ sequenceDiagram
     FE->>BE: GET /users/me
     alt Không token / refresh fail / mạng (AuthController nuốt thành null)
         FE->>FE: AsyncData(null) sau max(2.5s, request)
-        FE->>U: /welcome, carousel, push /login
+        FE->>U: Có cờ hết phiên: /login + cảnh báo; còn lại /welcome
     end
 ```
 
@@ -163,7 +166,7 @@ Cùng bootstrap, nhưng `/users/me` fail (không token, refresh fail, mạng, 50
 
 Timeout Dio 90 giây. Mất mạng lúc mở: splash có thể đứng ~90s rồi Welcome. Không hang vô hạn, cũng không vào Home khi chưa auth.
 
-Welcome là carousel 3 slide, mũi tên cuối `push /login`. Không deep link. Token chết đã bị interceptor `clear()` trong lúc refresh fail.
+Welcome là carousel 3 slide, mũi tên cuối `push /login`. Không deep link. Token chết bị interceptor kết thúc phiên khi refresh fail; trường hợp đó vào thẳng Login có cảnh báo.
 
 Mất mạng lúc mở: timeout 90s. Splash có thể đứng ~90s rồi Welcome (vì failure → null). Home về sau không: chưa auth. Đó là trade-off đã biết.
 
@@ -192,7 +195,7 @@ sequenceDiagram
     else fail
         SR->>SR: clear + notifyExpired
         I-->>A: lỗi gốc
-        Note over I,SR: AuthController null, sang /welcome ngay
+        Note over I,SR: Nếu trước đó có token: AuthController null, sang /login kèm cảnh báo
     end
 ```
 
@@ -202,7 +205,7 @@ Giữa phiên, access hết hạn. Request REST A và stream SSE cùng 401.
 
 Skip-list (login, register, refresh, forgot, reset, verify, resend): **không** refresh, **không** `endSession` — 401 ở đó là sai mật khẩu / OTP, không phải hết hạn. Đã gắn cờ `retried` mà vẫn 401: `endSession`, chống vòng lặp.
 
-Còn lại: `SessionRefresher.refresh()`. REST và SSE await **cùng** `_inFlight`. Dio trần, không interceptor, body `refresh_token` + `device_id`. Thành công: ghi storage, REST retry một lần, SSE mở stream một lần. Fail: `clear` + `notifyExpired` → AuthController `null` **ngay** → redirect Welcome, không chờ lần build sau.
+Còn lại: `SessionRefresher.refresh()`. REST và SSE await **cùng** `_inFlight`. Dio trần, không interceptor, body `refresh_token` + `device_id`. Thành công: ghi storage, REST retry một lần, SSE mở stream một lần. Fail: `clear` + `notifyExpired` → AuthController `null` **ngay** → redirect Login kèm cảnh báo nếu trước đó có token, không chờ lần build sau.
 
 Vì sao chung một cửa: xem [`01-auth.md`](01-auth.md) mục 5.3 (reuse detection).
 
@@ -250,7 +253,8 @@ flowchart TD
     B -->|"Có"| C["null — splash"]
     B -->|"Không"| D{"user ≠ null?"}
     D -->|"Chưa"| E{"Location"}
-    E -->|"/splash hoặc protected"| F["/welcome"]
+    E -->|"Hết phiên và protected / splash / welcome"| X["/login + cảnh báo"]
+    E -->|"Không có cờ hết phiên, splash hoặc protected"| F["/welcome"]
     E -->|"auth routes"| G["Ở lại"]
     D -->|"Rồi"| H{"Location"}
     H -->|"splash hoặc auth"| I["/home"]
@@ -263,7 +267,7 @@ Cách đọc:
 
 `isLoading` (đang `Future.wait` splash): `return null` = ở nguyên, thường `/splash`. Chưa xong mà đẩy Welcome/Home sẽ nháy màn.
 
-Chưa đăng nhập (`user == null`): đang splash hoặc đang vào route protected (home, groups, bill...) → `/welcome`. Đang đứng sẵn `/login` `/register`... thì **ở lại** (xem form, không đá về welcome).
+Cờ `sessionExpired` được ưu tiên: protected/Splash/Welcome → Login có cảnh báo; các form auth khác được giữ nguyên. Không có cờ hết phiên, chưa đăng nhập (`user == null`): đang splash hoặc đang vào route protected (home, groups, bill...) → `/welcome`. Đang đứng sẵn `/login` `/register`... thì **ở lại** (xem form, không đá về welcome).
 
 Đã đăng nhập: còn đứng splash hoặc form auth → `/home`. Đang ở `/groups/xyz` thì **ở lại**, không kéo về home mỗi lần rebuild.
 
@@ -294,7 +298,7 @@ Mọi `DioException` vào đây. Không phải 401 → `mapDioError` (timeout/co
 
 401: path thuộc skip-list auth → coi như lỗi nghiệp vụ, **không** xóa phiên. Không skip: đã retry request này chưa? Rồi → `endSession` (token mới cấp đã chết, đừng lặp). Chưa → `await SessionRefresher.refresh()`. OK thì gắn Bearer mới, retry. Fail thì `endSession`. Retry xong vẫn lỗi khác 401 thì lại `mapDioError`.
 
-`endSession` xóa token + `SessionEvents` → AuthController null → redirect Welcome **ngay**.
+`endSession` gom các lần gọi đồng thời, xóa token, chỉ phát `SessionEvents` nếu trước đó còn token → AuthController null + cờ hết phiên → redirect Login kèm cảnh báo. Không có token từ đầu thì không bật cảnh báo. SSE `close: session_ended` cũng đi đúng đường này.
 
 ---
 
@@ -305,7 +309,7 @@ Mọi `DioException` vào đây. Không phải 401 → `mapDioError` (timeout/co
 | `connectionError` / timeout | `NetworkFailure` | Không thể kết nối tới máy chủ |
 | 5xx | `ServerFailure` | |
 | 2xx sai shape | `invalidResponseFailure` | `ApiResponse` khoan dung: thiếu `success` thì coi cả body là data |
-| 401 sau refresh | session hết → Welcome | |
+| 401 sau refresh | session hết → Login kèm cảnh báo | |
 | `RATE_LIMITED` | parse `Retry-After` vào message | LoginPage **bỏ qua**, khóa 900s — [`01`](01-auth.md) |
 
 Envelope chuẩn: [`README.md`](README.md).
@@ -351,7 +355,7 @@ FCM listeners đăng ký post-frame **song song** splash — có thể PUT token
 
 2. **`clear()` không xóa `device_id`.** Đúng: refresh/sign-in sau logout vẫn cùng máy. Xóa nhầm = mọi refresh `INVALID_OR_EXPIRED_TOKEN`.
 
-3. **Sign-out không skip interceptor.** Access chết lúc bấm Đăng xuất → refresh (session còn) rồi sign-out. Session đã chết → refresh fail → `endSession` — vẫn về Welcome, sign-out BE có thể chưa gọi. TokenAuth lẽ ra nhận JWT hết hạn? JWT hết `exp` thì Verify fail trước handler — nên refresh trước là hữu ích khi session còn.
+3. **Sign-out không skip interceptor.** Access chết lúc bấm Đăng xuất → refresh (session còn) rồi sign-out. Session đã chết → refresh fail → `endSession` — có thể bật cảnh báo hết phiên; sign-out BE có thể chưa gọi. TokenAuth lẽ ra nhận JWT hết hạn? JWT hết `exp` thì Verify fail trước handler — nên refresh trước là hữu ích khi session còn.
 
 4. **AuthController nuốt mọi lỗi `/users/me` thành null.** 500 lúc cold start = user bị đẩy Welcome dù token tốt. Có chủ đích "không kẹt splash", giá là false logout.
 

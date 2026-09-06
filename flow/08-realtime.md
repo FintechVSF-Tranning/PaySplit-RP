@@ -1,5 +1,7 @@
 # 08 — Realtime: một kênh sự kiện duy nhất cho cả app
 
+> Đối chiếu mã nguồn local ngày **06/09/2026** — BE `7f2b2a7`, FE `fb0cf0b`. [Phạm vi, bằng chứng và kiểm chứng](reports/2026-09-06-flow-sync.md). Các ghi chú AC/runtime cũ không có nghĩa đã chạy lại E2E trong lần này.
+
 > **Phạm vi**: BE `GET /api/v1/users/me/events` + ba kênh PostgreSQL `LISTEN/NOTIFY` ↔ FE toàn bộ màn hình có dữ liệu sống (Trang chủ, Danh sách nhóm, Chi tiết nhóm, Chi tiết hóa đơn, Chờ OCR, Thanh toán).
 >
 > Code tham chiếu chính: `PaySplit-BE/internal/platform/realtime/**`, `PaySplit-BE/internal/platform/database/notification_listener.go`, `PaySplit-BE/internal/modules/auth/delivery/http/sse_hub.go` + `sse_handler.go`, `PaySplit-FE/lib/core/realtime/**`.
@@ -251,7 +253,7 @@ Cách đọc:
 
 Ví dụ cụ thể của sơ đồ 4.1. Người B `DELETE /bills/id`. Trong tx: khóa nhóm, xóa bill, lấy audience, `pg_notify bill.deleted`. **Chỉ sau COMMIT** Hub mới nhận.
 
-Hub lọc session của người trong audience (trần 50 user). App A nhận `invalidate` type `bill.deleted` kèm `group_id` + `resource_id`. Tra bảng định tuyến (mục 6): đánh thức `group.bills`, hai danh sách nhóm, `home.activities`, ... Chỉ surface **đang đăng ký** mới chạy.
+Hub lọc session của người trong audience (trần 50 user). `GROUP_MAX_ACTIVE_MEMBERS` hiện cấu hình được nhưng trần audience chưa tăng theo; nhóm >50 có nguy cơ thiếu invalidation cho một số người. App A nhận `invalidate` type `bill.deleted` kèm `group_id` + `resource_id`. Tra bảng định tuyến (mục 6): đánh thức `group.bills`, hai danh sách nhóm, `home.activities`, ... Chỉ surface **đang đăng ký** mới chạy.
 
 Gộp 250 ms: chốt một hóa đơn có thể sinh vài invalidate liên tiếp. Gộp theo **đích làm mới**, không theo loại sự kiện. Rồi `GET /groups/id` (phải có `pending_bill_count`). Vá đúng một dòng trong list đã tải trang 3. Chip "1 bill mở" biến mất, vị trí cuộn không đổi. Không gọi lại trang 1 (sẽ tụt về 20 nhóm).
 
@@ -283,7 +285,7 @@ Cách đọc:
 
 `pg_notify session.ended` với `target_sids`. Hơn 100 sid thì chia lô, **vẫn trong cùng tx**. Không dùng `NormalizeAudience` (cắt trần 50): sid là UUID v7, phiên sống nằm cuối danh sách đã sort, cắt 50 sẽ **bỏ sót đúng máy đang dùng**.
 
-COMMIT → Hub → `event: close reason session_ended`. Trong spec/BE, app **nên** xóa token về login. FE hiện tại coi hầu hết `close` (trừ `max_connection_age`) là reconnect, **không** logout từ frame này. Máy bị đá chết ở REST 401 kế. Xem [`01-auth.md`](01-auth.md) mục 4.
+COMMIT → Hub → `event: close reason session_ended`. FE **đóng stream, gọi `SessionRefresher.endSession()`**, xóa token và phát sự kiện hết phiên nếu trước đó có token. Router chuyển tới Login kèm cảnh báo; không reconnect phiên đã bị thu hồi. Xem [`01-auth.md`](01-auth.md) mục 4.
 
 Đoạn "Cái bẫy" ngay dưới là lịch sử cắt trần 50. Đã tách `NormalizeAudience` (có cắt) và `NormalizeSIDs` (không cắt).
 
@@ -387,7 +389,7 @@ Khi sự kiện tới, app tra bảng định tuyến để biết những khóa
 | `group.debts:<gid>` | Công nợ trong nhóm |
 | `group.activities:<gid>` | Nhật ký hoạt động của nhóm |
 | `bill.detail:<gid>:<bid>` | Chi tiết một hóa đơn |
-| `ocr.waiter:<gid>:<bid>` | Màn chờ kết quả quét hóa đơn |
+| `notifications` | Danh sách thông báo và badge Home; gọi refresh list + unread-count |
 
 ### 6.3 Bảng định tuyến đầy đủ
 
@@ -395,7 +397,7 @@ Nguồn: `PaySplit-FE/lib/core/realtime/user_realtime_owner.dart`, hàm `targets
 
 | Loại sự kiện | Các surface được đánh thức |
 |---|---|
-| `bill.created`, `bill.content_changed`, `bill.reviewed` | `bill.detail`, `group.bills`, **hai danh sách nhóm**, `home.activities` |
+| `bill.created`, `bill.content_changed`, `bill.reviewed` | `bill.detail`, `group.bills`, `settlement.overview`, **hai danh sách nhóm**, `home.activities` |
 | `bill.deleted`, `bill.finalized`, `bill.voided` | `bill.detail`, `group.bills`, `group.debts`, `group.detail`, `settlement.overview`, **hai danh sách nhóm**, `home.activities` |
 | `bill.settlement_changed` | `bill.detail`, `group.bills` |
 | `group.bill_submission_locked` | `group.detail`, `group.roster`, **hai danh sách nhóm** |
@@ -404,12 +406,19 @@ Nguồn: `PaySplit-FE/lib/core/realtime/user_realtime_owner.dart`, hàm `targets
 | `home.balance_changed` | `settlement.overview`, **hai danh sách nhóm** |
 | `settlement.payment_changed` | `settlement.overview` |
 | `settlement.debt_reminded` | `settlement.overview`, `group.debts` |
-| `ocr.updated` | `ocr.waiter`, `bill.detail` (khớp đúng `group_id` và `bill_id`) |
+| `ocr.updated` | `bill.detail` (đúng group/bill) + `group.bills` của nhóm để cập nhật OCR status |
+| `notification.created` | Chỉ `notifications`, không làm mới danh sách nhóm |
 | Loại chưa biết | **Hai danh sách nhóm** (phòng hờ an toàn) |
 
 > **"Hai danh sách nhóm" luôn đi cùng nhau.** `home.groups` và `groups.index` gọi **cùng một** `GET /groups` và hiển thị **cùng một** dữ liệu, chỉ khác `limit`. Nếu chỉ làm mới một cái mà quên cái kia, sẽ có tình huống Trang chủ đã đúng còn màn Danh sách nhóm vẫn hiện "1 bill mở" của một hóa đơn đã bị xóa. Trong code chúng được gộp vào một hàm dùng chung để không thể quên.
 
 ---
+
+**Chặn event cũ ở Bill Detail:** interest cung cấp `resourceVersion`; event có `resource_version <=` version hiện tại không gọi lại chi tiết. `bill.deleted` và `bill.settlement_changed` luôn được xử lý vì thay đổi có thể không tăng bill version. Event thiếu version cũng không bị bỏ. OCR dùng nhánh riêng ở trên; không còn surface `ocr.waiter`.
+
+**Thông báo mới:** BE dùng scope `notification`, type `notification.created`, audience là đúng user nhận notification, trong transaction ghi notification của bill/settlement. FE làm mới danh sách đa nhóm qua surface `notifications`. FCM độc lập với đường này.
+
+**Settlement:** các mutation dùng cache audience theo group trong phạm vi transaction (`WithAudienceCache`) để tránh truy vấn lặp cho từng event. Đây là tối ưu đọc; không thay đổi người nhận từng loại event. FE `patchGroup` nạp lại đúng nhóm đổi và giữ dữ liệu các nhóm còn lại; xem [04](04-settlement.md).
 
 ## 7. Vá tại chỗ, thay vì tải lại cả danh sách
 
@@ -503,7 +512,7 @@ Mở `GET /users/me/events`:
 - 429: chờ đúng `Retry-After`, jitter **chỉ cộng thêm**, không trừ (trừ sẽ thử sớm, ăn thêm 429).
 - 503 / timeout / đứt: backoff 1..30s.
 
-Đang `live`: `invalidate` → bẩn → gộp 250ms → REST. `roster` áp delta thẳng. `heartbeat` bỏ qua. `close: max_connection_age` kết nối lại **ngay**. `replaced` im. `session_ended` về login (theo diagram; implementation hiện reconnect, REST 401 mới đá). `close` khác → backoff.
+Đang `live`: `invalidate` → bẩn → gộp 250ms → REST. `roster` áp delta thẳng. `heartbeat` bỏ qua. `close: max_connection_age` kết nối lại **ngay**. `replaced` im. `session_ended` kết thúc phiên ngay, về Login kèm cảnh báo. `close` khác → backoff.
 
 **Một quy tắc quan trọng ở nhánh `404/501`**: chỉ được lùi về cơ chế cũ khi **chưa từng** nhận `ready` trong phiên này. Đã từng chạy được rồi mà sau đó gặp lỗi thì đó là sự cố tạm thời, phải kiên nhẫn thử lại chứ không được đổi cơ chế. Nếu không, một lỗi thoáng qua sẽ làm app tụt về đường cũ và ở lì đó.
 

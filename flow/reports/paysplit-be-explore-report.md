@@ -1,5 +1,7 @@
 # Báo cáo khám phá PaySplit-BE (raw)
 
+> **Tài liệu lịch sử, không đại diện HEAD ngày 06/09/2026.** Nội dung explore nguyên văn bên dưới được giữ để truy nguyên; số dòng và một số kết luận đã cũ. Đọc [đối chiếu hiện tại](2026-09-06-flow-sync.md) và [flow 01–08](../README.md) trước khi dùng. Các thay đổi về SSE, notification, unlock, giới hạn nhóm và idempotency được mô tả ở tài liệu mới.
+
 > Nguyên văn kết quả của subagent explore (nghiên cứu codebase Go backend tại `PaySplit-BE`, mức độ very thorough). Dùng làm nguồn tham chiếu thô cho các file flow `01–07`.
 
 ---
