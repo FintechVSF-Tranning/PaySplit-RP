@@ -356,7 +356,7 @@
 
               <!-- ================= SYNC CALLS (GATEWAY -> CỘT 2 CONTEXTS) ================= -->
               <!-- 1. Gateway -> Auth -->
-              <path class="arrow-sync-line" d="d 295 240 C 350 240, 350 133, 400 133" marker-end="url(#arrow-sync)" />
+              <path class="arrow-sync-line" d="M 295 240 C 350 240, 350 133, 400 133" marker-end="url(#arrow-sync)" />
 
               <!-- 2. Gateway -> Group -->
               <path class="arrow-sync-line" d="M 295 260 C 350 260, 350 223, 400 223" marker-end="url(#arrow-sync)" />
@@ -377,11 +377,8 @@
               <!-- B. Queue -> Bill ("receipt extracted") -->
               <path class="arrow-async-line" d="M 845 260 C 785 260, 705 315, 640 315" marker-end="url(#arrow-async)" />
 
-              <!-- C. Bill -> Queue ("bill finalized") -->
+              <!-- C. Bill -> Queue ("bill finalized: push job") — nợ đã được ghi trong chính transaction finalize -->
               <path class="arrow-async-line" d="M 635 330 C 700 330, 780 290, 840 290" marker-end="url(#arrow-async)" />
-
-              <!-- D. Queue -> Debt ("bill finalized") -->
-              <path class="arrow-async-line" d="M 845 320 C 785 320, 705 390, 640 390" marker-end="url(#arrow-async)" />
 
               <!-- E. Debt -> Queue ("payment action / reminder") -->
               <path class="arrow-async-line" d="M 635 415 C 700 415, 780 350, 840 350" marker-end="url(#arrow-async)" />
@@ -434,11 +431,7 @@
             </div>
 
             <div class="event-badge badge-event-fin1">
-              <span>bill finalized</span>
-            </div>
-
-            <div class="event-badge badge-event-fin2">
-              <span>bill finalized</span>
+              <span>bill finalized &rarr; push job</span>
             </div>
 
             <div class="event-badge badge-event-pay1">
@@ -569,13 +562,219 @@
           </div>
         </div>
 
+        <p class="arch-footnote">Chốt hóa đơn ghi <code>bills</code>, <code>bill_shares</code>, <code>debts</code>,
+          thông báo và job push <strong>trong cùng một transaction</strong>. River Queue nhận job sau khi commit và phụ
+          trách OCR, push, tác vụ định kỳ &amp; chốt sổ hàng loạt &#8212; không phải hàng đợi tạo nợ riêng sau finalize.
+        </p>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 5: MÔ HÌNH DỮ LIỆU CÔNG NỢ (DB1)
+         ============================================== -->
+    <section class="slide" id="schema-overview" data-index="4">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="eng-header">
+          <h2 class="slide-title">Mô Hình Dữ Liệu Công Nợ</h2>
+          <p class="eng-subtitle">Từ hóa đơn đến khoản nợ — mỗi loại dữ liệu trả lời một câu hỏi riêng</p>
+        </div>
+
+        <div class="tsl-lede">Nam ứng trước hóa đơn 300.000đ cho ba người: hệ thống lưu <strong>3 phần
+            chia</strong> nhưng chỉ sinh <strong>2 khoản nợ</strong> — Nam không nợ chính mình.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 420" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Sơ đồ quan hệ chọn lọc giữa users, groups, group_members, bills, bill_shares, debts, payment_debts và payments">
+              <defs>
+                <marker id="dgArrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <path class="dg-edge" d="M 200 193 L 264 193" marker-end="url(#dgArrow)" />
+              <path class="dg-edge" d="M 360 76 L 360 152" marker-end="url(#dgArrow)" />
+              <path class="dg-edge" d="M 448 43 C 536 43, 604 92, 604 152" marker-end="url(#dgArrow)" />
+              <path class="dg-edge" d="M 604 226 L 604 298" marker-end="url(#dgArrow)" />
+              <path class="dg-edge" d="M 692 193 L 782 193" marker-end="url(#dgArrow)" />
+              <path class="dg-edge" d="M 878 226 C 878 272, 906 276, 936 303" marker-end="url(#dgArrow)" />
+              <path class="dg-edge" d="M 1118 226 C 1118 272, 1080 276, 1050 303" marker-end="url(#dgArrow)" />
+
+              <text class="dg-label" x="232" y="184" text-anchor="middle">tham gia</text>
+              <text class="dg-label" x="372" y="120">gồm</text>
+              <text class="dg-label" x="546" y="38" text-anchor="middle">hóa đơn của nhóm</text>
+              <text class="dg-label" x="616" y="268">phần chia đã chốt</text>
+              <text class="dg-label" x="737" y="148" text-anchor="middle">sinh nợ khi chốt</text>
+              <text class="dg-label" x="856" y="284" text-anchor="end">được bao phủ</text>
+              <text class="dg-label" x="1140" y="284">chi trả</text>
+
+              <rect class="dg-box dg-box-identity" x="272" y="10" width="176" height="66" rx="13" />
+              <text class="dg-name dg-name-identity" x="360" y="39" text-anchor="middle">groups</text>
+              <text class="dg-sub" x="360" y="60" text-anchor="middle">nhóm chi tiêu</text>
+
+              <rect class="dg-box dg-box-identity" x="24" y="160" width="176" height="66" rx="13" />
+              <text class="dg-name dg-name-identity" x="112" y="189" text-anchor="middle">users</text>
+              <text class="dg-sub" x="112" y="210" text-anchor="middle">tài khoản</text>
+
+              <rect class="dg-box dg-box-identity" x="272" y="160" width="176" height="66" rx="13" />
+              <text class="dg-name dg-name-identity" x="360" y="189" text-anchor="middle">group_members</text>
+              <text class="dg-sub" x="360" y="210" text-anchor="middle">vai trò trong nhóm</text>
+
+              <rect class="dg-box dg-box-bill" x="516" y="160" width="176" height="66" rx="13" />
+              <text class="dg-name dg-name-bill" x="604" y="189" text-anchor="middle">bills</text>
+              <text class="dg-sub" x="604" y="210" text-anchor="middle">hóa đơn đã chốt</text>
+
+              <rect class="dg-box dg-box-bill" x="516" y="306" width="176" height="66" rx="13" />
+              <text class="dg-name dg-name-bill" x="604" y="335" text-anchor="middle">bill_shares</text>
+              <text class="dg-sub" x="604" y="356" text-anchor="middle">phần của từng người</text>
+
+              <rect class="dg-box dg-box-money" x="790" y="160" width="176" height="66" rx="13" />
+              <text class="dg-name dg-name-money" x="878" y="189" text-anchor="middle">debts</text>
+              <text class="dg-sub" x="878" y="210" text-anchor="middle">ai còn phải trả ai</text>
+
+              <rect class="dg-box dg-box-money" x="886" y="306" width="200" height="66" rx="13" />
+              <text class="dg-name dg-name-money" x="986" y="335" text-anchor="middle">payment_debts</text>
+              <text class="dg-sub" x="986" y="356" text-anchor="middle">nợ nào được trả</text>
+
+              <rect class="dg-box dg-box-money" x="1030" y="160" width="176" height="66" rx="13" />
+              <text class="dg-name dg-name-money" x="1118" y="189" text-anchor="middle">payments</text>
+              <text class="dg-sub" x="1118" y="210" text-anchor="middle">một lần xử lý</text>
+
+              <text class="dg-cap" x="24" y="410">ERD chọn lọc &#8212; chỉ những bảng và quan hệ dùng trong câu chuyện
+                hóa đơn &#8594; thanh toán, không phải toàn bộ schema.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-4">
+            <div class="tsl-chip">
+              <span class="tsl-chip-head">Ai trong nhóm</span>
+              <code>users</code> + <code>group_members</code> — một người, nhiều nhóm; vai trò tính theo từng nhóm.
+            </div>
+            <div class="tsl-chip is-teal">
+              <span class="tsl-chip-head">Chia bao nhiêu</span>
+              <code>bills</code> + <code>bill_shares</code> — hóa đơn và phần tiền đã chốt của từng người.
+            </div>
+            <div class="tsl-chip is-rose">
+              <span class="tsl-chip-head">Còn nợ ai</span>
+              <code>debts</code> + <code>payments</code> + <code>payment_debts</code> — nghĩa vụ trả, lần xử lý và các
+              khoản được bao phủ.
+            </div>
+            <div class="tsl-chip is-example">
+              <span class="tsl-chip-head">Ví dụ xuyên suốt</span>
+              <strong>300.000đ / 3 người &#8594; 3 phần chia, 2 khoản nợ:</strong> Lam &#8594; Nam và Tín &#8594; Nam,
+              mỗi khoản 100.000đ.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 6: RÀNG BUỘC DỮ LIỆU & RANH GIỚI TRANSACTION (DB2)
+         ============================================== -->
+    <section class="slide" id="schema-invariants" data-index="5">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="eng-header">
+          <h2 class="slide-title">Ràng Buộc Dữ Liệu &amp; Ranh Giới Transaction</h2>
+          <p class="eng-subtitle">Bảo vệ dữ liệu công nợ ngay tại nơi lưu trữ</p>
+        </div>
+
+        <div class="tsl-lede">Database chặn những vi phạm đã có ràng buộc; <strong>application vẫn kiểm tra quyền và
+            phép chuyển trạng thái</strong> — hai lớp không thay thế nhau.</div>
+
+        <div class="tsl-body">
+          <div class="eng-table-container" style="flex: 0 0 auto;">
+            <table class="eng-table">
+              <thead>
+                <tr>
+                  <th style="width: 42%;">Lỗi muốn ngăn</th>
+                  <th style="width: 58%;">Cơ chế trong PostgreSQL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="cell-highlight"><i class="fa-solid fa-coins"></i><span>Sai biểu diễn tiền do số
+                        thực</span></div>
+                  </td>
+                  <td>Tiền lưu <code>BIGINT</code>, đơn vị đồng (VND); không có kiểu dấu phẩy động trong đường tính
+                    tiền.</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="cell-highlight"><i class="fa-solid fa-diagram-project"></i><span>Ghép khoản nợ sai nhóm
+                        hoặc sai cặp người</span></div>
+                  </td>
+                  <td>Khóa ngoại tổ hợp trong <code>payment_debts</code>: <code>(group_id, debtor_member_id,
+                      creditor_member_id)</code> phải khớp cả ở payment lẫn debt.</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="cell-highlight"><i class="fa-solid fa-copy"></i><span>Chốt lặp tạo nợ trùng</span></div>
+                  </td>
+                  <td>Ràng buộc duy nhất theo <code>bill + debtor + creditor</code>; một hóa đơn không sinh hai lần cùng
+                    một khoản nợ.</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="cell-highlight"><i class="fa-solid fa-clipboard-check"></i><span>Trạng thái payment
+                        thiếu thông tin bắt buộc</span></div>
+                  </td>
+                  <td><code>CHECK</code> theo từng trạng thái: <code>pending_confirmation</code> bắt buộc có ảnh biên
+                    lai, snapshot ngân hàng và mốc thời gian nộp.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 200" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Ranh giới transaction khi chốt hóa đơn: bill, bill_shares, debts, notification và job push ghi trong cùng một transaction">
+              <rect class="dg-box dg-box-accent" x="16" y="34" width="1188" height="118" rx="16" />
+              <text class="dg-lead" x="40" y="22">BEGIN &#8230; COMMIT &#8212; một transaction khi Captain chốt hóa
+                đơn</text>
+
+              <rect class="dg-box" x="44" y="62" width="212" height="62" rx="11" />
+              <text class="dg-mono" x="150" y="90" text-anchor="middle">bills</text>
+              <text class="dg-sub" x="150" y="111" text-anchor="middle">status = finalized</text>
+
+              <rect class="dg-box" x="276" y="62" width="212" height="62" rx="11" />
+              <text class="dg-mono" x="382" y="90" text-anchor="middle">bill_shares</text>
+              <text class="dg-sub" x="382" y="111" text-anchor="middle">snapshot phần chia</text>
+
+              <rect class="dg-box" x="508" y="62" width="212" height="62" rx="11" />
+              <text class="dg-mono" x="614" y="90" text-anchor="middle">debts</text>
+              <text class="dg-sub" x="614" y="111" text-anchor="middle">trạng thái awaiting</text>
+
+              <rect class="dg-box" x="740" y="62" width="212" height="62" rx="11" />
+              <text class="dg-mono" x="846" y="90" text-anchor="middle">notifications</text>
+              <text class="dg-sub" x="846" y="111" text-anchor="middle">thông báo in-app</text>
+
+              <rect class="dg-box" x="972" y="62" width="204" height="62" rx="11" />
+              <text class="dg-mono" x="1074" y="90" text-anchor="middle">job push</text>
+              <text class="dg-sub" x="1074" y="111" text-anchor="middle">River nhận sau commit</text>
+
+              <text class="dg-cap" x="16" y="184">Một bước hỏng thì toàn bộ lần ghi quay lại. River Queue xử lý OCR,
+                push và job định kỳ &#8212; không phải nơi tạo khoản nợ sau khi hóa đơn đã chốt.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-note"><strong>Ví dụ:</strong> một payment của Lam trả Nam trong nhóm ăn trưa không thể bị gắn
+            với khoản nợ ở nhóm du lịch — khóa ngoại tổ hợp từ chối ngay tại database, không cần tin vào tầng giao
+            diện.</div>
+        </div>
+
       </div>
     </section>
 
     <!-- ==============================================
          SLIDE 5: CHI TIẾT CÁC MODULE: 1. API GATEWAY & AUTH & USER
          ============================================== -->
-    <section class="slide" id="slide-5" data-index="4">
+    <section class="slide" id="slide-5" data-index="6">
       <div class="slide-content module-detail-slide">
 
         <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
@@ -602,10 +801,12 @@
     <!-- ==============================================
          SLIDE 6: CHI TIẾT CÁC MODULE: 2. AUTH & USER SERVICE
          ============================================== -->
-    <section class="slide" id="slide-6" data-index="5">
-      <div class="slide-content module-detail-slide">
+    <!-- ==============================================
+         SLIDE 8: CHI TIẾT CÁC MODULE: 2. AUTH & USER SERVICE (A1)
+         ============================================== -->
+    <section class="slide" id="slide-6" data-index="7">
+      <div class="slide-content module-detail-slide tsl-slide">
 
-        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
         <div class="module-detail-header">
           <h2 class="slide-title">Chi Tiết Các Module</h2>
           <div class="module-sub-indicator">
@@ -615,61 +816,167 @@
           </div>
         </div>
 
-        <!-- BẢNG TỔNG QUAN CƠ CHẾ BẢO MẬT (4 TRỤ CỘT) -->
-        <div class="tech-spec-grid">
+        <div class="tsl-lede">Có token chưa đủ: mỗi request nghiệp vụ còn <strong>hỏi database xem phiên đăng nhập còn
+            hiệu lực</strong> hay không.</div>
 
-          <!-- KHỐI 1 -->
-          <div class="tech-spec-card">
-            <div class="tech-spec-card-header text-center">
-              <h3 class="tech-spec-card-title">1. Refresh Token Rotation (RTR)</h3>
+        <div class="tsl-body">
+          <div class="tsl-chips tsl-chips-4">
+            <div class="tsl-chip">Access JWT sống <strong>15 phút</strong>, mang theo mã phiên <code>sid</code>.</div>
+            <div class="tsl-chip">API nghiệp vụ kiểm tra <strong>JWT và session còn sống</strong>, không chỉ chữ ký.
             </div>
-            <ul class="tech-spec-list">
-              <li>Sử dụng cặp Access Token ngắn hạn (15 phút) và Refresh Token dài hạn (7 ngày).</li>
-              <li>Tự động cấp cặp token mới và vô hiệu hóa token cũ sau mỗi lần làm mới phiên làm việc.</li>
-              <li>Phát hiện tái sử dụng (Reuse Detection): Lập tức thu hồi toàn bộ phiên nếu phát hiện token cũ bị gửi
-                lại.</li>
-            </ul>
+            <div class="tsl-chip">Refresh token <strong>dùng một lần</strong>, giới hạn trong phiên <strong>7
+                ngày</strong>.</div>
+            <div class="tsl-chip">Một tài khoản có <strong>một phiên chưa bị thu hồi</strong> tại một thời điểm.</div>
           </div>
 
-          <!-- KHỐI 2 -->
-          <div class="tech-spec-card">
-            <div class="tech-spec-card-header text-center">
-              <h3 class="tech-spec-card-title">2. Single Active Device Policy</h3>
-            </div>
-            <ul class="tech-spec-list">
-              <li>Mỗi tài khoản người dùng chỉ được phép duy trì duy nhất một phiên hoạt động trên một thiết bị.</li>
-              <li>Tự động đánh dấu thu hồi phiên cũ trên hệ thống khi tài khoản đăng nhập từ một thiết bị mới.</li>
-              <li>API Gateway đối chiếu trực tiếp trạng thái phiên trong Database đối với mọi yêu cầu được bảo vệ.</li>
-            </ul>
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 412" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Trình tự đăng nhập và kiểm tra phiên giữa app Flutter, Auth API và PostgreSQL">
+              <defs>
+                <marker id="dgArrowSeq" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+                <marker id="dgArrowSeqHot" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#4F46E5" />
+                </marker>
+              </defs>
+
+              <line class="dg-life" x1="200" y1="58" x2="200" y2="404" />
+              <line class="dg-life" x1="610" y1="58" x2="610" y2="404" />
+              <line class="dg-life" x1="1020" y1="58" x2="1020" y2="404" />
+
+              <rect class="dg-box dg-box-identity" x="75" y="6" width="250" height="48" rx="12" />
+              <text class="dg-lead" x="200" y="36" text-anchor="middle">App Flutter</text>
+              <rect class="dg-box dg-box-identity" x="485" y="6" width="250" height="48" rx="12" />
+              <text class="dg-lead" x="610" y="36" text-anchor="middle">PaySplit API</text>
+              <rect class="dg-box dg-box-identity" x="895" y="6" width="250" height="48" rx="12" />
+              <text class="dg-lead" x="1020" y="36" text-anchor="middle">PostgreSQL</text>
+
+              <path class="dg-edge" d="M 200 96 L 604 96" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="402" y="88" text-anchor="middle">sign-in: email, mật khẩu, device_id</text>
+
+              <path class="dg-edge" d="M 610 144 L 1014 144" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="812" y="136" text-anchor="middle">thu hồi phiên cũ &#183; tạo session + hash
+                refresh</text>
+
+              <path class="dg-edge dg-edge-dash" d="M 610 192 L 206 192" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="408" y="184" text-anchor="middle">Access JWT 15 phút (có sid) + refresh
+                token</text>
+
+              <line class="dg-rule" x1="40" y1="226" x2="1180" y2="226" stroke-dasharray="7 6" />
+              <text class="dg-label dg-label-strong" x="610" y="231" text-anchor="middle">Mỗi request tới API nghiệp
+                vụ</text>
+
+              <path class="dg-edge" d="M 200 268 L 604 268" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="402" y="260" text-anchor="middle">GET /groups/&#8230; + Bearer JWT</text>
+
+              <path class="dg-edge" d="M 610 296 L 700 296 L 700 322 L 616 322" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="714" y="315">xác minh chữ ký &#8594; lấy sid</text>
+
+              <path class="dg-edge dg-edge-strong" d="M 610 364 L 1014 364" marker-end="url(#dgArrowSeqHot)" />
+              <text class="dg-label dg-label-strong" x="812" y="356" text-anchor="middle">session còn sống? tài khoản
+                còn active?</text>
+
+              <path class="dg-edge dg-edge-dash" d="M 610 402 L 206 402" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="408" y="394" text-anchor="middle">cho đi tiếp &#183; hoặc 401</text>
+            </svg>
           </div>
 
-          <!-- KHỐI 3 -->
-          <div class="tech-spec-card">
-            <div class="tech-spec-card-header text-center">
-              <h3 class="tech-spec-card-title">3. Cơ Chế Xác Thực OTP</h3>
-            </div>
-            <ul class="tech-spec-list">
-              <li>Cung cấp mã OTP 6 chữ số ngẫu nhiên an toàn cho luồng đăng ký tài khoản và quên mật khẩu (hạn 5 phút).
-              </li>
-              <li>Sử dụng thuật toán so sánh an toàn nhằm triệt tiêu nguy cơ tấn công phân tích thời gian phản hồi
-                (Timing Attack).</li>
-              <li>Áp dụng giới hạn tần suất gửi yêu cầu và tự động khóa mã vĩnh viễn sau 5 lần nhập sai liên tiếp.</li>
-            </ul>
+          <div class="tsl-note">Đăng ký &#8594; <strong>OTP 6 chữ số, hạn 10 phút</strong> &#8594; kích hoạt &#8594;
+            đăng nhập. Sai 5 lần thì <strong>chính mã đó bị vô hiệu</strong>, không khóa tài khoản vĩnh viễn. Mật khẩu
+            được <strong>băm bằng bcrypt</strong> kèm salt; refresh token chỉ lưu hash ở server, app giữ token trong
+            secure storage.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 9: AUTH — LÀM MỚI PHIÊN & KẾT THÚC PHIÊN (A2)
+         ============================================== -->
+    <section class="slide" id="auth-session-lifecycle" data-index="8">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">2</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Auth &amp; User Service &#8212; Làm mới &amp; kết thúc phiên</span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">REST và SSE <strong>cùng chờ một lượt refresh</strong>; khi phiên bị thu hồi thì app kết
+          thúc dứt khoát tại màn Login.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 440" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Hai nguồn lỗi 401 gộp vào một lượt refresh dùng chung, và nhánh kết thúc phiên">
+              <defs>
+                <marker id="dgArrowFlow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <path class="dg-edge" d="M 234 100 C 284 100, 280 142, 314 142" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 234 208 C 284 208, 280 172, 314 172" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 560 160 L 634 160" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 880 142 C 918 142, 924 94, 954 88" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 880 178 C 918 178, 924 226, 954 232" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge dg-edge-dash" d="M 880 328 C 924 328, 940 272, 954 254"
+                marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 1078 276 L 1078 296" marker-end="url(#dgArrowFlow)" />
+
+              <text class="dg-label" x="948" y="108" text-anchor="end">thành công</text>
+              <text class="dg-label" x="948" y="222" text-anchor="end">thất bại</text>
+
+              <rect class="dg-box" x="24" y="70" width="210" height="60" rx="12" />
+              <text class="dg-lead" x="129" y="98" text-anchor="middle">REST gặp 401</text>
+              <text class="dg-sub" x="129" y="118" text-anchor="middle">một lời gọi API</text>
+
+              <rect class="dg-box" x="24" y="178" width="210" height="60" rx="12" />
+              <text class="dg-lead" x="129" y="206" text-anchor="middle">SSE gặp 401</text>
+              <text class="dg-sub" x="129" y="226" text-anchor="middle">kết nối realtime</text>
+
+              <rect class="dg-box dg-box-accent" x="320" y="120" width="240" height="80" rx="14" />
+              <text class="dg-lead" x="440" y="154" text-anchor="middle">SessionRefresher</text>
+              <text class="dg-sub" x="440" y="178" text-anchor="middle">dùng chung &#8212; single-flight</text>
+
+              <rect class="dg-box" x="640" y="120" width="240" height="80" rx="14" />
+              <text class="dg-lead" x="760" y="154" text-anchor="middle">Một request refresh</text>
+              <text class="dg-sub" x="760" y="178" text-anchor="middle">token cũ dùng một lần</text>
+
+              <rect class="dg-box dg-box-bill" x="960" y="44" width="236" height="86" rx="14" />
+              <text class="dg-lead" x="1078" y="78" text-anchor="middle">Lưu cặp token mới</text>
+              <text class="dg-sub" x="1078" y="102" text-anchor="middle">mọi bên chờ cùng đi tiếp</text>
+
+              <rect class="dg-box dg-box-money" x="960" y="190" width="236" height="86" rx="14" />
+              <text class="dg-lead" x="1078" y="224" text-anchor="middle">Kết thúc phiên</text>
+              <text class="dg-sub" x="1078" y="248" text-anchor="middle">đóng stream, xóa token</text>
+
+              <rect class="dg-box dg-box-muted" x="640" y="298" width="240" height="60" rx="12" />
+              <text class="dg-body" x="760" y="323" text-anchor="middle">SSE close:</text>
+              <text class="dg-mono" x="760" y="346" text-anchor="middle">session_ended</text>
+
+              <rect class="dg-box dg-box-money" x="960" y="302" width="236" height="56" rx="12" />
+              <text class="dg-lead" x="1078" y="336" text-anchor="middle">Login + cảnh báo</text>
+
+              <text class="dg-cap" x="24" y="422">Mở app lần đầu chưa từng có token vẫn vào Welcome bình thường, không
+                hiện cảnh báo hết phiên.</text>
+            </svg>
           </div>
 
-          <!-- KHỐI 4 -->
-          <div class="tech-spec-card">
-            <div class="tech-spec-card-header text-center">
-              <h3 class="tech-spec-card-title">4. Bảo Mật Mật Khẩu &amp; Phân Tầng</h3>
+          <div class="tsl-chips tsl-chips-4">
+            <div class="tsl-chip">Mỗi lần refresh: <strong>dùng token cũ, cấp token mới</strong>; server lưu dấu đã
+              dùng.</div>
+            <div class="tsl-chip">Token đã dùng xuất hiện lại &#8594; server <strong>thu hồi phiên liên quan</strong>.
             </div>
-            <ul class="tech-spec-list">
-              <li>Mã hóa mật khẩu một chiều an toàn bằng thuật toán Bcrypt kèm muối ngẫu nhiên (salt).</li>
-              <li>Thiết kế theo Clean Architecture, tách biệt hoàn toàn nghiệp vụ xác thực khỏi hạ tầng lưu trữ
-                Database.</li>
-              <li>Chuẩn hóa cơ chế phân loại lỗi nghiệp vụ và phản hồi theo cấu trúc REST JSON đồng nhất.</li>
-            </ul>
+            <div class="tsl-chip">Hai request cùng gặp 401 <strong>không tự refresh riêng</strong>; ai đến sau chờ lượt
+              đang chạy.</div>
+            <div class="tsl-chip is-rose">Không phải mọi lỗi refresh đều là bị tấn công &#8212; lỗi mạng cũng làm app
+              kết thúc phiên theo implementation hiện tại.</div>
           </div>
-
         </div>
 
       </div>
@@ -678,7 +985,7 @@
     <!-- ==============================================
          SLIDE 7: CHI TIẾT CÁC MODULE: 3. GROUP & MEMBERSHIP
          ============================================== -->
-    <section class="slide" id="slide-7" data-index="6">
+    <section class="slide" id="slide-7" data-index="9">
       <div class="slide-content module-detail-slide">
         <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
         <div class="module-detail-header">
@@ -703,7 +1010,7 @@
     <!-- ==============================================
          SLIDE 8: CHI TIẾT CÁC MODULE: 4. OCR PROCESSING
          ============================================== -->
-    <section class="slide" id="slide-8" data-index="7">
+    <section class="slide" id="slide-8" data-index="10">
       <div class="slide-content module-detail-slide">
 
         <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
@@ -730,7 +1037,7 @@
     <!-- ==============================================
          SLIDE 9: CHI TIẾT CÁC MODULE: 5. BILL & EXPENSE ALLOCATION
          ============================================== -->
-    <section class="slide" id="slide-9" data-index="8">
+    <section class="slide" id="slide-9" data-index="11">
       <div class="slide-content module-detail-slide">
         <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
         <div class="module-detail-header">
@@ -856,9 +1163,12 @@
     <!-- ==============================================
          SLIDE 10: CHI TIẾT CÁC MODULE: 6. DEBT & SETTLEMENT
          ============================================== -->
-    <section class="slide" id="slide-10" data-index="9">
-      <div class="slide-content module-detail-slide">
-        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+    <!-- ==============================================
+         SLIDE 13: CHI TIẾT CÁC MODULE: 6. DEBT & SETTLEMENT (D1)
+         ============================================== -->
+    <section class="slide" id="slide-10" data-index="12">
+      <div class="slide-content module-detail-slide tsl-slide">
+
         <div class="module-detail-header">
           <h2 class="slide-title">Chi Tiết Các Module</h2>
           <div class="module-sub-indicator">
@@ -868,20 +1178,314 @@
           </div>
         </div>
 
-        <!-- KHUNG SƠ ĐỒ KIẾN TRÚC THỰC TẾ -->
-        <div class="module-diagram-wrapper">
-          <div class="module-diagram-card">
-            <img src="assets/diagram_debt_settlement.png" alt="Sơ đồ kiến trúc Debt &amp; Settlement"
-              class="module-diagram-image" />
+        <div class="tsl-lede">Tạo QR chưa đồng nghĩa đã thanh toán: <strong>creditor xác nhận thì khoản nợ mới
+            settled</strong>. Debt là nghĩa vụ, payment là một lần xử lý.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 440" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Hai lane trạng thái payment và debt qua ba mốc tạo QR, gửi biên lai và xác nhận, kèm nhánh từ chối">
+              <defs>
+                <marker id="dgArrowLane" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+                <marker id="dgArrowReject" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#BE123C" />
+                </marker>
+              </defs>
+
+              <rect class="dg-box dg-box-accent" x="265" y="14" width="230" height="48" rx="12" />
+              <text class="dg-lead" x="380" y="44" text-anchor="middle">1 &#183; Lam tạo QR</text>
+              <rect class="dg-box dg-box-accent" x="575" y="14" width="230" height="48" rx="12" />
+              <text class="dg-lead" x="690" y="44" text-anchor="middle">2 &#183; Lam gửi biên lai</text>
+              <rect class="dg-box dg-box-accent" x="885" y="14" width="230" height="48" rx="12" />
+              <text class="dg-lead" x="1000" y="44" text-anchor="middle">3 &#183; Nam xác nhận</text>
+
+              <text class="dg-lane" x="24" y="136">Payment</text>
+              <text class="dg-sub" x="24" y="158">một lần xử lý</text>
+              <rect class="dg-box" x="265" y="110" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="380" y="149" text-anchor="middle">pending_proof</text>
+              <rect class="dg-box" x="575" y="110" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="690" y="149" text-anchor="middle">pending_confirmation</text>
+              <rect class="dg-box dg-box-bill" x="885" y="110" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="1000" y="149" text-anchor="middle">confirmed</text>
+              <path class="dg-edge" d="M 495 142 L 569 142" marker-end="url(#dgArrowLane)" />
+              <path class="dg-edge" d="M 805 142 L 879 142" marker-end="url(#dgArrowLane)" />
+
+              <text class="dg-lane" x="24" y="248">Debt</text>
+              <text class="dg-sub" x="24" y="270">nghĩa vụ trả</text>
+              <rect class="dg-box dg-box-money" x="265" y="222" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="380" y="261" text-anchor="middle">awaiting</text>
+              <rect class="dg-box dg-box-money" x="575" y="222" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="690" y="261" text-anchor="middle">pending_confirmation</text>
+              <rect class="dg-box dg-box-bill" x="885" y="222" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="1000" y="261" text-anchor="middle">settled</text>
+              <path class="dg-edge" d="M 495 254 L 569 254" marker-end="url(#dgArrowLane)" />
+              <path class="dg-edge" d="M 805 254 L 879 254" marker-end="url(#dgArrowLane)" />
+
+              <path class="dg-edge" stroke="#BE123C" d="M 690 288 L 690 326" marker-end="url(#dgArrowReject)" />
+              <rect class="dg-box dg-box-money" x="330" y="330" width="740" height="70" rx="14"
+                stroke-dasharray="7 6" />
+              <text class="dg-lead dg-name-money" x="700" y="359" text-anchor="middle">Nam từ chối</text>
+              <text class="dg-body" x="700" y="384" text-anchor="middle">payment kết thúc ở
+                <tspan class="dg-mono">rejected</tspan>, debt trở về <tspan class="dg-mono">awaiting</tspan> &#8212; lần
+                trả sau là một payment mới.
+              </text>
+
+              <text class="dg-cap" x="24" y="428">Debt và payment dùng hai bộ trạng thái riêng; không đổi một payment
+                đã rejected thành thành công.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-2">
+            <div class="tsl-chip is-rose">
+              <span class="tsl-chip-head">Ranh giới của hệ thống</span>
+              <strong>PaySplit ghi nhận và điều phối; tiền được chuyển ngoài app.</strong> Hệ thống không tự đối soát
+              giao dịch ngân hàng — ảnh biên lai là lời khai của người gửi, không phải bằng chứng đã nhận tiền.
+            </div>
+            <div class="tsl-chip is-example">
+              <span class="tsl-chip-head">Theo ví dụ</span>
+              Tổng phải thu chỉ giảm khi khoản nợ được xác nhận <code>settled</code>. Sau khi khoản của Lam được xác
+              nhận, <strong>Nam vẫn còn phải thu Tín 100.000đ</strong>.
+            </div>
           </div>
         </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 14: DEBT & SETTLEMENT — QUYỀN XÁC NHẬN & BIÊN LAI HAI PHA (D2)
+         ============================================== -->
+    <section class="slide" id="settlement-proof" data-index="13">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">6</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Debt &amp; Settlement &#8212; Đúng người, đúng khoản, có kiểm tra</span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">Chuyển khoản diễn ra ở ngân hàng, <strong>xác nhận thuộc về creditor</strong>. Riêng bước
+          gửi biên lai phải chạy hai pha vì lưu trữ ảnh và database không cùng một transaction.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 404" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Năm bước nghiệp vụ từ tạo QR tới xác nhận, và ba pha Prepare, upload, Submit của bước gửi biên lai">
+              <defs>
+                <marker id="dgArrowStep" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <!-- Băng 1: 5 bước nghiệp vụ -->
+              <rect class="dg-box" x="10" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="116" y="42" text-anchor="middle">Lam tạo QR</text>
+              <text class="dg-sub" x="116" y="66" text-anchor="middle">chọn khoản nợ cùng nhóm</text>
+
+              <rect class="dg-box dg-box-muted" x="254" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="360" y="42" text-anchor="middle">Chuyển tiền</text>
+              <text class="dg-sub" x="360" y="66" text-anchor="middle">ở ngân hàng, ngoài app</text>
+
+              <rect class="dg-box" x="498" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="604" y="42" text-anchor="middle">Lam gửi biên lai</text>
+              <text class="dg-sub" x="604" y="66" text-anchor="middle">ảnh và ghi chú</text>
+
+              <rect class="dg-box" x="742" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="848" y="42" text-anchor="middle">Nam mở, kiểm tra</text>
+              <text class="dg-sub" x="848" y="66" text-anchor="middle">creditor, không phải Captain</text>
+
+              <rect class="dg-box dg-box-accent" x="986" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="1092" y="42" text-anchor="middle">Xác nhận / từ chối</text>
+              <text class="dg-sub" x="1092" y="66" text-anchor="middle">trạng thái nợ đổi tại đây</text>
+
+              <path class="dg-edge" d="M 226 48 L 248 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 470 48 L 492 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 714 48 L 736 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 958 48 L 980 48" marker-end="url(#dgArrowStep)" />
+
+              <!-- Băng 2: ba pha của bước gửi biên lai -->
+              <line class="dg-rule" x1="10" y1="120" x2="1198" y2="120" />
+              <text class="dg-label dg-label-strong" x="604" y="125" text-anchor="middle">Bước gửi biên lai, nhìn từ
+                backend</text>
+
+              <rect class="dg-box" x="10" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="34" y="180">1 &#183; Prepare</text>
+              <text class="dg-body" x="34" y="208">Khóa nhóm, kiểm tra người gọi đúng là</text>
+              <text class="dg-body" x="34" y="230">debtor, payment còn <tspan class="dg-mono">pending_proof</tspan>,
+              </text>
+              <text class="dg-body" x="34" y="252">ngân hàng của creditor còn hợp lệ.</text>
+              <text class="dg-body" x="34" y="274">Chốt ý định trước khi tốn lưu trữ ảnh.</text>
+
+              <rect class="dg-box" x="420" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="444" y="180">2 &#183; Upload ảnh</text>
+              <text class="dg-body" x="444" y="208">Đọc magic bytes để nhận đúng định dạng</text>
+              <text class="dg-body" x="444" y="230">JPEG / PNG / HEIC, không tin header client,</text>
+              <text class="dg-body" x="444" y="252">rồi đẩy ảnh lên Cloudinary.</text>
+              <text class="dg-body" x="444" y="274">Upload hỏng thì giữ nguyên ý định.</text>
+
+              <rect class="dg-box dg-box-accent" x="830" y="148" width="368" height="140" rx="14" />
+              <text class="dg-lead" x="854" y="180">3 &#183; Submit</text>
+              <text class="dg-body" x="854" y="208">Khóa các khoản nợ, tất cả phải còn</text>
+              <text class="dg-body" x="854" y="230"><tspan class="dg-mono">awaiting</tspan>, rồi chuyển sang</text>
+              <text class="dg-body" x="854" y="252"><tspan class="dg-mono">pending_confirmation</tspan>.</text>
+              <text class="dg-body dg-label-strong" x="854" y="274">Snapshot ngân hàng chốt tại bước này.</text>
+
+              <path class="dg-edge" d="M 394 218 L 414 218" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 804 218 L 824 218" marker-end="url(#dgArrowStep)" />
+
+              <rect class="dg-box dg-box-muted" x="10" y="308" width="1188" height="58" rx="12" />
+              <text class="dg-body" x="34" y="343">Ảnh đã lên nhưng ghi database thất bại: backend xóa ảnh bù hoặc lên
+                lịch dọn, đồng thời cấp mã thao tác mới để lần gửi lại không đè lên tệp cũ.</text>
+
+              <text class="dg-cap" x="10" y="394">&#8220;Hai pha&#8221; ở đây là quy trình ứng dụng với hai bước
+                database quanh lần upload, không phải distributed two-phase commit.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-2">
+            <div class="tsl-chip is-rose">
+              <span class="tsl-chip-head">Phân quyền</span>
+              Chỉ <strong>creditor</strong> được confirm hoặc reject. Trong ví dụ, Lam là Captain nhưng vẫn không tự xác
+              nhận được rằng Nam đã nhận tiền.
+            </div>
+            <div class="tsl-chip is-teal">
+              <span class="tsl-chip-head">Phạm vi gộp nợ</span>
+              Một payment gộp được nhiều khoản nợ, nhưng phải <strong>cùng nhóm, cùng người nợ và cùng người
+                nhận</strong>. Ví dụ: Lam nợ Nam 100.000đ ở bill A và 50.000đ ở bill B, một lần trả 150.000đ phủ cả hai.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 15: DEBT & SETTLEMENT — ĐỒNG THỜI & GỬI LẠI (D3)
+         ============================================== -->
+    <section class="slide" id="settlement-reliability" data-index="14">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">6</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Debt &amp; Settlement &#8212; Thao tác đồng thời &amp; gửi lại</span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">Đua thao tác và gửi lại là hai bài toán khác nhau: <strong>khóa để tuần tự hóa</strong>,
+          <strong>idempotency key để nhận diện retry</strong>. Không dùng một cơ chế thay cho cả hai.
+        </div>
+
+        <div class="tsl-body">
+          <div class="tsl-split">
+
+            <div class="tsl-panel">
+              <div class="tsl-panel-title"><span>A</span>Void hóa đơn đua với nộp biên lai</div>
+              <div class="tsl-figure">
+                <svg viewBox="0 0 580 340" preserveAspectRatio="xMidYMid meet" role="img"
+                  aria-label="Thứ tự khóa nhóm, khóa các khoản nợ rồi khóa payment quyết định ai thắng khi void bill đua với nộp proof">
+                  <defs>
+                    <marker id="dgArrowRace" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                      <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                    </marker>
+                  </defs>
+
+                  <rect class="dg-box dg-box-accent" x="10" y="8" width="560" height="56" rx="13" />
+                  <text class="dg-body" x="290" y="33" text-anchor="middle">Cả hai đường ghi đều khóa theo cùng một
+                    thứ tự:</text>
+                  <text class="dg-mono" x="290" y="55" text-anchor="middle">group &#8594; debts (UUID tăng dần) &#8594;
+                    payment</text>
+
+                  <path class="dg-edge" d="M 160 68 L 160 100" marker-end="url(#dgArrowRace)" />
+                  <path class="dg-edge" d="M 420 68 L 420 100" marker-end="url(#dgArrowRace)" />
+
+                  <rect class="dg-box dg-box-money" x="10" y="104" width="270" height="96" rx="13" />
+                  <text class="dg-lead" x="145" y="134" text-anchor="middle">Void thắng trước</text>
+                  <text class="dg-body" x="145" y="160" text-anchor="middle">Nợ đã <tspan
+                      class="dg-mono">voided</tspan>,</text>
+                  <text class="dg-body" x="145" y="182" text-anchor="middle">biên lai không gắn vào được</text>
+
+                  <rect class="dg-box dg-box-bill" x="300" y="104" width="270" height="96" rx="13" />
+                  <text class="dg-lead" x="435" y="134" text-anchor="middle">Biên lai thắng trước</text>
+                  <text class="dg-body" x="435" y="160" text-anchor="middle">Nợ đã <tspan
+                      class="dg-mono">pending_confirmation</tspan>,</text>
+                  <text class="dg-body" x="435" y="182" text-anchor="middle">void bị chặn với 409</text>
+
+                  <rect class="dg-box dg-box-muted" x="10" y="216" width="560" height="104" rx="13" />
+                  <text class="dg-body" x="34" y="246">Tạo QR chưa giữ chỗ khoản nợ: ở giai đoạn đó Captain</text>
+                  <text class="dg-body" x="34" y="272">vẫn void được, payment đang <tspan
+                      class="dg-mono">pending_proof</tspan></text>
+                  <text class="dg-body" x="34" y="298">chuyển sang <tspan class="dg-mono">superseded</tspan>.</text>
+                </svg>
+              </div>
+            </div>
+
+            <div class="tsl-panel">
+              <div class="tsl-panel-title"><span>B</span>Server đã lưu nhưng mất phản hồi</div>
+              <div class="tsl-figure">
+                <svg viewBox="0 0 580 340" preserveAspectRatio="xMidYMid meet" role="img"
+                  aria-label="Gửi lại cùng nội dung với cùng idempotency key nhận lại kết quả đã lưu thay vì lỗi trạng thái mới">
+                  <defs>
+                    <marker id="dgArrowRetry" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                      <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                    </marker>
+                  </defs>
+
+                  <line class="dg-life" x1="120" y1="34" x2="120" y2="262" />
+                  <line class="dg-life" x1="450" y1="34" x2="450" y2="262" />
+
+                  <rect class="dg-box dg-box-identity" x="20" y="6" width="200" height="40" rx="10" />
+                  <text class="dg-lead" x="120" y="32" text-anchor="middle">App của Lam</text>
+                  <rect class="dg-box dg-box-identity" x="350" y="6" width="200" height="40" rx="10" />
+                  <text class="dg-lead" x="450" y="32" text-anchor="middle">PaySplit API</text>
+
+                  <path class="dg-edge" d="M 120 88 L 444 88" marker-end="url(#dgArrowRetry)" />
+                  <text class="dg-label" x="285" y="80" text-anchor="middle">gửi biên lai + Idempotency-Key</text>
+
+                  <text class="dg-label dg-label-strong" x="450" y="118" text-anchor="middle">COMMIT thành công</text>
+
+                  <path class="dg-edge dg-edge-dash" stroke="#BE123C" d="M 450 150 L 300 150" />
+                  <line stroke="#BE123C" stroke-width="2.4" x1="367" y1="142" x2="383" y2="158" />
+                  <line stroke="#BE123C" stroke-width="2.4" x1="383" y1="142" x2="367" y2="158" />
+                  <text class="dg-label" x="230" y="144" text-anchor="middle" fill="#BE123C">phản hồi mất trên
+                    đường</text>
+
+                  <path class="dg-edge" d="M 120 200 L 444 200" marker-end="url(#dgArrowRetry)" />
+                  <text class="dg-label" x="285" y="192" text-anchor="middle">gửi lại cùng ảnh, cùng ghi chú</text>
+
+                  <path class="dg-edge dg-edge-dash" d="M 450 248 L 126 248" marker-end="url(#dgArrowRetry)" />
+                  <text class="dg-label" x="288" y="240" text-anchor="middle">phát lại kết quả đã lưu</text>
+
+                  <rect class="dg-box dg-box-muted" x="10" y="268" width="560" height="64" rx="13" />
+                  <text class="dg-body" x="290" y="294" text-anchor="middle">Biên lai: key sinh theo payment + nội dung
+                    gửi &#8594; gửi lại là phát lại.</text>
+                  <text class="dg-body" x="290" y="316" text-anchor="middle">Tạo QR: key mới mỗi lượt &#8594; sau khi
+                    bị từ chối sẽ là một payment mới.</text>
+                </svg>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="tsl-note">Nhắc nợ tối đa <strong>3 lần</strong>, cách nhau <strong>ít nhất 24 giờ</strong>; nhắc
+            thủ công và job tự động dùng chung một bộ đếm. Idempotency key không thay thế transaction và khóa &#8212; ba
+            cơ chế giải quyết ba việc khác nhau.</div>
+        </div>
+
       </div>
     </section>
 
     <!-- ==============================================
          SLIDE 11: CHI TIẾT CÁC MODULE: 7. NOTIFICATION
          ============================================== -->
-    <section class="slide" id="slide-11" data-index="10">
+    <section class="slide" id="slide-11" data-index="15">
       <div class="slide-content module-detail-slide">
         <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
         <div class="module-detail-header">
@@ -1013,13 +1617,215 @@
     </section>
 
     <!-- ==============================================
+         SLIDE 17: REALTIME — GHI NHẬN XONG MỚI BÁO (R1)
+         ============================================== -->
+    <section class="slide" id="realtime-delivery" data-index="16">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="eng-header">
+          <h2 class="slide-title">Realtime: Ghi Nhận Xong Mới Báo</h2>
+          <p class="eng-subtitle">Sự kiện chỉ nói tài nguyên nào vừa đổi; dữ liệu nghiệp vụ vẫn đi qua REST</p>
+        </div>
+
+        <div class="tsl-lede">Nam xác nhận &#8594; transaction <strong>commit</strong> &#8594; <code>user_events</code>
+          &#8594; SSE báo màn hình của Lam &#8594; app gọi REST lấy dữ liệu mới. Rollback thì không ai nhận được gì.
+        </div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1260 430" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Trình tự từ thao tác xác nhận của Nam, qua transaction PostgreSQL, listener dùng chung và SSE tới app của Lam">
+              <defs>
+                <marker id="dgArrowRt" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+                <marker id="dgArrowRtHot" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#4F46E5" />
+                </marker>
+              </defs>
+
+              <line class="dg-life" x1="120" y1="56" x2="120" y2="422" />
+              <line class="dg-life" x1="375" y1="56" x2="375" y2="422" />
+              <line class="dg-life" x1="630" y1="56" x2="630" y2="422" />
+              <line class="dg-life" x1="890" y1="56" x2="890" y2="422" />
+              <line class="dg-life" x1="1140" y1="56" x2="1140" y2="422" />
+
+              <rect class="dg-box dg-box-identity" x="17" y="6" width="206" height="46" rx="12" />
+              <text class="dg-lead" x="120" y="35" text-anchor="middle">Nam (creditor)</text>
+              <rect class="dg-box dg-box-identity" x="272" y="6" width="206" height="46" rx="12" />
+              <text class="dg-lead" x="375" y="35" text-anchor="middle">PaySplit API</text>
+              <rect class="dg-box dg-box-identity" x="527" y="6" width="206" height="46" rx="12" />
+              <text class="dg-lead" x="630" y="35" text-anchor="middle">PostgreSQL</text>
+              <rect class="dg-box dg-box-identity" x="787" y="6" width="206" height="46" rx="12" />
+              <text class="dg-lead" x="890" y="35" text-anchor="middle">Listener dùng chung</text>
+              <rect class="dg-box dg-box-identity" x="1037" y="6" width="206" height="46" rx="12" />
+              <text class="dg-lead" x="1140" y="35" text-anchor="middle">App của Lam</text>
+
+              <path class="dg-edge" d="M 120 94 L 369 94" marker-end="url(#dgArrowRt)" />
+              <text class="dg-label" x="247" y="86" text-anchor="middle">Xác nhận đã nhận tiền</text>
+
+              <path class="dg-edge" d="M 375 138 L 624 138" marker-end="url(#dgArrowRt)" />
+              <text class="dg-label" x="502" y="130" text-anchor="middle">BEGIN &#183; payment confirmed &#183; debts
+                settled</text>
+
+              <path class="dg-edge" d="M 375 182 L 624 182" marker-end="url(#dgArrowRt)" />
+              <text class="dg-label" x="502" y="174" text-anchor="middle">notification + job push + pg_notify, cùng
+                transaction</text>
+
+              <path class="dg-edge dg-edge-strong" d="M 375 226 L 624 226" marker-end="url(#dgArrowRtHot)" />
+              <text class="dg-label dg-label-strong" x="502" y="218" text-anchor="middle">COMMIT</text>
+
+              <path class="dg-edge dg-edge-strong" d="M 630 272 L 884 272" marker-end="url(#dgArrowRtHot)" />
+              <text class="dg-label dg-label-strong" x="760" y="264" text-anchor="middle">user_events &#8212; chỉ phát
+                sau commit</text>
+
+              <path class="dg-edge" d="M 890 318 L 1134 318" marker-end="url(#dgArrowRt)" />
+              <text class="dg-label" x="1014" y="310" text-anchor="middle">SSE invalidate</text>
+
+              <path class="dg-edge" d="M 1140 364 L 381 364" marker-end="url(#dgArrowRt)" />
+              <text class="dg-label" x="757" y="356" text-anchor="middle">REST lấy dữ liệu mới &#8212; vẫn kiểm tra
+                quyền truy cập</text>
+
+              <path class="dg-edge dg-edge-dash" d="M 375 406 L 1134 406" marker-end="url(#dgArrowRt)" />
+              <text class="dg-label" x="757" y="398" text-anchor="middle">khoản nợ và tổng quan số dư đã cập
+                nhật</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-3">
+            <div class="tsl-chip is-teal">
+              <span class="tsl-chip-head">SSE</span>
+              Làm mới <strong>các màn hình đang mở</strong> của phiên đăng nhập. Một user stream phục vụ mọi màn hình,
+              không mở thêm kết nối cho từng tab.
+            </div>
+            <div class="tsl-chip">
+              <span class="tsl-chip-head">FCM</span>
+              Đẩy <strong>thông báo tới thiết bị</strong>, kể cả khi app ở nền. Cùng bắt nguồn từ một thao tác nhưng
+              không thay thế SSE.
+            </div>
+            <div class="tsl-chip">
+              <span class="tsl-chip-head">Payload</span>
+              Event chỉ báo <strong>tài nguyên nào vừa đổi</strong>; không chở ảnh biên lai hay số tài khoản.
+            </div>
+          </div>
+
+          <div class="tsl-note">Mỗi backend instance dùng <strong>một listener realtime dùng chung</strong> cho
+            <code>bill_events</code>, <code>group_events</code> và <code>user_events</code> &#8212; đây là kết nối
+            LISTEN, tách khỏi connection pool nghiệp vụ và River Queue.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 18: REALTIME — MẤT KẾT NỐI & KHÔI PHỤC (R2)
+         ============================================== -->
+    <section class="slide" id="realtime-recovery" data-index="17">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="eng-header">
+          <h2 class="slide-title">Realtime: Mất Kết Nối &amp; Khôi Phục</h2>
+          <p class="eng-subtitle">Đọc lại trạng thái hiện tại thay vì phát lại từng sự kiện đã lỡ</p>
+        </div>
+
+        <div class="tsl-lede">Mất SSE <strong>không mất nguồn dữ liệu</strong>: app kết nối lại, nhận
+          <code>ready</code>, rồi tải lại các màn hình đang đăng ký để lấy trạng thái mới nhất từ server.
+        </div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 272" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Dòng thời gian từ trạng thái live, mất kết nối, backoff, ready, refetch và trở lại live">
+              <defs>
+                <marker id="dgArrowTl" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <line class="dg-rule" x1="10" y1="44" x2="1210" y2="44" />
+
+              <circle class="dg-step-dot" cx="99" cy="44" r="15" />
+              <text class="dg-step-num" x="99" y="49" text-anchor="middle">1</text>
+              <rect class="dg-box dg-box-bill" x="10" y="76" width="178" height="112" rx="14" />
+              <text class="dg-lead" x="99" y="112" text-anchor="middle">Live</text>
+              <text class="dg-body" x="99" y="140" text-anchor="middle">stream đang chạy,</text>
+              <text class="dg-body" x="99" y="162" text-anchor="middle">màn hình tự cập nhật</text>
+
+              <circle class="dg-step-dot" cx="303" cy="44" r="15" />
+              <text class="dg-step-num" x="303" y="49" text-anchor="middle">2</text>
+              <rect class="dg-box dg-box-money" x="214" y="76" width="178" height="112" rx="14" />
+              <text class="dg-lead" x="303" y="112" text-anchor="middle">Mất kết nối</text>
+              <text class="dg-body" x="303" y="140" text-anchor="middle">mạng đứt hoặc</text>
+              <text class="dg-body" x="303" y="162" text-anchor="middle">server chủ động đóng</text>
+
+              <circle class="dg-step-dot" cx="507" cy="44" r="15" />
+              <text class="dg-step-num" x="507" y="49" text-anchor="middle">3</text>
+              <rect class="dg-box" x="418" y="76" width="178" height="112" rx="14" />
+              <text class="dg-lead" x="507" y="112" text-anchor="middle">Backoff</text>
+              <text class="dg-body" x="507" y="140" text-anchor="middle">1s &#8594; 30s, nhân</text>
+              <text class="dg-body" x="507" y="162" text-anchor="middle">hệ số ngẫu nhiên</text>
+
+              <circle class="dg-step-dot" cx="711" cy="44" r="15" />
+              <text class="dg-step-num" x="711" y="49" text-anchor="middle">4</text>
+              <rect class="dg-box dg-box-accent" x="622" y="76" width="178" height="112" rx="14" />
+              <text class="dg-lead" x="711" y="112" text-anchor="middle">ready</text>
+              <text class="dg-body" x="711" y="140" text-anchor="middle">kết nối lại được</text>
+              <text class="dg-body" x="711" y="162" text-anchor="middle">server chấp nhận</text>
+
+              <circle class="dg-step-dot" cx="915" cy="44" r="15" />
+              <text class="dg-step-num" x="915" y="49" text-anchor="middle">5</text>
+              <rect class="dg-box dg-box-accent" x="826" y="76" width="178" height="112" rx="14" />
+              <text class="dg-lead" x="915" y="112" text-anchor="middle">Refetch</text>
+              <text class="dg-body" x="915" y="140" text-anchor="middle">tải lại màn hình</text>
+              <text class="dg-body" x="915" y="162" text-anchor="middle">đang đăng ký</text>
+
+              <circle class="dg-step-dot" cx="1119" cy="44" r="15" />
+              <text class="dg-step-num" x="1119" y="49" text-anchor="middle">6</text>
+              <rect class="dg-box dg-box-bill" x="1030" y="76" width="178" height="112" rx="14" />
+              <text class="dg-lead" x="1119" y="112" text-anchor="middle">Live</text>
+              <text class="dg-body" x="1119" y="140" text-anchor="middle">dữ liệu khớp</text>
+              <text class="dg-body" x="1119" y="162" text-anchor="middle">trạng thái ở server</text>
+
+              <path class="dg-edge" d="M 192 132 L 208 132" marker-end="url(#dgArrowTl)" />
+              <path class="dg-edge" d="M 396 132 L 412 132" marker-end="url(#dgArrowTl)" />
+              <path class="dg-edge" d="M 600 132 L 616 132" marker-end="url(#dgArrowTl)" />
+              <path class="dg-edge" d="M 804 132 L 820 132" marker-end="url(#dgArrowTl)" />
+              <path class="dg-edge" d="M 1008 132 L 1024 132" marker-end="url(#dgArrowTl)" />
+
+              <text class="dg-cap" x="10" y="222">Trong lúc offline, app có thể không biết từng bước vừa xảy ra; sau
+                khi nhận ready nó vẫn lấy được kết quả mới nhất từ server.</text>
+              <text class="dg-cap" x="10" y="252">User stream không phải nhật ký bền vững để phát lại mọi sự kiện, và
+                không hứa exactly-once.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-3">
+            <div class="tsl-chip">Gộp invalidation trong cửa sổ <strong>250ms</strong> để giảm số request dồn khi nhiều
+              sự kiện tới gần nhau.</div>
+            <div class="tsl-chip">Chỉ một nhóm thay đổi thì <strong>nạp lại nhóm đó</strong>, giữ cache các nhóm khác
+              khi màn hình hỗ trợ.</div>
+            <div class="tsl-chip">Bill Detail <strong>bỏ event phiên bản cũ</strong> và giữ nội dung đang hiển thị
+              trong lúc làm mới.</div>
+          </div>
+
+          <div class="tsl-note">250ms là cửa sổ gộp ở phía client, <strong>không phải cam kết độ trễ end-to-end</strong>.
+            Đây vẫn là đồng bộ qua mạng, không phải lời hứa mọi thiết bị đổi cùng một thời điểm.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
      SLIDE 12: BÀI TOÁN KỸ THUẬT PHÁT SINH
      ============================================== -->
-    <section class="slide" id="slide-12" data-index="11">
+    <section class="slide" id="slide-12" data-index="18">
       <div class="slide-content module-detail-slide">
         <!-- TIÊU ĐỀ CHÍNH & PHỤ CHUẨN MỰC -->
         <div class="eng-header">
           <h2 class="slide-title">Bài Toán Kỹ Thuật Phát Sinh</h2>
+          <p class="eng-subtitle">Bảng tổng kết &#8212; các tình huống đã được giải thích ở phần schema, auth và
+            settlement phía trước</p>
         </div>
 
         <!-- BẢNG THỬ THÁCH KỸ THUẬT -->
@@ -1037,14 +1843,18 @@
                 <td>
                   <div class="cell-highlight">
                     <i class="fa-solid fa-calculator"></i>
-                    <span>Sai số làm tròn 1 đồng (VND)</span>
+                    <span>Chia tiền lẻ không khớp tổng (VND)</span>
                   </div>
                 </td>
-                <td>Chia số tiền không chia hết (ví dụ 100.000đ cho 3 người) sinh số thập phân. Khi nhân ngược lại bị
-                  hụt 1 đồng (99.999đ), gây lệch sổ sách tài chính khi chốt sổ.</td>
-                <td>Áp dụng <b>Thuật toán Hamilton (Largest Remainder)</b>: Lấy phần nguyên VND và ưu tiên phân bổ 1
-                  đồng dư lẻ cho người có phần thập phân lớn nhất. Đồng nhất cho cả 3 chế độ (chia đều, phần trăm, cố
-                  định).</td>
+                <td>Chia 100.000đ cho 3 người sinh số lẻ. Nếu cắt phần lẻ thì tổng thu về hụt so với hóa đơn; nếu làm
+                  tròn ở từng món và từng loại phụ phí rồi <b>dồn hết phần dư cho một người</b> thì sai lệch cộng dồn
+                  qua nhiều dòng, người đó phải trả cao hơn hẳn phần thực tế của mình.</td>
+                <td>Cộng phần chia của từng người dưới dạng <b>số hữu tỷ chính xác</b> (<code>big.Rat</code>) qua mọi
+                  món và phụ phí &mdash; <b>không dùng số thực, không làm tròn giữa chừng</b>. Chỉ làm tròn <b>một lần ở
+                    bước cuối</b>: lấy phần nguyên rồi cộng 1 đồng cho người có phần thập phân lớn nhất (Largest
+                  Remainder), hòa thì theo UUID thành viên tăng dần. <b>Creditor không được ưu tiên và không hấp thụ
+                    phần dư</b>, nên chênh lệch giữa hai người tối đa 1 đồng. Dùng chung một allocator cho cả 5 chế độ
+                  chia.</td>
               </tr>
               <tr>
                 <td>
@@ -1056,8 +1866,9 @@
                 <td>Nhiều thành viên cùng bấm chốt hóa đơn hoặc thanh toán nợ cùng một tích tắc. Race condition làm ghi
                   đè trạng thái hoặc sinh trùng lặp bản ghi công nợ.</td>
                 <td>Kết hợp khóa bi quan <code>SELECT ... FOR UPDATE</code> tại PostgreSQL và khóa lạc quan
-                  <code>expected_version</code> (CAS). Bọc toàn bộ quá trình tính toán và chuyển trạng thái trong đúng 1
-                  Database Transaction.</td>
+                  qua trường <code>version</code> gửi kèm mỗi mutation hóa đơn (CAS &#8212; phiên bản mà client kỳ
+                  vọng; lệch thì trả <code>409 VERSION_CONFLICT</code>). Toàn bộ tính toán và chuyển trạng thái nằm
+                  trong đúng 1 Database Transaction.</td>
               </tr>
               <tr>
                 <td>
@@ -1094,7 +1905,7 @@
     <!-- ==============================================
      SLIDE 13: KIẾN TRÚC & TIÊU CHUẨN CÔNG NGHỆ
      ============================================== -->
-    <section class="slide" id="slide-13" data-index="12">
+    <section class="slide" id="slide-13" data-index="19">
       <div class="slide-content module-detail-slide">
         <!-- TIÊU ĐỀ CHÍNH & PHỤ CHUẨN MỰC -->
         <div class="eng-header">
@@ -1121,7 +1932,7 @@
                   </div>
                 </td>
                 <td>
-                  <strong>Go 1.24+</strong> · <strong>PostgreSQL 18</strong><br />
+                  <strong>Go 1.26</strong> · <strong>PostgreSQL 18</strong><br />
                   Chi Router · pgx/v5 Pool · River Queue
                 </td>
                 <td>
@@ -1191,11 +2002,13 @@
     <!-- ==============================================
      SLIDE 14: KIỂM SOÁT RỦI RO & KHẢ NĂNG CHỊU LỖI
      ============================================== -->
-    <section class="slide" id="slide-14" data-index="13">
+    <section class="slide" id="slide-14" data-index="20">
       <div class="slide-content module-detail-slide">
         <!-- TIÊU ĐỀ CHÍNH & PHỤ CHUẨN MỰC -->
         <div class="eng-header">
           <h2 class="slide-title">Kiểm Soát Rủi Ro &amp; Khả Năng Chịu Lỗi</h2>
+          <p class="eng-subtitle">Bảng tổng kết &#8212; mỗi dòng trỏ lại một tình huống đã minh họa bằng ví dụ Nam
+            &#8211; Lam &#8211; Tín</p>
         </div>
 
         <!-- BẢNG TÌNH HUỐNG BIÊN -->
@@ -1229,11 +2042,12 @@
                     <span>Mất mạng / Dịch vụ ngoài gián đoạn</span>
                   </div>
                 </td>
-                <td>Cổng Firebase FCM hoặc Gmail SMTP bị nghẽn mạng, phản hồi timeout kéo dài quá 15 giây làm nghẽn
-                  luồng xử lý API chính (Cascading Failure).</td>
-                <td>API phản hồi HTTP 200 tức thời cho Client. Tác vụ được đẩy vào <b>River Queue</b> với thuật toán
-                  <b>Exponential Backoff</b> thử lại với độ trễ tăng dần (1s, 2s, 4s, 8s...) kèm độ trôi ngẫu nhiên
-                  (Jitter).</td>
+                <td>Cổng Firebase FCM hoặc Gmail SMTP phản hồi chậm; nếu gọi thẳng trong request thì luồng xử lý
+                  API chính bị kéo theo (Cascading Failure).</td>
+                <td>Với thông báo: bản ghi in-app và job River được <b>ghi cùng transaction nghiệp vụ</b>, worker gửi
+                  push sau khi commit, thử lại theo <b>Exponential Backoff</b> kèm jitter. Mã trạng thái tùy theo API:
+                  tạo hóa đơn từ OCR trả <code>202</code>, các ghi khác trả <code>200/201/204</code>; nộp biên lai chạy
+                  hai pha ngay trong request nên không trả về trước khi ghi xong.</td>
               </tr>
               <tr>
                 <td>
@@ -1268,17 +2082,38 @@
     <!-- ==============================================
      SLIDE 15: DEMO
      ============================================== -->
-    <section class="slide" id="slide-15" data-index="14">
-      <div class="slide-content module-detail-slide">
+    <section class="slide" id="slide-15" data-index="21">
+      <div class="slide-content module-detail-slide tsl-slide">
         <!-- TIÊU ĐỀ CHÍNH -->
-        <div class="module-detail-header">
+        <div class="eng-header">
           <h2 class="slide-title">Demo Thực Nghiệm</h2>
+          <p class="eng-subtitle">Một khoản nợ đi từ chờ trả tới đã xác nhận &#8212; hai màn hình, hai tài khoản</p>
+        </div>
+
+        <div class="tsl-lede">Hai thiết bị đăng nhập <strong>hai tài khoản khác nhau</strong>: Lam (người nợ, đồng thời
+          Captain) và Nam (người đã ứng tiền). Dữ liệu demo, không thực hiện chuyển khoản thật.</div>
+
+        <div class="tsl-chips tsl-chips-3">
+          <div class="tsl-chip">
+            <span class="tsl-chip-head">Bước 1</span>
+            Lam tạo QR &#8594; <strong>khoản nợ vẫn chờ trả</strong>. PaySplit chưa biết tiền đã tới tài khoản Nam hay
+            chưa.
+          </div>
+          <div class="tsl-chip">
+            <span class="tsl-chip-head">Bước 2</span>
+            Lam gửi ảnh biên lai demo &#8594; <strong>chờ Nam xác nhận</strong>. Nam mở biên lai để kiểm tra.
+          </div>
+          <div class="tsl-chip is-example">
+            <span class="tsl-chip-head">Bước 3</span>
+            Nam xác nhận &#8594; khoản của Lam <strong>settled</strong>; màn Lam tự cập nhật, <strong>Nam còn phải thu
+              Tín 100.000đ</strong>.
+          </div>
         </div>
 
         <!-- KHUNG ĐỂ TRỐNG (PLACEHOLDER) -->
         <div class="module-placeholder-box">
           <div class="placeholder-icon"><i class="fa-solid fa-play"></i></div>
-          <p class="placeholder-text">Khu vực trình chiếu Video Demo hoặc Thực nghiệm ứng dụng trực tiếp</p>
+          <p class="placeholder-text">Khu vực trình chiếu ứng dụng trực tiếp hoặc bản ghi dự phòng</p>
         </div>
       </div>
     </section>
@@ -1292,7 +2127,7 @@
     <div class="slide-counter" id="slideCounter" aria-label="Số trang slide">
       <span class="current-slide">01</span>
       <span class="slide-sep">/</span>
-      <span class="total-slides">15</span>
+      <span class="total-slides">22</span>
     </div>
     <button class="nav-btn" id="btnNext" title="Slide tiếp theo">
       <i class="fa-solid fa-arrow-right"></i>
