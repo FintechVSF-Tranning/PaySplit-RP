@@ -52,3 +52,8 @@ node_modules/
 build/
 dist/
 out/
+
+# Personal briefing notes & presentation scripts
+CODE_DEEP_DIVE_GUIDE.md
+MENTOR_BRIEFING_CORE_MODULES.md
+PRESENTATION_SCRIPT_*.md
