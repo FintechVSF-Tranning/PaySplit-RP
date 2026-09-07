@@ -983,27 +983,108 @@
     </section>
 
     <!-- ==============================================
-         SLIDE 7: CHI TIẾT CÁC MODULE: 3. GROUP & MEMBERSHIP
+         SLIDE 10: CHI TIẾT CÁC MODULE: 3. GROUP & MEMBERSHIP
          ============================================== -->
     <section class="slide" id="slide-7" data-index="9">
-      <div class="slide-content module-detail-slide">
-        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+      <div class="slide-content module-detail-slide tsl-slide">
+
         <div class="module-detail-header">
           <h2 class="slide-title">Chi Tiết Các Module</h2>
           <div class="module-sub-indicator">
             <span class="module-sub-num">3</span>
             <span class="module-sub-sep">.</span>
-            <span class="module-sub-title">Group &amp; Membership</span>
+            <span class="module-sub-title">Group &amp; Membership &#8212; Vòng đời nhóm, phân quyền &amp; đồng bộ tuần tự</span>
           </div>
         </div>
 
-        <!-- KHUNG SƠ ĐỒ KIẾN TRÚC THỰC TẾ -->
-        <div class="module-diagram-wrapper">
-          <div class="module-diagram-card">
-            <img src="assets/diagram_group_membership.png" alt="Sơ đồ kiến trúc Group &amp; Membership"
-              class="module-diagram-image" />
+        <div class="tsl-lede">Mã mời Base62 chống dò quét. <strong>Mọi thay đổi đều qua LockActiveGroup FOR UPDATE</strong> và tăng <code>roster_version</code> tuần tự để đồng bộ delta qua SSE.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 380" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Năm giai đoạn vòng đời nhóm và ba trụ cột kiến trúc: Khóa mức hàng, Outbox tuần tự và Bắt kịp delta">
+              <defs>
+                <marker id="dgArrowStep" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <!-- Băng 1: 5 giai đoạn vòng đời nhóm & thành viên -->
+              <rect class="dg-box" x="10" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="116" y="42" text-anchor="middle">1 &#183; Tạo nhóm &amp; Mời</text>
+              <text class="dg-sub" x="116" y="66" text-anchor="middle">Base62, tùy chỉnh hạn dùng</text>
+
+              <rect class="dg-box" x="254" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="360" y="42" text-anchor="middle">2 &#183; Tham gia nhóm</text>
+              <text class="dg-sub" x="360" y="66" text-anchor="middle">preview rate limit, khóa hàng</text>
+
+              <rect class="dg-box" x="498" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="604" y="42" text-anchor="middle">3 &#183; Khóa nộp bill</text>
+              <text class="dg-sub" x="604" y="66" text-anchor="middle">đóng băng trước khi chốt nợ</text>
+
+              <rect class="dg-box" x="742" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="848" y="42" text-anchor="middle">4 &#183; Rời / Chuyển quyền</text>
+              <text class="dg-sub" x="848" y="66" text-anchor="middle">chặn nếu còn nợ chưa trả</text>
+
+              <rect class="dg-box dg-box-accent" x="986" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="1092" y="42" text-anchor="middle">5 &#183; Giải tán (Archive)</text>
+              <text class="dg-sub" x="1092" y="66" text-anchor="middle">chỉ khi tất toán sạch 100%</text>
+
+              <path class="dg-edge" d="M 226 48 L 248 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 470 48 L 492 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 714 48 L 736 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 958 48 L 980 48" marker-end="url(#dgArrowStep)" />
+
+              <!-- Băng 2: Ba trụ cột kiến trúc kỹ thuật -->
+              <line class="dg-rule" x1="10" y1="120" x2="1198" y2="120" />
+              <text class="dg-label dg-label-strong" x="604" y="125" text-anchor="middle">Kiến trúc kỹ thuật: Khóa mức hàng, Transactional Outbox &amp; Đồng bộ Delta</text>
+
+              <rect class="dg-box" x="10" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="34" y="180">1 &#183; Khóa Hàng &amp; Ràng Buộc</text>
+              <text class="dg-body" x="34" y="208">Khóa dòng <tspan class="dg-mono">groups FOR UPDATE</tspan> ngăn ngừa</text>
+              <text class="dg-body" x="34" y="230">xung đột dữ liệu khi nhiều người vào cùng lúc.</text>
+              <text class="dg-body" x="34" y="252">Kiểm tra công nợ hai chiều trước khi cho phép rời,</text>
+              <text class="dg-body" x="34" y="274">chuyển giao Captain nguyên tử bằng <tspan class="dg-mono">NOWAIT</tspan>.</text>
+
+              <rect class="dg-box" x="420" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="444" y="180">2 &#183; roster_version &amp; Outbox</text>
+              <text class="dg-body" x="444" y="208">Tăng <tspan class="dg-mono">roster_version</tspan> đơn điệu trong cùng</text>
+              <text class="dg-body" x="444" y="230">DB transaction mutation. Ghi nhật ký sự kiện vào</text>
+              <text class="dg-body" x="444" y="252"><tspan class="dg-mono">group_events</tspan> và hẹn lệnh <tspan class="dg-mono">pg_notify</tspan>.</text>
+              <text class="dg-body dg-label-strong" x="444" y="274">Rollback thì không bao giờ phát sinh sự kiện ma.</text>
+
+              <rect class="dg-box dg-box-accent" x="830" y="148" width="368" height="140" rx="14" />
+              <text class="dg-lead" x="854" y="180">3 &#183; Bắt Kịp Delta (/sync)</text>
+              <text class="dg-body" x="854" y="208">Shared Listener nhận notify, đẩy SSE tới client.</text>
+              <text class="dg-body" x="854" y="230">Client mất mạng thấy lệch phiên bản tự gọi</text>
+              <text class="dg-body" x="854" y="252"><tspan class="dg-mono">GET /groups/{id}/sync?since=N</tspan>.</text>
+              <text class="dg-body" x="854" y="274">Vá trực tiếp danh sách, không cần tải lại toàn bộ trang.</text>
+
+              <path class="dg-edge" d="M 394 218 L 414 218" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 804 218 L 824 218" marker-end="url(#dgArrowStep)" />
+
+              <!-- Chú thích chi tiết -->
+              <rect class="dg-box dg-box-muted" x="10" y="308" width="1188" height="58" rx="12" />
+              <text class="dg-body" x="34" y="343">Payload sự kiện vượt 8KB pg_notify: backend tự động cắt gọt bản gầy (chỉ giữ version); client nhận diện bước nhảy sẽ tự động gọi /sync để lấy chi tiết mà không làm nghẽn kênh realtime.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-3">
+            <div class="tsl-chip is-rose">
+              <span class="tsl-chip-head">Bất biến công nợ</span>
+              Chặn 100% rời nhóm hoặc kick thành viên nếu còn khoản nợ chưa quyết toán (cả chiều <code>payable</code> lẫn <code>receivable</code>) &#8212; bảo vệ tính toàn vẹn sổ cái.
+            </div>
+            <div class="tsl-chip is-teal">
+              <span class="tsl-chip-head">Khóa nộp &amp; Chốt nợ</span>
+              Captain kích hoạt <code>bill_submission_locked_at</code> đóng băng nộp hóa đơn trước khi chốt nợ (<code>finalize-all</code>) để ngăn race condition phát sinh thêm món.
+            </div>
+            <div class="tsl-chip is-example">
+              <span class="tsl-chip-head">Đồng bộ delta bền bỉ</span>
+              Mất kết nối mạng không làm hỏng dữ liệu client: <code>roster_version</code> tăng đơn điệu giúp client phát hiện khoảng cách phiên bản và tự động bù đắp qua <code>/sync</code>.
+            </div>
           </div>
         </div>
+
       </div>
     </section>
 
