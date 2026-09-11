@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PaySplit — Giới thiệu dự án</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Main Presentation Deck -->
+  <main class="deck-viewport" id="deckViewport">
+    <!-- ==============================================
+         SLIDE 1: GIỚI THIỆU TỔNG QUAN DỰ ÁN
+         ============================================== -->
+    <section class="slide active" id="slide-1" data-index="0">
+      <div class="slide-content cover-slide">
+
+        <div class="cover-grid">
+
+          <!-- Cột bên trái: Tên dự án & Thông tin Thành viên / Mentor -->
+          <div class="cover-left">
+            <h1 class="project-title">
+              <img src="assets/app_icon.png" alt="PaySplit App Icon" class="title-app-icon">
+              <span>PaySplit</span>
+            </h1>
+            <h2 class="project-subtitle">Hệ Thống Chia Hóa Đơn Nhóm &amp; Nhắc nợ thông minh</h2>
+            <p class="project-desc">
+              Ứng dụng hỗ trợ quét hóa đơn, chia tiền chính xác cho từng thành viên trong nhóm, nhắc nợ thông minh và
+              thanh toán thông qua VietQR nhanh chóng.</p>
+
+            <!-- Khối thông tin Mentor & Thành viên -->
+            <div class="info-blocks">
+
+              <!-- Mentor hướng dẫn -->
+              <div class="info-card">
+                <div class="info-header">
+                  <i class="fa-solid fa-chalkboard-user"></i>
+                  <span>Mentor hướng dẫn:</span>
+                </div>
+                <ul class="info-list">
+                  <li><strong>1.</strong> Trần Quang Hiển</li>
+                  <li><strong>2.</strong> Bành Quốc Danh</li>
+                  <li><strong>3.</strong> Phan Công Huân</li>
+                  <li><strong>4.</strong> Nguyễn Mạnh Tể</li>
+                  <li><strong>5.</strong> Nguyễn Nam Trường</li>
+                </ul>
+              </div>
+
+              <!-- 3 Thành viên thực hiện -->
+              <div class="info-card">
+                <div class="info-header">
+                  <i class="fa-solid fa-users"></i>
+                  <span>Thành viên thực hiện:</span>
+                </div>
+                <ul class="info-list">
+                  <li><strong>1.</strong> Phạm Lê Hoàng Nam</li>
+                  <li><strong>2.</strong> Phạm Thanh Lam</li>
+                  <li><strong>3.</strong> Nguyễn Trọng Tín</li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Cột bên phải: Ảnh dự án thực tế tạo tò mò -->
+          <div class="cover-right">
+            <div class="phone-mockup">
+              <img src="assets/app_screenshot.png" alt="Giao diện thực tế PaySplit — Tổng số dư công nợ"
+                class="screenshot-img">
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 2: NỖI ĐAU & GIẢI PHÁP TỪ PAYSPLIT
+         ============================================== -->
+    <section class="slide show-solutions" id="slide-2" data-index="1">
+      <div class="slide-content problem-slide">
+
+        <h2 class="slide-title" id="slide2Title">Nỗi Đau Thực Tế & Giải Pháp PaySplit</h2>
+
+        <!-- HÀNG 1: 3 Ô NỖI ĐAU THỰC TẾ (GIỮ NGUYÊN VĂN BẢN VÀ HÌNH ẢNH) -->
+        <div class="pain-cards-grid">
+
+          <!-- Thẻ Nỗi đau 1 -->
+          <div class="pain-card">
+            <div class="pain-img-box">
+              <img src="assets/pain_01_manual_calc.jpg" alt="Tính toán thủ công rối rắm" class="pain-img">
+            </div>
+            <div class="pain-body">
+              <h3 class="pain-card-title">Tính toán thủ công rối rắm</h3>
+              <p class="pain-card-desc">
+                Hóa đơn dài ngoằng, nhiều món chung riêng, cộng trừ thuế VAT và voucher giảm giá thủ công rất dễ sai sót
+                và mất thời gian.
+              </p>
+            </div>
+          </div>
+
+          <!-- Thẻ Nỗi đau 2 -->
+          <div class="pain-card">
+            <div class="pain-img-box">
+              <img src="assets/pain_02_unfair_split.jpg" alt="Chia đều gây bất công" class="pain-img">
+            </div>
+            <div class="pain-body">
+              <h3 class="pain-card-title">Chia đều gây bất công</h3>
+              <p class="pain-card-desc">
+                Người chỉ uống nước lọc hay ăn nhẹ phải chịu chung tiền với người gọi món đắt đỏ hoặc đồ uống có cồn,
+                tạo cảm giác thiếu sòng phẳng.
+              </p>
+            </div>
+          </div>
+
+          <!-- Thẻ Nỗi đau 3 -->
+          <div class="pain-card">
+            <div class="pain-img-box">
+              <img src="assets/pain_03_awkward_debt.png" alt="Tâm lý ngại ngùng khi nhắc nợ" class="pain-img">
+            </div>
+            <div class="pain-body">
+              <h3 class="pain-card-title">Tâm lý ngại mở lời nhắc nợ</h3>
+              <p class="pain-card-desc">
+                Khoản tiền nhỏ khó mở lời đòi, để lâu thì quên, nhập tay số tài khoản lắt nhắt dễ nhầm lẫn và gây ngại
+                ngùng, sứt mẻ tình bạn bè.
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- NÚT MŨI TÊN CHUNG: BẤM ĐỂ HIỂN THỊ 3 Ô GIẢI PHÁP Ở DƯỚI -->
+        <div class="solution-action-bar">
+          <button id="btnToggleAllSolution" class="solution-arrow-btn" type="button" aria-label="Xem giải pháp PaySplit"
+            title="Xem giải pháp PaySplit">
+            <i class="fa-solid fa-arrow-down"></i>
+          </button>
+        </div>
+
+        <!-- HÀNG 2: 3 Ô GIẢI PHÁP TƯƠNG ỨNG Ở PHÍA DƯỚI (XUẤT HIỆN KHI BẤM NÚT) -->
+        <div class="solution-cards-grid" id="solutionGrid">
+
+          <!-- Giải pháp 1: Đối ứng với Thẻ 1 -->
+          <div class="solution-card">
+            <div class="solution-header">
+              <i class="fa-solid fa-circle-check"></i>
+              <h3 class="solution-card-title">Quét OCR tự động 1 chạm</h3>
+            </div>
+            <p class="solution-card-desc">
+              Vision AI tự động trích xuất danh mục món, số lượng, đơn giá và thuế VAT trong vài giây. Khớp dữ liệu tự
+              động, giảm thiểu tính toán thủ công.
+            </p>
+          </div>
+
+          <!-- Giải pháp 2: Đối ứng với Thẻ 2 -->
+          <div class="solution-card">
+            <div class="solution-header">
+              <i class="fa-solid fa-circle-check"></i>
+              <h3 class="solution-card-title">Phân bổ từng món (Làm tròn Hamilton)</h3>
+            </div>
+            <p class="solution-card-desc">
+              Ai ăn món gì trả món đó, hỗ trợ chia theo tỷ lệ/trọng số. Thuật toán làm tròn Hamilton bảo đảm khớp chính
+              xác 100% từng đồng xu.
+            </p>
+          </div>
+
+          <!-- Giải pháp 3: Đối ứng với Thẻ 3 -->
+          <div class="solution-card">
+            <div class="solution-header">
+              <i class="fa-solid fa-circle-check"></i>
+              <h3 class="solution-card-title">VietQR &amp; Nhắc nợ</h3>
+            </div>
+            <p class="solution-card-desc">
+              Tự sinh mã VietQR NAPAS 247 điền sẵn số tiền nợ chính xác. Hệ thống tự gửi thông báo nhắc lịch sự.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 3: TỔNG QUAN HỆ THỐNG (SYSTEM CONTEXT)
+         ============================================== -->
+    <section class="slide" id="slide-3" data-index="2">
+      <div class="slide-content system-slide">
+
+        <h2 class="slide-title">Tổng Quan Hệ Thống</h2>
+
+        <div class="system-context-wrapper">
+          <div class="system-context-board">
+
+            <!-- SVG CANVAS VẼ TOÀN BỘ CÁC ĐƯỜNG MŨI TÊN KẾT NỐI -->
+            <svg class="context-svg-canvas" viewBox="0 0 1440 580" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                  <polygon points="0 0, 10 4, 0 8" fill="#64748B" />
+                </marker>
+              </defs>
+
+              <!-- Mũi tên 1: PaySplit User -> PaySplit System -->
+              <path class="flow-arrow-line" d="M 270 285 L 555 285" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 2: PaySplit System -> LlamaExtract (OCR) -->
+              <path class="flow-arrow-line" d="M 875 245 C 980 245, 1040 57, 1150 57" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 3: PaySplit System -> VietQR -->
+              <path class="flow-arrow-line" d="M 875 265 C 980 265, 1045 207, 1150 207" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 4: PaySplit System -> Cloudinary -->
+              <path class="flow-arrow-line" d="M 875 305 C 980 305, 1045 357, 1150 357" marker-end="url(#arrowhead)" />
+
+              <!-- Mũi tên 5: PaySplit System -> Firebase FCM -->
+              <path class="flow-arrow-line" d="M 875 325 C 980 325, 1040 507, 1150 507" marker-end="url(#arrowhead)" />
+            </svg>
+
+            <!-- CÁC NHÃN TRÊN MŨI TÊN (THEO ĐÚNG NỘI DUNG SƠ ĐỒ GỐC) -->
+            <div class="flow-badge badge-user-sys">
+              <span>manages groups, bills, and payments</span>
+            </div>
+
+            <div class="flow-badge badge-sys-ocr">
+              <span>extracts receipt information</span>
+            </div>
+
+            <div class="flow-badge badge-sys-qr">
+              <span>generates payment QR information</span>
+            </div>
+
+            <div class="flow-badge badge-sys-storage">
+              <span>stores receipt images</span>
+            </div>
+
+            <div class="flow-badge badge-sys-notif">
+              <span>sends reminders and updates</span>
+            </div>
+
+            <!-- NODE 1: PaySplit User (Trái) -->
+            <div class="context-node node-pill node-user">
+              <img src="assets/logos/user.svg" alt="User Icon" class="node-logo node-logo-user">
+              <div class="node-text">
+                <span class="node-name">PaySplit User</span>
+                <span class="node-type">Mobile App (Flutter)</span>
+              </div>
+            </div>
+
+            <!-- NODE 2: PaySplit System (Trung tâm) -->
+            <div class="context-node node-rect node-system">
+              <img src="assets/app_icon.png" alt="PaySplit Logo" class="node-logo node-logo-system">
+              <div class="node-text">
+                <span class="node-name-system">PaySplit System</span>
+                <span class="node-type-system">Go, PostgreSQL, River Queue</span>
+              </div>
+            </div>
+
+            <!-- NODE 3: LlamaExtract (Phải 1) -->
+            <div class="context-node node-pill node-provider node-ocr">
+              <img src="assets/logos/llama_square.png" alt="Llama Logo" class="node-logo node-logo-ocr">
+              <div class="node-text">
+                <span class="node-name">LlamaExtract</span>
+                <span class="node-type">OCR / Vision Provider</span>
+              </div>
+            </div>
+
+            <!-- NODE 4: VietQR / NAPAS (Phải 2) -->
+            <div class="context-node node-pill node-provider node-vietqr">
+              <div class="logo-box">
+                <img src="assets/logos/vietqr.svg" alt="VietQR Logo" class="node-logo-vietqr">
+              </div>
+              <div class="node-text">
+                <span class="node-name">VietQR / NAPAS</span>
+                <span class="node-type">Payment QR Gateway</span>
+              </div>
+            </div>
+
+            <!-- NODE 5: Cloudinary (Phải 3) -->
+            <div class="context-node node-pill node-provider node-storage">
+              <div class="logo-box">
+                <img src="assets/logos/cloudinary.svg" alt="Cloudinary Logo" class="node-logo-cloudinary">
+              </div>
+              <div class="node-text">
+                <span class="node-name">Cloudinary</span>
+                <span class="node-type">Object Storage</span>
+              </div>
+            </div>
+
+            <!-- NODE 6: Firebase FCM (Phải 4) -->
+            <div class="context-node node-pill node-provider node-fcm">
+              <img src="assets/logos/firebase.svg" alt="Firebase Logo" class="node-logo node-logo-fcm">
+              <div class="node-text">
+                <span class="node-name">Firebase FCM</span>
+                <span class="node-type">Push Notification</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Ghi chú dưới sơ đồ tổng quan hệ thống -->
+        <p class="system-caption">Sơ đồ tổng quan hệ thống PaySplit</p>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 4: KIẾN TRÚC PHÂN RÃ MODULE & TÍCH HỢP
+         ============================================== -->
+    <section class="slide" id="slide-4" data-index="3">
+      <div class="slide-content internal-arch-slide">
+
+        <h2 class="slide-title">Kiến Trúc Hệ Thống </h2>
+
+        <div class="internal-arch-wrapper">
+          <div class="internal-arch-board">
+
+            <!-- ================= KHUNG BỌC HỆ THỐNG CHÍNH (PAYSPLIT SYSTEM) ================= -->
+            <div class="system-boundary">
+              <div class="system-boundary-badge">
+                <i class="fa-solid fa-server"></i>
+                <span>PaySplit System</span>
+              </div>
+            </div>
+
+            <!-- SVG CANVAS VẼ CÁC ĐƯỜNG MŨI TÊN KẾT NỐI ĐỒNG BỘ, BẤT ĐỒNG BỘ VÀ PROVIDER NGOÀI -->
+            <svg class="arch-svg-canvas" viewBox="0 0 1600 620" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <!-- Marker Đồng bộ (Xám) -->
+                <marker id="arrow-sync" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#64748B" />
+                </marker>
+                <!-- Marker Bất đồng bộ (Slate) -->
+                <marker id="arrow-async" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#64748B" />
+                </marker>
+                <!-- Marker Provider Bên Ngoài (Slate nhạt) -->
+                <marker id="arrow-ext" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <!-- ================= INGRESS CALL (MOBILE [TOP] -> GATEWAY) ================= -->
+              <path class="arrow-sync-line" d="M 195 48 L 195 170" marker-end="url(#arrow-sync)" />
+
+              <!-- ================= SYNC CALLS (GATEWAY -> CỘT 2 CONTEXTS) ================= -->
+              <!-- 1. Gateway -> Auth -->
+              <path class="arrow-sync-line" d="M 295 240 C 350 240, 350 133, 400 133" marker-end="url(#arrow-sync)" />
+
+              <!-- 2. Gateway -> Group -->
+              <path class="arrow-sync-line" d="M 295 260 C 350 260, 350 223, 400 223" marker-end="url(#arrow-sync)" />
+
+              <!-- 3. Gateway -> Bill -->
+              <path class="arrow-sync-line" d="M 295 313 L 400 313" marker-end="url(#arrow-sync)" />
+
+              <!-- 4. Gateway -> Debt -->
+              <path class="arrow-sync-line" d="M 295 345 C 350 345, 350 403, 400 403" marker-end="url(#arrow-sync)" />
+
+              <!-- 5. Bill -> Group (Check Membership) -->
+              <path class="arrow-sync-line" d="M 520 285 L 520 256" marker-end="url(#arrow-sync)" />
+
+              <!-- ================= ASYNC EVENTS (CỘT 2 <-> RIVER QUEUE) ================= -->
+              <!-- A. Bill -> Queue ("receipt submitted") -->
+              <path class="arrow-async-line" d="M 635 295 C 700 295, 780 230, 840 230" marker-end="url(#arrow-async)" />
+
+              <!-- B. Queue -> Bill ("receipt extracted") -->
+              <path class="arrow-async-line" d="M 845 260 C 785 260, 705 315, 640 315" marker-end="url(#arrow-async)" />
+
+              <!-- C. Bill -> Queue ("bill finalized: push job") — nợ đã được ghi trong chính transaction finalize -->
+              <path class="arrow-async-line" d="M 635 330 C 700 330, 780 290, 840 290" marker-end="url(#arrow-async)" />
+
+              <!-- E. Debt -> Queue ("payment action / reminder") -->
+              <path class="arrow-async-line" d="M 635 415 C 700 415, 780 350, 840 350" marker-end="url(#arrow-async)" />
+
+              <!-- ================= ASYNC EVENTS (RIVER QUEUE <-> CỘT 4 WORKERS) ================= -->
+              <!-- F. Queue -> OCR ("receipt submitted") -->
+              <path class="arrow-async-line" d="M 1075 230 C 1140 230, 1220 165, 1280 165"
+                marker-end="url(#arrow-async)" />
+
+              <!-- G. OCR -> Queue ("receipt extracted") -->
+              <path class="arrow-async-line" d="M 1285 185 C 1225 185, 1145 260, 1080 260"
+                marker-end="url(#arrow-async)" />
+
+              <!-- H. Queue -> Notification ("payment action / reminder") -->
+              <path class="arrow-async-line" d="M 1075 335 C 1140 335, 1220 363, 1280 363"
+                marker-end="url(#arrow-async)" />
+
+              <!-- ================= EXTERNAL CALLS (TOP & BOTTOM PROVIDERS) ================= -->
+              <!-- 1. OCR -> LlamaExtract [TOP] -->
+              <path class="arrow-ext-line" d="M 1390 145 L 1390 54" marker-end="url(#arrow-ext)" />
+
+              <!-- 2. Notification -> Firebase FCM [BOTTOM] -->
+              <path class="arrow-ext-line" d="M 1390 391 L 1390 558" marker-end="url(#arrow-ext)" />
+
+              <!-- 3. Bill -> Cloudinary [BOTTOM] -->
+              <path class="arrow-ext-line" d="M 405 325 C 360 325, 368 460, 368 558" marker-end="url(#arrow-ext)" />
+
+              <!-- 4. Debt -> VietQR / NAPAS [BOTTOM] -->
+              <path class="arrow-ext-line" d="M 520 431 L 520 558" marker-end="url(#arrow-ext)" />
+            </svg>
+
+            <!-- ================= NHÃN SỰ KIỆN NỘI BỘ ================= -->
+            <!-- Ingress: Mobile -> Gateway -->
+            <div class="event-badge badge-mobile-gw">
+              <span>HTTPS / REST</span>
+            </div>
+
+            <!-- Đồng bộ: Bill -> Group -->
+            <div class="event-badge badge-bill-group">
+              <span>member check</span>
+            </div>
+
+            <!-- Bất đồng bộ Cột 2 <-> Cột 3 -->
+            <div class="event-badge badge-event-sub1">
+              <span>receipt submitted</span>
+            </div>
+
+            <div class="event-badge badge-event-ext1">
+              <span>receipt extracted</span>
+            </div>
+
+            <div class="event-badge badge-event-fin1">
+              <span>bill finalized &rarr; push job</span>
+            </div>
+
+            <div class="event-badge badge-event-pay1">
+              <span>payment action / reminder</span>
+            </div>
+
+            <!-- Bất đồng bộ Cột 3 <-> Cột 4 -->
+            <div class="event-badge badge-event-sub2">
+              <span>receipt submitted</span>
+            </div>
+
+            <div class="event-badge badge-event-ext2">
+              <span>receipt extracted</span>
+            </div>
+
+            <div class="event-badge badge-event-pay2">
+              <span>payment action / reminder</span>
+            </div>
+
+            <!-- ================= NHÃN GỌI RA PROVIDER BÊN NGOÀI ================= -->
+            <div class="event-badge badge-ocr-ext">
+              <span>extract items</span>
+            </div>
+
+            <div class="event-badge badge-notif-ext">
+              <span>push notification</span>
+            </div>
+
+            <div class="event-badge badge-bill-storage">
+              <span>store receipts</span>
+            </div>
+
+            <div class="event-badge badge-debt-qr">
+              <span>generate QR</span>
+            </div>
+
+            <!-- ================= 8 KHỐI MODULES NỘI BỘ ================= -->
+
+            <!-- 1. API Gateway / HTTP Router (Cột 1) -->
+            <div class="arch-card card-gateway">
+              <div class="card-icon-box icon-gateway">
+                <i class="fa-solid fa-network-wired"></i>
+              </div>
+              <div class="card-title-gateway">API Gateway</div>
+              <div class="card-pills">
+                <span class="card-pill">JWT Auth Guard</span>
+                <span class="card-pill">Rate Limiter</span>
+                <span class="card-pill">CORS &amp; Recoverer</span>
+                <span class="card-pill">Sync Dispatch</span>
+              </div>
+            </div>
+
+            <!-- 2. Auth & User (Cột 2 - Hàng 1) -->
+            <div class="arch-card card-context card-auth">
+              <span class="card-name">Auth &amp; User</span>
+            </div>
+
+            <!-- 3. Group & Membership (Cột 2 - Hàng 2) -->
+            <div class="arch-card card-context card-group">
+              <span class="card-name">Group &amp; Membership</span>
+            </div>
+
+            <!-- 4. Bill & Expense Allocation (Cột 2 - Hàng 3) -->
+            <div class="arch-card card-context card-bill">
+              <span class="card-name">Bill &amp; Expense Allocation</span>
+            </div>
+
+            <!-- 5. Debt & Settlement (Cột 2 - Hàng 4) -->
+            <div class="arch-card card-context card-debt">
+              <span class="card-name">Debt &amp; Settlement</span>
+            </div>
+
+            <!-- 6. Job Queue / Event Bus (Cột 3 - Trục trung tâm) -->
+            <div class="arch-card card-queue">
+              <div class="card-icon-box icon-queue">
+                <i class="fa-solid fa-bolt"></i>
+              </div>
+              <div class="card-title-queue">Job Queue / Event Bus</div>
+              <div class="card-pills">
+                <span class="card-pill-queue">Transactional Enqueue (ACID)</span>
+                <span class="card-pill-queue">At-least-once Delivery</span>
+                <span class="card-pill-queue">Auto Retry &amp; Backoff</span>
+                <span class="card-pill-queue">Decouple Background Tasks</span>
+              </div>
+            </div>
+
+            <!-- 7. OCR Processing Worker (Cột 4 - Hàng 1) -->
+            <div class="arch-card card-worker card-ocr-worker">
+              <span class="card-name">OCR Processing</span>
+            </div>
+
+            <!-- 8. Notification Worker (Cột 4 - Hàng 2) -->
+            <div class="arch-card card-worker card-notif-worker">
+              <span class="card-name">Notification</span>
+            </div>
+
+            <!-- ================= 5 PROVIDER & CLIENT BÊN NGOÀI (PHỤ, KHÔNG SUBTITLE, NHỎ GỌN) ================= -->
+            <!-- 1. Mobile App (Client gọi vào API Gateway) -->
+            <div class="arch-card-ext ext-mobile">
+              <img src="assets/logos/flutter.svg" alt="Flutter" class="ext-logo">
+              <span class="ext-name">Mobile App</span>
+            </div>
+
+            <!-- 2. LlamaExtract (phục vụ OCR Processing) -->
+            <div class="arch-card-ext ext-llama">
+              <img src="assets/logos/llama.svg" alt="LlamaExtract" class="ext-logo">
+              <span class="ext-name">LlamaExtract</span>
+            </div>
+
+            <!-- 3. Firebase FCM (phục vụ Notification) -->
+            <div class="arch-card-ext ext-firebase">
+              <img src="assets/logos/firebase.svg" alt="Firebase FCM" class="ext-logo">
+              <span class="ext-name">Firebase FCM</span>
+            </div>
+
+            <!-- 4. Cloudinary (phục vụ Bill & Expense Allocation) -->
+            <div class="arch-card-ext ext-cloudinary">
+              <img src="assets/logos/cloudinary.svg" alt="Cloudinary" class="ext-logo">
+              <span class="ext-name">Cloudinary</span>
+            </div>
+
+            <!-- 5. VietQR / NAPAS (phục vụ Debt & Settlement) -->
+            <div class="arch-card-ext ext-vietqr">
+              <img src="assets/logos/vietqr.svg" alt="VietQR" class="ext-logo">
+              <span class="ext-name">VietQR / NAPAS</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Liệt kê ngắn gọn 6 module nghiệp vụ nội bộ -->
+        <ul class="arch-modules-list">
+          <li><strong>1. Auth &amp; User:</strong> Quản lý thông tin tài khoản, xác thực đăng nhập và bảo mật phiên người dùng.</li>
+          <li><strong>2. Group &amp; Membership:</strong> Quản lý nhóm chi tiêu, phân quyền thành viên (Admin/Member) và liên kết mời.</li>
+          <li><strong>3. Bill &amp; Expense Allocation:</strong> Quản lý hóa đơn, lưu ảnh chứng từ, phân bổ từng món và chia tiền (Hamilton).</li>
+          <li><strong>4. Debt &amp; Settlement:</strong> Theo dõi công nợ giữa các thành viên, tự sinh VietQR thanh toán và đối soát trả nợ.</li>
+          <li><strong>5. OCR Processing:</strong> Quét ảnh hóa đơn và tự động trích xuất danh mục món, số lượng, đơn giá bằng AI.</li>
+          <li><strong>6. Notification:</strong> Gửi thông báo tự động nhắc nợ, cập nhật trạng thái hóa đơn và thanh toán (In-App &amp; Push).</li>
+        </ul>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 5: CHI TIẾT CÁC MODULE: 1. API GATEWAY & AUTH & USER
+         ============================================== -->
+    <section class="slide" id="slide-5" data-index="4">
+      <div class="slide-content module-detail-slide">
+
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">1</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">API Gateway <span class="module-sub-author">(Phạm Thanh Lam)</span></span>
+          </div>
+        </div>
+
+        <!-- KHUNG SƠ ĐỒ KIẾN TRÚC THỰC TẾ -->
+        <div class="module-diagram-wrapper">
+          <div class="module-diagram-card">
+            <img src="assets/diagram_api_gateway.png" alt="Sơ đồ kiến trúc PaySplit API Gateway"
+              class="module-diagram-image" />
+          </div>
+        </div>
+
+        <!-- Ghi chú dưới sơ đồ API Gateway -->
+        <p class="diagram-caption">Sơ đồ chi tiết API Gateway hệ thống</p>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 6: CHI TIẾT CÁC MODULE: 2. AUTH & USER SERVICE
+         ============================================== -->
+    <!-- ==============================================
+         SLIDE 8: CHI TIẾT CÁC MODULE: 2. AUTH & USER SERVICE (A1)
+         ============================================== -->
+    <section class="slide" id="slide-6" data-index="5">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">2</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Auth &amp; User Service <span class="module-sub-author">(Phạm Lê Hoàng Nam)</span></span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">Có token chưa đủ: mỗi request nghiệp vụ còn <strong>hỏi database xem phiên đăng nhập còn
+            hiệu lực</strong> hay không.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-chips tsl-chips-4">
+            <div class="tsl-chip">Access JWT sống <strong>15 phút</strong>, mang theo mã phiên <code>sid</code>.</div>
+            <div class="tsl-chip">API nghiệp vụ kiểm tra <strong>JWT và session còn sống</strong>, không chỉ chữ ký.
+            </div>
+            <div class="tsl-chip">Refresh token <strong>dùng một lần</strong>, giới hạn trong phiên <strong>7
+                ngày</strong>.</div>
+            <div class="tsl-chip">Một tài khoản có <strong>một phiên chưa bị thu hồi</strong> tại một thời điểm.</div>
+          </div>
+
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 412" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Trình tự đăng nhập và kiểm tra phiên giữa app Flutter, Auth API và PostgreSQL">
+              <defs>
+                <marker id="dgArrowSeq" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+                <marker id="dgArrowSeqHot" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#4F46E5" />
+                </marker>
+              </defs>
+
+              <line class="dg-life" x1="200" y1="58" x2="200" y2="404" />
+              <line class="dg-life" x1="610" y1="58" x2="610" y2="404" />
+              <line class="dg-life" x1="1020" y1="58" x2="1020" y2="404" />
+
+              <rect class="dg-box dg-box-identity" x="75" y="6" width="250" height="48" rx="12" />
+              <text class="dg-lead" x="200" y="36" text-anchor="middle">App Flutter</text>
+              <rect class="dg-box dg-box-identity" x="485" y="6" width="250" height="48" rx="12" />
+              <text class="dg-lead" x="610" y="36" text-anchor="middle">PaySplit API</text>
+              <rect class="dg-box dg-box-identity" x="895" y="6" width="250" height="48" rx="12" />
+              <text class="dg-lead" x="1020" y="36" text-anchor="middle">PostgreSQL</text>
+
+              <path class="dg-edge" d="M 200 96 L 604 96" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="402" y="88" text-anchor="middle">sign-in: email, mật khẩu, device_id</text>
+
+              <path class="dg-edge" d="M 610 144 L 1014 144" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="812" y="136" text-anchor="middle">thu hồi phiên cũ &#183; tạo session + hash
+                refresh</text>
+
+              <path class="dg-edge dg-edge-dash" d="M 610 192 L 206 192" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="408" y="184" text-anchor="middle">Access JWT 15 phút (có sid) + refresh
+                token</text>
+
+              <line class="dg-rule" x1="40" y1="226" x2="1180" y2="226" stroke-dasharray="7 6" />
+              <text class="dg-label dg-label-strong" x="610" y="231" text-anchor="middle">Mỗi request tới API nghiệp
+                vụ</text>
+
+              <path class="dg-edge" d="M 200 268 L 604 268" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="402" y="260" text-anchor="middle">GET /groups/&#8230; + Bearer JWT</text>
+
+              <path class="dg-edge" d="M 610 296 L 700 296 L 700 322 L 616 322" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="714" y="315">xác minh chữ ký &#8594; lấy sid</text>
+
+              <path class="dg-edge dg-edge-strong" d="M 610 364 L 1014 364" marker-end="url(#dgArrowSeqHot)" />
+              <text class="dg-label dg-label-strong" x="812" y="356" text-anchor="middle">session còn sống? tài khoản
+                còn active?</text>
+
+              <path class="dg-edge dg-edge-dash" d="M 610 402 L 206 402" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="408" y="394" text-anchor="middle">cho đi tiếp &#183; hoặc 401</text>
+            </svg>
+          </div>
+
+          <div class="tsl-note">Đăng ký &#8594; <strong>OTP 6 chữ số, hạn 10 phút</strong> &#8594; kích hoạt &#8594;
+            đăng nhập. Sai 5 lần thì <strong>chính mã đó bị vô hiệu</strong>, không khóa tài khoản vĩnh viễn. Mật khẩu
+            được <strong>băm bằng bcrypt</strong> kèm salt; refresh token chỉ lưu hash ở server, app giữ token trong
+            secure storage.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 9: AUTH — LÀM MỚI PHIÊN & KẾT THÚC PHIÊN (A2)
+         ============================================== -->
+    <section class="slide" id="auth-session-lifecycle" data-index="6">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">2</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Auth &amp; User Service <span class="module-sub-author">(Phạm Lê Hoàng Nam)</span> &#8212; Làm mới &amp; kết thúc phiên</span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">REST và SSE <strong>cùng chờ một lượt refresh</strong>; khi phiên bị thu hồi thì app kết
+          thúc dứt khoát tại màn Login.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 440" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Hai nguồn lỗi 401 gộp vào một lượt refresh dùng chung, và nhánh kết thúc phiên">
+              <defs>
+                <marker id="dgArrowFlow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <path class="dg-edge" d="M 234 100 C 284 100, 280 142, 314 142" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 234 208 C 284 208, 280 172, 314 172" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 560 160 L 634 160" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 880 142 C 918 142, 924 94, 954 88" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 880 178 C 918 178, 924 226, 954 232" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge dg-edge-dash" d="M 880 328 C 924 328, 940 272, 954 254"
+                marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 1078 276 L 1078 296" marker-end="url(#dgArrowFlow)" />
+
+              <text class="dg-label" x="948" y="108" text-anchor="end">thành công</text>
+              <text class="dg-label" x="948" y="222" text-anchor="end">thất bại</text>
+
+              <rect class="dg-box" x="24" y="70" width="210" height="60" rx="12" />
+              <text class="dg-lead" x="129" y="98" text-anchor="middle">REST gặp 401</text>
+              <text class="dg-sub" x="129" y="118" text-anchor="middle">một lời gọi API</text>
+
+              <rect class="dg-box" x="24" y="178" width="210" height="60" rx="12" />
+              <text class="dg-lead" x="129" y="206" text-anchor="middle">SSE gặp 401</text>
+              <text class="dg-sub" x="129" y="226" text-anchor="middle">kết nối realtime</text>
+
+              <rect class="dg-box dg-box-accent" x="320" y="120" width="240" height="80" rx="14" />
+              <text class="dg-lead" x="440" y="154" text-anchor="middle">SessionRefresher</text>
+              <text class="dg-sub" x="440" y="178" text-anchor="middle">dùng chung &#8212; single-flight</text>
+
+              <rect class="dg-box" x="640" y="120" width="240" height="80" rx="14" />
+              <text class="dg-lead" x="760" y="154" text-anchor="middle">Một request refresh</text>
+              <text class="dg-sub" x="760" y="178" text-anchor="middle">token cũ dùng một lần</text>
+
+              <rect class="dg-box dg-box-bill" x="960" y="44" width="236" height="86" rx="14" />
+              <text class="dg-lead" x="1078" y="78" text-anchor="middle">Lưu cặp token mới</text>
+              <text class="dg-sub" x="1078" y="102" text-anchor="middle">mọi bên chờ cùng đi tiếp</text>
+
+              <rect class="dg-box dg-box-money" x="960" y="190" width="236" height="86" rx="14" />
+              <text class="dg-lead" x="1078" y="224" text-anchor="middle">Kết thúc phiên</text>
+              <text class="dg-sub" x="1078" y="248" text-anchor="middle">đóng stream, xóa token</text>
+
+              <rect class="dg-box dg-box-muted" x="640" y="298" width="240" height="60" rx="12" />
+              <text class="dg-body" x="760" y="323" text-anchor="middle">SSE close:</text>
+              <text class="dg-mono" x="760" y="346" text-anchor="middle">session_ended</text>
+
+              <rect class="dg-box dg-box-money" x="960" y="302" width="236" height="56" rx="12" />
+              <text class="dg-lead" x="1078" y="336" text-anchor="middle">Login + cảnh báo</text>
+
+              <text class="dg-cap" x="24" y="422">Mở app lần đầu chưa từng có token vẫn vào Welcome bình thường, không
+                hiện cảnh báo hết phiên.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-4">
+            <div class="tsl-chip">Mỗi lần refresh: <strong>dùng token cũ, cấp token mới</strong>; server lưu dấu đã
+              dùng.</div>
+            <div class="tsl-chip">Token đã dùng xuất hiện lại &#8594; server <strong>thu hồi phiên liên quan</strong>.
+            </div>
+            <div class="tsl-chip">Hai request cùng gặp 401 <strong>không tự refresh riêng</strong>; ai đến sau chờ lượt
+              đang chạy.</div>
+            <div class="tsl-chip is-rose">Không phải mọi lỗi refresh đều là bị tấn công &#8212; lỗi mạng cũng làm app
+              kết thúc phiên theo implementation hiện tại.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 10: CHI TIẾT CÁC MODULE: 3. GROUP & MEMBERSHIP
+         ============================================== -->
+    <section class="slide" id="slide-7" data-index="7">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">3</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Group &amp; Membership <span class="module-sub-author">(Phạm Thanh Lam)</span> &#8212; Vòng đời nhóm, phân quyền &amp; đồng bộ tuần tự</span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">Mã mời Base62 chống dò quét. <strong>Mọi thay đổi đều qua LockActiveGroup FOR UPDATE</strong> và tăng <code>roster_version</code> tuần tự để đồng bộ delta qua SSE.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 380" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Năm giai đoạn vòng đời nhóm và ba trụ cột kiến trúc: Khóa mức hàng, Outbox tuần tự và Bắt kịp delta">
+              <defs>
+                <marker id="dgArrowStep" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <!-- Băng 1: 5 giai đoạn vòng đời nhóm & thành viên -->
+              <rect class="dg-box" x="10" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="116" y="42" text-anchor="middle">1 &#183; Tạo nhóm &amp; Mời</text>
+              <text class="dg-sub" x="116" y="66" text-anchor="middle">Base62, tùy chỉnh hạn dùng</text>
+
+              <rect class="dg-box" x="254" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="360" y="42" text-anchor="middle">2 &#183; Tham gia nhóm</text>
+              <text class="dg-sub" x="360" y="66" text-anchor="middle">preview rate limit, khóa hàng</text>
+
+              <rect class="dg-box" x="498" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="604" y="42" text-anchor="middle">3 &#183; Khóa nộp bill</text>
+              <text class="dg-sub" x="604" y="66" text-anchor="middle">đóng băng trước khi chốt nợ</text>
+
+              <rect class="dg-box" x="742" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="848" y="42" text-anchor="middle">4 &#183; Rời / Chuyển quyền</text>
+              <text class="dg-sub" x="848" y="66" text-anchor="middle">chặn nếu còn nợ chưa trả</text>
+
+              <rect class="dg-box dg-box-accent" x="986" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="1092" y="42" text-anchor="middle">5 &#183; Giải tán (Archive)</text>
+              <text class="dg-sub" x="1092" y="66" text-anchor="middle">chỉ khi tất toán sạch 100%</text>
+
+              <path class="dg-edge" d="M 226 48 L 248 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 470 48 L 492 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 714 48 L 736 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 958 48 L 980 48" marker-end="url(#dgArrowStep)" />
+
+              <!-- Băng 2: Ba trụ cột kiến trúc kỹ thuật -->
+              <line class="dg-rule" x1="10" y1="120" x2="1198" y2="120" />
+              <text class="dg-label dg-label-strong" x="604" y="125" text-anchor="middle">Kiến trúc kỹ thuật: Khóa mức hàng, Transactional Outbox &amp; Đồng bộ Delta</text>
+
+              <rect class="dg-box" x="10" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="34" y="180">1 &#183; Khóa Hàng &amp; Ràng Buộc</text>
+              <text class="dg-body" x="34" y="208">Khóa dòng <tspan class="dg-mono">groups FOR UPDATE</tspan> ngăn ngừa</text>
+              <text class="dg-body" x="34" y="230">xung đột dữ liệu khi nhiều người vào cùng lúc.</text>
+              <text class="dg-body" x="34" y="252">Kiểm tra công nợ hai chiều trước khi cho phép rời,</text>
+              <text class="dg-body" x="34" y="274">chuyển giao Captain nguyên tử bằng <tspan class="dg-mono">NOWAIT</tspan>.</text>
+
+              <rect class="dg-box" x="420" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="444" y="180">2 &#183; roster_version &amp; Outbox</text>
+              <text class="dg-body" x="444" y="208">Tăng <tspan class="dg-mono">roster_version</tspan> đơn điệu trong cùng</text>
+              <text class="dg-body" x="444" y="230">DB transaction mutation. Ghi nhật ký sự kiện vào</text>
+              <text class="dg-body" x="444" y="252"><tspan class="dg-mono">group_events</tspan> và hẹn lệnh <tspan class="dg-mono">pg_notify</tspan>.</text>
+              <text class="dg-body dg-label-strong" x="444" y="274">Rollback thì không bao giờ phát sinh sự kiện ma.</text>
+
+              <rect class="dg-box dg-box-accent" x="830" y="148" width="368" height="140" rx="14" />
+              <text class="dg-lead" x="854" y="180">3 &#183; Bắt Kịp Delta (/sync)</text>
+              <text class="dg-body" x="854" y="208">Shared Listener nhận notify, đẩy SSE tới client.</text>
+              <text class="dg-body" x="854" y="230">Client mất mạng thấy lệch phiên bản tự gọi</text>
+              <text class="dg-body" x="854" y="252"><tspan class="dg-mono">GET /groups/{id}/sync?since=N</tspan>.</text>
+              <text class="dg-body" x="854" y="274">Vá trực tiếp danh sách, không cần tải lại toàn bộ trang.</text>
+
+              <path class="dg-edge" d="M 394 218 L 414 218" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 804 218 L 824 218" marker-end="url(#dgArrowStep)" />
+
+              <!-- Chú thích chi tiết -->
+              <rect class="dg-box dg-box-muted" x="10" y="308" width="1188" height="58" rx="12" />
+              <text class="dg-body" x="34" y="343">Payload sự kiện vượt 8KB pg_notify: backend tự động cắt gọt bản gầy (chỉ giữ version); client nhận diện bước nhảy sẽ tự động gọi /sync để lấy chi tiết mà không làm nghẽn kênh realtime.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-3">
+            <div class="tsl-chip is-rose">
+              <span class="tsl-chip-head">Bất biến công nợ</span>
+              Chặn 100% rời nhóm hoặc kick thành viên nếu còn khoản nợ chưa quyết toán (cả chiều <code>payable</code> lẫn <code>receivable</code>) &#8212; bảo vệ tính toàn vẹn sổ cái.
+            </div>
+            <div class="tsl-chip is-teal">
+              <span class="tsl-chip-head">Khóa nộp &amp; Chốt nợ</span>
+              Captain kích hoạt <code>bill_submission_locked_at</code> đóng băng nộp hóa đơn trước khi chốt nợ (<code>finalize-all</code>) để ngăn race condition phát sinh thêm món.
+            </div>
+            <div class="tsl-chip is-example">
+              <span class="tsl-chip-head">Đồng bộ delta bền bỉ</span>
+              Mất kết nối mạng không làm hỏng dữ liệu client: <code>roster_version</code> tăng đơn điệu giúp client phát hiện khoảng cách phiên bản và tự động bù đắp qua <code>/sync</code>.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 8: CHI TIẾT CÁC MODULE: 4. OCR PROCESSING
+         ============================================== -->
+    <section class="slide" id="slide-8" data-index="8">
+      <div class="slide-content module-detail-slide">
+
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">4</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">OCR Processing <span class="module-sub-author">(Nguyễn Trọng Tín)</span></span>
+          </div>
+        </div>
+
+        <!-- KHUNG SƠ ĐỒ KIẾN TRÚC THỰC TẾ -->
+        <div class="module-diagram-wrapper">
+          <div class="module-diagram-card">
+            <img src="assets/diagram_ocr_processing.png" alt="Sơ đồ kiến trúc quy trình OCR Processing"
+              class="module-diagram-image" />
+          </div>
+        </div>
+
+        <!-- Ghi chú dưới sơ đồ OCR Processing -->
+        <p class="diagram-caption">Sơ đồ luồng xử lý bóc tách hóa đơn OCR</p>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 9: CHI TIẾT CÁC MODULE: 5. BILL & EXPENSE ALLOCATION
+         ============================================== -->
+    <section class="slide" id="slide-9" data-index="9">
+      <div class="slide-content module-detail-slide">
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">5</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Bill &amp; Expense Allocation <span class="module-sub-author">(Nguyễn Trọng Tín)</span></span>
+          </div>
+        </div>
+
+        <!-- BỐ CỤC CHÍNH: SƠ ĐỒ TRÊN, CHI TIẾT DƯỚI -->
+        <div class="bill-layout-container">
+
+          <!-- SƠ ĐỒ QUY TRÌNH TỔNG QUAN -->
+          <div class="bill-diagram-top">
+            <img src="assets/diagram_bill_allocation.png"
+              alt="Sơ đồ quy trình phân bổ chia tiền Bill &amp; Expense Allocation" />
+          </div>
+
+          <!-- 2 CỘT: MA TRẬN PHÂN QUYỀN & CÔNG THỨC CHIA TIỀN -->
+          <div class="bill-detail-grid">
+
+            <!-- CỘT 1: MA TRẬN PHÂN QUYỀN & LIFECYCLE GUARD -->
+            <div class="bill-card">
+              <div class="bill-card-header">
+                <h3 class="bill-card-title">1. Phân Quyền &amp; Khóa Trạng Thái (RBAC &amp; Guard)</h3>
+              </div>
+
+              <table class="rbac-table">
+                <thead>
+                  <tr>
+                    <th>Hành Động / Quyền Hạn</th>
+                    <th>Admin Nhóm</th>
+                    <th>Người Tạo / Ứng Tiền</th>
+                    <th>Thành Viên</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Tạo &amp; Quét Hóa Đơn</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                  </tr>
+                  <tr>
+                    <td>Gán Người Ăn &amp; Trọng Số Món</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-xmark check-no"></i></td>
+                  </tr>
+                  <tr>
+                    <td>Chốt Phân Bổ (Finalize Bill)</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-xmark check-no"></i></td>
+                    <td><i class="fa-solid fa-circle-xmark check-no"></i></td>
+                  </tr>
+                  <tr>
+                    <td>Xem Chi Tiết Món &amp; Phần Nợ</td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                    <td><i class="fa-solid fa-circle-check check-yes"></i></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- CỘT 2: CÔNG THỨC CHIA TIỀN & LÀM TRÒN HAMILTON -->
+            <div class="bill-card">
+              <div class="bill-card-header">
+                <h3 class="bill-card-title">2. Công Thức Chia Tiền &amp; Thuật Toán Hamilton</h3>
+              </div>
+
+              <!-- Bước 1 -->
+              <div class="formula-step">
+                <div class="formula-step-title">
+                  <span class="step-badge">Bước 1</span>
+                  <span>Tiền món theo người ăn (Item Share)</span>
+                </div>
+                <div class="formula-box">
+                  Tiền món = Giá món × (Trọng số phần ăn của bạn / Tổng trọng số món)
+                </div>
+                <p class="formula-desc">Ai ăn món gì trả món đó. Nếu ăn chung thì chia đều hoặc chia theo trọng số phần
+                  ăn.</p>
+              </div>
+
+              <!-- Bước 2 -->
+              <div class="formula-step">
+                <div class="formula-step-title">
+                  <span class="step-badge">Bước 2</span>
+                  <span>Phân bổ phụ phí (VAT, Phí DV, Giảm giá)</span>
+                </div>
+                <div class="formula-box">
+                  Phụ phí cá nhân = Tổng phụ phí × (Tiền món của bạn / Tổng tiền các món)
+                </div>
+                <p class="formula-desc">Chia sẻ phụ phí theo tỷ lệ tiêu dùng: Người ăn nhiều chịu phí nhiều, ăn ít chịu
+                  phí ít.</p>
+              </div>
+
+              <!-- Bước 3 -->
+              <div class="formula-step">
+                <div class="formula-step-title">
+                  <span class="step-badge">Bước 3</span>
+                  <span>Làm tròn Hamilton - Khớp 100% từng đồng</span>
+                </div>
+                <div class="formula-box">
+                  Lấy phần nguyên VND + Phân bổ số dư lẻ cho người có số thập phân lớn nhất
+                </div>
+                <p class="formula-desc">Tránh hoàn toàn lỗi lệch 1 đồng do làm tròn số lẻ. Tổng tiền thu về luôn khớp
+                  chuẩn xác 100%.</p>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 10: CHI TIẾT CÁC MODULE: 6. DEBT & SETTLEMENT
+         ============================================== -->
+    <!-- ==============================================
+         SLIDE 13: CHI TIẾT CÁC MODULE: 6. DEBT & SETTLEMENT (D1)
+         ============================================== -->
+    <section class="slide" id="slide-10" data-index="10">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">6</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Debt &amp; Settlement <span class="module-sub-author">(Phạm Lê Hoàng Nam)</span></span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">Tạo QR chưa đồng nghĩa đã thanh toán: <strong>creditor xác nhận thì khoản nợ mới
+            settled</strong>. Debt là nghĩa vụ, payment là một lần xử lý.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 440" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Hai lane trạng thái payment và debt qua ba mốc tạo QR, gửi biên lai và xác nhận, kèm nhánh từ chối">
+              <defs>
+                <marker id="dgArrowLane" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+                <marker id="dgArrowReject" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#BE123C" />
+                </marker>
+              </defs>
+
+              <rect class="dg-box dg-box-accent" x="265" y="14" width="230" height="48" rx="12" />
+              <text class="dg-lead" x="380" y="44" text-anchor="middle">1 &#183; Lam tạo QR</text>
+              <rect class="dg-box dg-box-accent" x="575" y="14" width="230" height="48" rx="12" />
+              <text class="dg-lead" x="690" y="44" text-anchor="middle">2 &#183; Lam gửi biên lai</text>
+              <rect class="dg-box dg-box-accent" x="885" y="14" width="230" height="48" rx="12" />
+              <text class="dg-lead" x="1000" y="44" text-anchor="middle">3 &#183; Nam xác nhận</text>
+
+              <text class="dg-lane" x="24" y="136">Payment</text>
+              <text class="dg-sub" x="24" y="158">một lần xử lý</text>
+              <rect class="dg-box" x="265" y="110" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="380" y="149" text-anchor="middle">pending_proof</text>
+              <rect class="dg-box" x="575" y="110" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="690" y="149" text-anchor="middle">pending_confirmation</text>
+              <rect class="dg-box dg-box-bill" x="885" y="110" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="1000" y="149" text-anchor="middle">confirmed</text>
+              <path class="dg-edge" d="M 495 142 L 569 142" marker-end="url(#dgArrowLane)" />
+              <path class="dg-edge" d="M 805 142 L 879 142" marker-end="url(#dgArrowLane)" />
+
+              <text class="dg-lane" x="24" y="248">Debt</text>
+              <text class="dg-sub" x="24" y="270">nghĩa vụ trả</text>
+              <rect class="dg-box dg-box-money" x="265" y="222" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="380" y="261" text-anchor="middle">awaiting</text>
+              <rect class="dg-box dg-box-money" x="575" y="222" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="690" y="261" text-anchor="middle">pending_confirmation</text>
+              <rect class="dg-box dg-box-bill" x="885" y="222" width="230" height="64" rx="13" />
+              <text class="dg-mono" x="1000" y="261" text-anchor="middle">settled</text>
+              <path class="dg-edge" d="M 495 254 L 569 254" marker-end="url(#dgArrowLane)" />
+              <path class="dg-edge" d="M 805 254 L 879 254" marker-end="url(#dgArrowLane)" />
+
+              <path class="dg-edge" stroke="#BE123C" d="M 690 288 L 690 326" marker-end="url(#dgArrowReject)" />
+              <rect class="dg-box dg-box-money" x="330" y="330" width="740" height="70" rx="14"
+                stroke-dasharray="7 6" />
+              <text class="dg-lead dg-name-money" x="700" y="359" text-anchor="middle">Nam từ chối</text>
+              <text class="dg-body" x="700" y="384" text-anchor="middle">payment kết thúc ở
+                <tspan class="dg-mono">rejected</tspan>, debt trở về <tspan class="dg-mono">awaiting</tspan> &#8212; lần
+                trả sau là một payment mới.
+              </text>
+
+              <text class="dg-cap" x="24" y="428">Debt và payment dùng hai bộ trạng thái riêng; không đổi một payment
+                đã rejected thành thành công.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-2">
+            <div class="tsl-chip is-rose">
+              <span class="tsl-chip-head">Ranh giới của hệ thống</span>
+              <strong>PaySplit ghi nhận và điều phối; tiền được chuyển ngoài app.</strong> Hệ thống không tự đối soát
+              giao dịch ngân hàng — ảnh biên lai là lời khai của người gửi, không phải bằng chứng đã nhận tiền.
+            </div>
+            <div class="tsl-chip is-example">
+              <span class="tsl-chip-head">Theo ví dụ</span>
+              Tổng phải thu chỉ giảm khi khoản nợ được xác nhận <code>settled</code>. Sau khi khoản của Lam được xác
+              nhận, <strong>Nam vẫn còn phải thu Tín 100.000đ</strong>.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 14: DEBT & SETTLEMENT — QUYỀN XÁC NHẬN & BIÊN LAI HAI PHA (D2)
+         ============================================== -->
+    <section class="slide" id="settlement-proof" data-index="11">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">6</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Debt &amp; Settlement <span class="module-sub-author">(Phạm Lê Hoàng Nam)</span> &#8212; Đúng người, đúng khoản, có kiểm tra</span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">Chuyển khoản diễn ra ở ngân hàng, <strong>xác nhận thuộc về creditor</strong>. Riêng bước
+          gửi biên lai phải chạy hai pha vì lưu trữ ảnh và database không cùng một transaction.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 404" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Năm bước nghiệp vụ từ tạo QR tới xác nhận, và ba pha Prepare, upload, Submit của bước gửi biên lai">
+              <defs>
+                <marker id="dgArrowStep" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <!-- Băng 1: 5 bước nghiệp vụ -->
+              <rect class="dg-box" x="10" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="116" y="42" text-anchor="middle">Lam tạo QR</text>
+              <text class="dg-sub" x="116" y="66" text-anchor="middle">chọn khoản nợ cùng nhóm</text>
+
+              <rect class="dg-box dg-box-muted" x="254" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="360" y="42" text-anchor="middle">Chuyển tiền</text>
+              <text class="dg-sub" x="360" y="66" text-anchor="middle">ở ngân hàng, ngoài app</text>
+
+              <rect class="dg-box" x="498" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="604" y="42" text-anchor="middle">Lam gửi biên lai</text>
+              <text class="dg-sub" x="604" y="66" text-anchor="middle">ảnh và ghi chú</text>
+
+              <rect class="dg-box" x="742" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="848" y="42" text-anchor="middle">Nam mở, kiểm tra</text>
+              <text class="dg-sub" x="848" y="66" text-anchor="middle">creditor, không phải Captain</text>
+
+              <rect class="dg-box dg-box-accent" x="986" y="10" width="212" height="76" rx="12" />
+              <text class="dg-lead" x="1092" y="42" text-anchor="middle">Xác nhận / từ chối</text>
+              <text class="dg-sub" x="1092" y="66" text-anchor="middle">trạng thái nợ đổi tại đây</text>
+
+              <path class="dg-edge" d="M 226 48 L 248 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 470 48 L 492 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 714 48 L 736 48" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 958 48 L 980 48" marker-end="url(#dgArrowStep)" />
+
+              <!-- Băng 2: ba pha của bước gửi biên lai -->
+              <line class="dg-rule" x1="10" y1="120" x2="1198" y2="120" />
+              <text class="dg-label dg-label-strong" x="604" y="125" text-anchor="middle">Bước gửi biên lai, nhìn từ
+                backend</text>
+
+              <rect class="dg-box" x="10" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="34" y="180">1 &#183; Prepare</text>
+              <text class="dg-body" x="34" y="208">Khóa nhóm, kiểm tra người gọi đúng là</text>
+              <text class="dg-body" x="34" y="230">debtor, payment còn <tspan class="dg-mono">pending_proof</tspan>,
+              </text>
+              <text class="dg-body" x="34" y="252">ngân hàng của creditor còn hợp lệ.</text>
+              <text class="dg-body" x="34" y="274">Chốt ý định trước khi tốn lưu trữ ảnh.</text>
+
+              <rect class="dg-box" x="420" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="444" y="180">2 &#183; Upload ảnh</text>
+              <text class="dg-body" x="444" y="208">Đọc magic bytes để nhận đúng định dạng</text>
+              <text class="dg-body" x="444" y="230">JPEG / PNG / HEIC, không tin header client,</text>
+              <text class="dg-body" x="444" y="252">rồi đẩy ảnh lên Cloudinary.</text>
+              <text class="dg-body" x="444" y="274">Upload hỏng thì giữ nguyên ý định.</text>
+
+              <rect class="dg-box dg-box-accent" x="830" y="148" width="368" height="140" rx="14" />
+              <text class="dg-lead" x="854" y="180">3 &#183; Submit</text>
+              <text class="dg-body" x="854" y="208">Khóa các khoản nợ, tất cả phải còn</text>
+              <text class="dg-body" x="854" y="230"><tspan class="dg-mono">awaiting</tspan>, rồi chuyển sang</text>
+              <text class="dg-body" x="854" y="252"><tspan class="dg-mono">pending_confirmation</tspan>.</text>
+              <text class="dg-body dg-label-strong" x="854" y="274">Snapshot ngân hàng chốt tại bước này.</text>
+
+              <path class="dg-edge" d="M 394 218 L 414 218" marker-end="url(#dgArrowStep)" />
+              <path class="dg-edge" d="M 804 218 L 824 218" marker-end="url(#dgArrowStep)" />
+
+              <rect class="dg-box dg-box-muted" x="10" y="308" width="1188" height="58" rx="12" />
+              <text class="dg-body" x="34" y="343">Ảnh đã lên nhưng ghi database thất bại: backend xóa ảnh bù hoặc lên
+                lịch dọn, đồng thời cấp mã thao tác mới để lần gửi lại không đè lên tệp cũ.</text>
+
+              <text class="dg-cap" x="10" y="394">&#8220;Hai pha&#8221; ở đây là quy trình ứng dụng với hai bước
+                database quanh lần upload, không phải distributed two-phase commit.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-2">
+            <div class="tsl-chip is-rose">
+              <span class="tsl-chip-head">Phân quyền</span>
+              Chỉ <strong>creditor</strong> được confirm hoặc reject. Trong ví dụ, Lam là Captain nhưng vẫn không tự xác
+              nhận được rằng Nam đã nhận tiền.
+            </div>
+            <div class="tsl-chip is-teal">
+              <span class="tsl-chip-head">Phạm vi gộp nợ</span>
+              Một payment gộp được nhiều khoản nợ, nhưng phải <strong>cùng nhóm, cùng người nợ và cùng người
+                nhận</strong>. Ví dụ: Lam nợ Nam 100.000đ ở bill A và 50.000đ ở bill B, một lần trả 150.000đ phủ cả hai.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 15: DEBT & SETTLEMENT — ĐỒNG THỜI & GỬI LẠI (D3)
+         ============================================== -->
+    <section class="slide" id="settlement-reliability" data-index="12">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">6</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Debt &amp; Settlement <span class="module-sub-author">(Phạm Lê Hoàng Nam)</span> &#8212; Thao tác đồng thời &amp; gửi lại</span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">Đua thao tác và gửi lại là hai bài toán khác nhau: <strong>khóa để tuần tự hóa</strong>,
+          <strong>idempotency key để nhận diện retry</strong>. Không dùng một cơ chế thay cho cả hai.
+        </div>
+
+        <div class="tsl-body">
+          <div class="tsl-split">
+
+            <div class="tsl-panel">
+              <div class="tsl-panel-title"><span>A</span>Void hóa đơn đua với nộp biên lai</div>
+              <div class="tsl-figure">
+                <svg viewBox="0 0 580 340" preserveAspectRatio="xMidYMid meet" role="img"
+                  aria-label="Thứ tự khóa nhóm, khóa các khoản nợ rồi khóa payment quyết định ai thắng khi void bill đua với nộp proof">
+                  <defs>
+                    <marker id="dgArrowRace" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                      <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                    </marker>
+                  </defs>
+
+                  <rect class="dg-box dg-box-accent" x="10" y="8" width="560" height="56" rx="13" />
+                  <text class="dg-body" x="290" y="33" text-anchor="middle">Cả hai đường ghi đều khóa theo cùng một
+                    thứ tự:</text>
+                  <text class="dg-mono" x="290" y="55" text-anchor="middle">group &#8594; debts (UUID tăng dần) &#8594;
+                    payment</text>
+
+                  <path class="dg-edge" d="M 160 68 L 160 100" marker-end="url(#dgArrowRace)" />
+                  <path class="dg-edge" d="M 420 68 L 420 100" marker-end="url(#dgArrowRace)" />
+
+                  <rect class="dg-box dg-box-money" x="10" y="104" width="270" height="96" rx="13" />
+                  <text class="dg-lead" x="145" y="134" text-anchor="middle">Void thắng trước</text>
+                  <text class="dg-body" x="145" y="160" text-anchor="middle">Nợ đã <tspan
+                      class="dg-mono">voided</tspan>,</text>
+                  <text class="dg-body" x="145" y="182" text-anchor="middle">biên lai không gắn vào được</text>
+
+                  <rect class="dg-box dg-box-bill" x="300" y="104" width="270" height="96" rx="13" />
+                  <text class="dg-lead" x="435" y="134" text-anchor="middle">Biên lai thắng trước</text>
+                  <text class="dg-body" x="435" y="160" text-anchor="middle">Nợ đã <tspan
+                      class="dg-mono">pending_confirmation</tspan>,</text>
+                  <text class="dg-body" x="435" y="182" text-anchor="middle">void bị chặn với 409</text>
+
+                  <rect class="dg-box dg-box-muted" x="10" y="216" width="560" height="104" rx="13" />
+                  <text class="dg-body" x="34" y="246">Tạo QR chưa giữ chỗ khoản nợ: ở giai đoạn đó Captain</text>
+                  <text class="dg-body" x="34" y="272">vẫn void được, payment đang <tspan
+                      class="dg-mono">pending_proof</tspan></text>
+                  <text class="dg-body" x="34" y="298">chuyển sang <tspan class="dg-mono">superseded</tspan>.</text>
+                </svg>
+              </div>
+            </div>
+
+            <div class="tsl-panel">
+              <div class="tsl-panel-title"><span>B</span>Server đã lưu nhưng mất phản hồi</div>
+              <div class="tsl-figure">
+                <svg viewBox="0 0 580 340" preserveAspectRatio="xMidYMid meet" role="img"
+                  aria-label="Gửi lại cùng nội dung với cùng idempotency key nhận lại kết quả đã lưu thay vì lỗi trạng thái mới">
+                  <defs>
+                    <marker id="dgArrowRetry" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                      <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                    </marker>
+                  </defs>
+
+                  <line class="dg-life" x1="120" y1="34" x2="120" y2="262" />
+                  <line class="dg-life" x1="450" y1="34" x2="450" y2="262" />
+
+                  <rect class="dg-box dg-box-identity" x="20" y="6" width="200" height="40" rx="10" />
+                  <text class="dg-lead" x="120" y="32" text-anchor="middle">App của Lam</text>
+                  <rect class="dg-box dg-box-identity" x="350" y="6" width="200" height="40" rx="10" />
+                  <text class="dg-lead" x="450" y="32" text-anchor="middle">PaySplit API</text>
+
+                  <path class="dg-edge" d="M 120 88 L 444 88" marker-end="url(#dgArrowRetry)" />
+                  <text class="dg-label" x="285" y="80" text-anchor="middle">gửi biên lai + Idempotency-Key</text>
+
+                  <text class="dg-label dg-label-strong" x="450" y="118" text-anchor="middle">COMMIT thành công</text>
+
+                  <path class="dg-edge dg-edge-dash" stroke="#BE123C" d="M 450 150 L 300 150" />
+                  <line stroke="#BE123C" stroke-width="2.4" x1="367" y1="142" x2="383" y2="158" />
+                  <line stroke="#BE123C" stroke-width="2.4" x1="383" y1="142" x2="367" y2="158" />
+                  <text class="dg-label" x="230" y="144" text-anchor="middle" fill="#BE123C">phản hồi mất trên
+                    đường</text>
+
+                  <path class="dg-edge" d="M 120 200 L 444 200" marker-end="url(#dgArrowRetry)" />
+                  <text class="dg-label" x="285" y="192" text-anchor="middle">gửi lại cùng ảnh, cùng ghi chú</text>
+
+                  <path class="dg-edge dg-edge-dash" d="M 450 248 L 126 248" marker-end="url(#dgArrowRetry)" />
+                  <text class="dg-label" x="288" y="240" text-anchor="middle">phát lại kết quả đã lưu</text>
+
+                  <rect class="dg-box dg-box-muted" x="10" y="268" width="560" height="64" rx="13" />
+                  <text class="dg-body" x="290" y="294" text-anchor="middle">Biên lai: key sinh theo payment + nội dung
+                    gửi &#8594; gửi lại là phát lại.</text>
+                  <text class="dg-body" x="290" y="316" text-anchor="middle">Tạo QR: key mới mỗi lượt &#8594; sau khi
+                    bị từ chối sẽ là một payment mới.</text>
+                </svg>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="tsl-note">Nhắc nợ tối đa <strong>3 lần</strong>, cách nhau <strong>ít nhất 24 giờ</strong>; nhắc
+            thủ công và job tự động dùng chung một bộ đếm. Idempotency key không thay thế transaction và khóa &#8212; ba
+            cơ chế giải quyết ba việc khác nhau.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 11: CHI TIẾT CÁC MODULE: 7. NOTIFICATION
+         ============================================== -->
+    <section class="slide" id="slide-11" data-index="13">
+      <div class="slide-content module-detail-slide">
+        <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">7</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Notification <span class="module-sub-author">(Nguyễn Trọng Tín)</span></span>
+          </div>
+        </div>
+
+        <!-- BỐ CỤC CHÍNH: SƠ ĐỒ TRÊN, CHI TIẾT DƯỚI -->
+        <div class="notif-layout-container">
+
+          <!-- SƠ ĐỒ QUY TRÌNH TỔNG QUAN -->
+          <div class="notif-diagram-top">
+            <img src="assets/diagram_notification.png" alt="Sơ đồ quy trình Notification" />
+          </div>
+
+          <!-- 2 CỘT: KỊCH BẢN THÔNG BÁO & CƠ CHẾ KỸ THUẬT -->
+          <div class="notif-detail-grid">
+
+            <!-- CỘT 1: CÁC KỊCH BẢN THÔNG BÁO & DEEP LINK -->
+            <div class="notif-card">
+              <div class="notif-card-header">
+                <div class="notif-card-icon icon-notif-events"><i class="fa-solid fa-bell"></i></div>
+                <h3 class="notif-card-title">1. Kịch Bản Thông Báo &amp; Điều Hướng (Events &amp; Deep Link)</h3>
+              </div>
+
+              <div class="notif-items-list">
+                <!-- Item 1: Nhắc nợ -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-comment-dollar" style="color: #D97706;"></i>
+                      Nhắc nợ thông minh (Smart Nudge)</span>
+                  </div>
+                  <p class="notif-item-desc">Chủ nợ gửi lời nhắc &rarr; Push thông báo hiện ngay trên máy con nợ. Nhấp
+                    vào mở trực tiếp popup <b>Dynamic VietQR</b> để chuyển khoản ngay.</p>
+                </div>
+
+                <!-- Item 2: Chốt hóa đơn -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-receipt" style="color: #4F46E5;"></i> Hóa đơn
+                      đã chốt chia tiền</span>
+                  </div>
+                  <p class="notif-item-desc">Hóa đơn hoàn tất phân bổ &rarr; Bắn thông báo kèm chi tiết số tiền phải
+                    đóng của từng thành viên sau khi chạy thuật toán Hamilton.</p>
+                </div>
+
+                <!-- Item 3: Xác nhận thanh toán -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-circle-check" style="color: #16A34A;"></i> Xác
+                      nhận gạch nợ thành công</span>
+                  </div>
+                  <p class="notif-item-desc">Thông báo khi chủ nợ xác nhận đã nhận được tiền chuyển khoản, công nợ tự
+                    động được chuyển sang trạng thái tất toán (settled).</p>
+                </div>
+
+                <!-- Item 4: Mời tham gia nhóm -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-user-group" style="color: #64748B;"></i> Lời
+                      mời tham gia nhóm chi tiêu</span>
+                  </div>
+                  <p class="notif-item-desc">Thông báo khi được thêm hoặc nhận link mời vào nhóm, chạm vào chuyển thẳng
+                    đến màn hình danh sách thành viên nhóm.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- CỘT 2: CƠ CHẾ KỸ THUẬT ĐẢM BẢO TIN CẬY -->
+            <div class="notif-card">
+              <div class="notif-card-header">
+                <div class="notif-card-icon icon-notif-tech"><i class="fa-solid fa-shield-halved"></i></div>
+                <h3 class="notif-card-title">2. Kiến Trúc Xử Lý Ngầm &amp; Độ Tin Cậy (Architecture)</h3>
+              </div>
+
+              <div class="notif-items-list">
+                <!-- Tech 1: Transactional Enqueue -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-database" style="color: #DC2626;"></i>
+                      Transactional Enqueue (ACID Guaranteed)</span>
+                  </div>
+                  <p class="notif-item-desc">Lưu bản ghi In-App và đẩy job River Queue trong <b>cùng 1 DB
+                      Transaction</b>. Loại bỏ 100% rủi ro <i>Ghost Push</i> khi thao tác nghiệp vụ bị rollback.</p>
+                </div>
+
+                <!-- Tech 2: Async & Auto Retry -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-arrows-rotate" style="color: #0284C7;"></i> Xử
+                      lý ngầm &amp; Tự động Retry Backoff</span>
+                  </div>
+                  <p class="notif-item-desc">API trả lời HTTP 200 tức thời không phụ thuộc độ trễ Firebase. Worker bốc
+                    job chạy ngầm, tự động retry với Exponential Backoff nếu mạng lỗi.</p>
+                </div>
+
+                <!-- Tech 3: FCM Token Invalidation -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-broom" style="color: #15803D;"></i> Tự động dọn
+                      dẹp FCM Token rác</span>
+                  </div>
+                  <p class="notif-item-desc">Khi người dùng gỡ app hoặc đổi máy, Worker tự phát hiện mã lỗi
+                    <code>UNREGISTERED</code> từ Firebase và xóa token lỗi khỏi DB để tiết kiệm tài nguyên.</p>
+                </div>
+
+                <!-- Tech 4: Deep Link Payload -->
+                <div class="notif-item">
+                  <div class="notif-item-title-row">
+                    <span class="notif-item-title"><i class="fa-solid fa-arrow-up-right-from-square"
+                        style="color: #7E22CE;"></i> Structured Payload &amp; Deep Link</span>
+                  </div>
+                  <p class="notif-item-desc">Push payload mang các ID thực thể (<code>bill_id</code>,
+                    <code>group_id</code>), cho phép Flutter App kích hoạt router chuyển ngay đến trang thao tác tương
+                    ứng.</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==============================================
+         SLIDE 15: DEMO TRẢI NGHIỆM & LỜI CẢM ƠN
+         ============================================== -->
+    <section class="slide" id="slide-15" data-index="14">
+      <div class="slide-content closing-slide">
+        <div class="closing-grid">
+
+          <!-- Cột bên trái: Demo links & Lời cảm ơn -->
+          <div class="closing-left">
+
+            <h2 class="closing-title">Demo Thực Nghiệm Ứng Dụng</h2>
+
+            <p class="closing-desc">
+              Trải nghiệm thực tế toàn bộ quy trình quét hóa đơn, bóc tách OCR tự động, phân bổ chia tiền bằng thuật toán Hamilton và thanh toán qua Dynamic VietQR.
+            </p>
+
+            <!-- Khối liên kết xem demo: YouTube & File video -->
+            <div class="demo-links-card">
+              <div class="demo-link-group">
+                <span class="demo-link-label">
+                  <i class="fa-brands fa-youtube" style="color: #EF4444;"></i>
+                  Xem demo ở YouTube:
+                </span>
+                <a href="https://www.youtube.com/watch?reload=9&v=mzsEHRDnKLI&feature=youtu.be" target="_blank" rel="noopener noreferrer" class="demo-link-action yt-action" title="Mở video demo trên YouTube">
+                  <span class="link-url">https://www.youtube.com/watch?reload=9&v=mzsEHRDnKLI&feature=youtu.be</span>
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+              </div>
+
+              <div class="demo-link-group">
+                <span class="demo-link-label">
+                  <i class="fa-solid fa-file-video" style="color: #0284C7;"></i>
+                  Hoặc xem file video kèm theo bài nộp
+                </span>
+              </div>
+            </div>
+
+            <!-- Khối Lời cảm ơn & Q&A -->
+            <div class="closing-thanks-box">
+              <div class="thanks-icon"><i class="fa-solid fa-circle-check"></i></div>
+              <div class="thanks-text-group">
+                <h3 class="thanks-heading">Cảm ơn mọi người đã xem buổi thuyết trình này!</h3>
+                <p class="thanks-caption">PaySplit sẵn sàng lắng nghe ý kiến đóng góp của mọi người.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cột bên phải: Ảnh điện thoại từ slide 1 -->
+          <div class="closing-right">
+            <div class="phone-mockup">
+              <img src="assets/app_screenshot.png" alt="Giao diện thực tế PaySplit — Ứng dụng di động"
+                class="screenshot-img">
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Nút điều hướng & Đánh số trang slide -->
+  <nav class="nav-controls" aria-label="Điều hướng slide">
+    <button class="nav-btn" id="btnPrev" title="Slide trước" disabled>
+      <i class="fa-solid fa-arrow-left"></i>
+    </button>
+    <div class="slide-counter" id="slideCounter" aria-label="Số trang slide">
+      <span class="current-slide">01</span>
+      <span class="slide-sep">/</span>
+      <span class="total-slides">15</span>
+    </div>
+    <button class="nav-btn" id="btnNext" title="Slide tiếp theo">
+      <i class="fa-solid fa-arrow-right"></i>
+    </button>
+  </nav>
+
+  <!-- Script Logic -->
+  <script src="script.js"></script>
+</body>
+
+</html>

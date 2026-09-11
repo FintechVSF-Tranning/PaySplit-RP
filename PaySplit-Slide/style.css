@@ -672,6 +672,19 @@ body {
   white-space: nowrap;
 }
 
+/* Ghi chú dưới sơ đồ (Slide 3 & Slide 5+) */
+.system-caption,
+.diagram-caption {
+  margin-top: 10px;
+  margin-bottom: 0;
+  text-align: center;
+  font-size: clamp(13px, 0.95vw, 15px);
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.2px;
+  flex-shrink: 0;
+}
+
 /* ==========================================================================
    SLIDE 4: Kiến Trúc Phân Rã Module & Bản Đồ Tích Hợp (Tối Giản)
    ========================================================================== */
@@ -1239,6 +1252,13 @@ body {
   letter-spacing: -0.3px;
 }
 
+.module-sub-author {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #4F46E5;
+  margin-left: 6px;
+}
+
 .module-detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1470,7 +1490,7 @@ body {
   border-radius: 16px;
   border: 1.5px solid #E2E8F0;
   box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
-  padding: 24px 32px;
+  padding: 16px 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1484,6 +1504,8 @@ body {
   object-fit: contain;
   display: block;
 }
+
+
 
 /* ==========================================================================
    SLIDE 6: Chi Tiết Module 2 - Auth & User Service (Clean Technical Style)
@@ -2876,3 +2898,224 @@ body {
   padding: 1px 5px;
   color: #0F172A;
 }
+
+/* Danh sách liệt kê 6 module nghiệp vụ dưới sơ đồ kiến trúc (Slide 4) */
+.arch-modules-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 40px;
+  width: 100%;
+  max-width: 1600px;
+  margin: 14px auto 0 auto;
+  padding: 0 4px;
+  list-style: none;
+}
+
+.arch-modules-list li {
+  font-size: clamp(12px, 0.82vw, 13.5px);
+  line-height: 1.45;
+  color: #475569;
+}
+
+.arch-modules-list li strong {
+  color: #0F172A;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .arch-modules-list {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
+/* ==========================================================================
+   SLIDE 15: Demo Showcase & Closing Slide (Minimal, Elegant, Clean)
+   ========================================================================== */
+.closing-slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.closing-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 0.85fr;
+  gap: 48px;
+  align-items: center;
+  width: 100%;
+}
+
+.closing-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.closing-tag {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--teal-primary, #0D9488);
+  background: var(--teal-surface, #F0FDFA);
+  border: 1px solid var(--teal-border, #CCFBF1);
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 14px;
+}
+
+.closing-title {
+  font-size: clamp(32px, 3.4vw, 44px);
+  font-weight: 800;
+  color: var(--text-title, #0F172A);
+  line-height: 1.15;
+  margin-bottom: 12px;
+  letter-spacing: -0.8px;
+}
+
+.closing-desc {
+  font-size: clamp(14px, 1.05vw, 15.5px);
+  line-height: 1.55;
+  color: var(--text-muted, #64748B);
+  margin-bottom: 22px;
+  max-width: 640px;
+}
+
+.demo-links-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.demo-link-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.demo-link-group:not(:last-child) {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.demo-link-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.demo-link-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.demo-link-action.yt-action {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #DC2626;
+}
+
+.demo-link-action.yt-action:hover {
+  background: #FEE2E2;
+  border-color: #FCA5A5;
+  transform: translateY(-1px);
+}
+
+.demo-link-action.file-action {
+  background: #F0F9FF;
+  border: 1px solid #BAE6FD;
+  color: #0284C7;
+}
+
+.demo-link-action.file-action:hover {
+  background: #E0F2FE;
+  border-color: #7DD3FC;
+  transform: translateY(-1px);
+}
+
+.link-url, .link-file {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.badge-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #0284C7;
+  color: #FFFFFF;
+  padding: 3px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+.closing-thanks-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-left: 4px solid var(--teal-primary, #0D9488);
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.thanks-icon {
+  font-size: 26px;
+  color: var(--teal-primary, #0D9488);
+  flex-shrink: 0;
+}
+
+.thanks-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 2px 0;
+}
+
+.thanks-caption {
+  font-size: 13px;
+  color: #64748B;
+  margin: 0;
+}
+
+.closing-right {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .closing-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .closing-right {
+    display: none;
+  }
+}
+
+
+
