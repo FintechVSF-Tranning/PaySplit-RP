@@ -45,7 +45,8 @@
 - [VI. KẾT LUẬN](#vi-kết-luận)
   - [1. Tổng kết kết quả đạt được](#1-tổng-kết-kết-quả-đạt-được)
   - [2. Bài học kinh nghiệm trong quá trình phát triển](#2-bài-học-kinh-nghiệm-trong-quá-trình-phát-triển)
-  - [3. Định hướng phát triển tiếp theo](#3-định-hướng-phát-triển-tiếp-theo)
+  - [3. Cải tiến sau giai đoạn báo cáo](#3-cải-tiến-sau-giai-đoạn-báo-cáo)
+  - [4. Định hướng phát triển tiếp theo](#4-định-hướng-phát-triển-tiếp-theo)
 
 ---
 
@@ -228,7 +229,7 @@ flowchart LR
         Creditor["Creditor (Chủ nợ)<br/>Xem nợ cần thu · Nhắc nợ (Cooldown 24h)<br/>Xác nhận"]
     end
 
-    subgraph BackendSettlement ["2. BACKEND & SETTLEMENT ENGINE (Go 1.24+)"]
+    subgraph BackendSettlement ["2. BACKEND & SETTLEMENT ENGINE (Go 1.26)"]
         direction TB
         APIController["API Controller &amp; Idempotency Guard<br/>Khóa Idempotency-Key 24h<br/>Chống double-submit"]
         LockManager["Concurrency Lock Manager<br/>Khóa debts UUID ASC<br/>Chống Deadlock &amp; Race condition"]
@@ -275,7 +276,7 @@ flowchart LR
         ClientReq["Client Request<br/>Tạo nhóm · Quét mã mời<br/>Rời nhóm · Đổi quyền"]
     end
 
-    subgraph BackendGov ["2. BACKEND & GOVERNANCE ENGINE (Go 1.24+)"]
+    subgraph BackendGov ["2. BACKEND & GOVERNANCE ENGINE (Go 1.26)"]
         direction TB
         RealtimeHub["Real-time Hub<br/>Server-Sent Events<br/>(SSE Dispatcher)"]
         APIController["API Controller &amp; RBAC<br/>Validate Session JWT &amp; Phân quyền"]
@@ -361,10 +362,12 @@ Quá trình xây dựng hệ thống tập trung giải quyết bốn bài toán
 
 ### 4. Hạ tầng công nghệ <a id="4-hạ-tầng-công-nghệ"></a>
 Toàn bộ hệ thống được triển khai thực tế trên môi trường máy chủ đám mây:
-- **Backend:** Ngôn ngữ Go phiên bản 1.24, bộ định tuyến Chi, thư viện truy xuất pgx, công cụ sinh mã truy vấn sqlc, công cụ quản lý phiên bản cơ sở dữ liệu Goose và hàng đợi River Queue.
+- **Backend:** Ngôn ngữ Go phiên bản 1.26, bộ định tuyến Chi, thư viện truy xuất pgx, công cụ sinh mã truy vấn sqlc, công cụ quản lý phiên bản cơ sở dữ liệu Goose và hàng đợi River Queue.
 - **Ứng dụng di động:** Nền tảng Flutter, thư viện quản lý trạng thái Riverpod, thư viện kết nối mạng Retrofit và Dio.
 - **Cơ sở dữ liệu:** PostgreSQL phiên bản 18 phục vụ đồng thời lưu trữ dữ liệu, quản lý hàng đợi và phát thông điệp sự kiện.
 - **Môi trường vận hành:** Đóng gói bằng Docker Compose, triển khai trên máy chủ đám mây Oracle Cloud kiến trúc ARM64, sử dụng máy chủ web Caddy tự động cấp phát và gia hạn chứng chỉ bảo mật HTTPS.
+
+> *Ghi chú:* Toàn bộ chương này mô tả kiến trúc tại thời điểm nghiệm thu ngày 07/09/2026. Sau giai đoạn báo cáo, phân hệ xác thực đã được thiết kế lại; xem [mục VI.3](#3-cải-tiến-sau-giai-đoạn-báo-cáo).
 
 ---
 
@@ -406,7 +409,7 @@ Tiến độ chi tiết được tổng hợp trực tiếp từ lịch sử ph�
 
 ### 3. Đánh giá hoàn thành <a id="3-đánh-giá-hoàn-thành"></a>
 - **Mức độ tuân thủ tiến độ:** Toàn bộ các mốc công việc từ ngày khởi động đề tài đến ngày demo đều được thực hiện đúng thời hạn đặt ra, hoàn thành đầy đủ các hạng mục cam kết ban đầu.
-- **Khối lượng sản phẩm bàn giao:** Hệ thống hoàn thành với hơn 300 commit trên toàn bộ dự án, bao gồm Backend đầy đủ chức năng, ứng dụng Frontend hoàn thiện và bộ Tài liệu kỹ thuật đồng bộ.
+- **Khối lượng sản phẩm bàn giao:** Hệ thống hoàn thành với hơn 300 commit trên toàn bộ các nhánh của hai kho mã nguồn, bao gồm Backend đầy đủ chức năng, ứng dụng Frontend hoàn thiện và bộ Tài liệu kỹ thuật đồng bộ.
 - **Tính ổn định của sản phẩm:** Sản phẩm được triển khai thực tế trên môi trường máy chủ đám mây, luồng nghiệp vụ khép kín từ khâu chụp hóa đơn đến thanh toán VietQR và đối soát nợ hoạt động ổn định và chính xác trong buổi demo ngày 07/09/2026.
 
 ---
@@ -440,7 +443,7 @@ Các trường hợp biên đặc biệt đã được kiểm chứng thành cô
 
 ### 3. Kiểm thử tự động <a id="3-kiểm-thử-tự-động"></a>
 Để bảo đảm độ tin cậy của mã nguồn, hệ thống duy trì các bộ kiểm thử tự động trên cả hai nền tảng:
-- **Backend (Go 1.24+):** Thực thi hơn **80 bộ kiểm thử tự động**, bao phủ các ca sử dụng tính toán tài chính, thuật toán Hamilton, truy vấn cơ sở dữ liệu, các lớp bảo vệ bảo mật, hàng đợi tác vụ River Queue và kênh lắng nghe sự kiện dùng chung.
+- **Backend (Go 1.26):** Duy trì **82 tệp kiểm thử với hơn 530 ca kiểm thử tự động**, bao phủ các ca sử dụng tính toán tài chính, thuật toán Hamilton, truy vấn cơ sở dữ liệu, các lớp bảo vệ bảo mật, hàng đợi tác vụ River Queue và kênh lắng nghe sự kiện dùng chung.
 - **Frontend (Flutter):** Thực thi thành công **384 bài kiểm thử tự động**, bao phủ các ca sử dụng nghiệp vụ, lưu trữ an toàn, luồng điều hướng màn hình và thuật toán nén ảnh thông minh (giảm dung lượng ảnh từ 6,38 MB xuống 1,8 MB trong 928 mili-giây).
 
 ### 4. Đánh giá chất lượng phi chức năng <a id="4-đánh-giá-chất-lượng-phi-chức-năng"></a>
@@ -461,6 +464,7 @@ Trong suốt quá trình triển khai dự án từ ngày 30/07/2026 đến ngà
 - Định nghĩa trước toàn bộ hợp đồng giao tiếp API theo chuẩn OpenAPI 3.0 nhằm bảo đảm sự nhất quán giữa phía máy chủ và ứng dụng di động trước khi viết mã nguồn.
 - Thiết lập quy trình làm việc chuyên nghiệp trên GitHub: mọi tính năng đều được phát triển theo nhánh riêng và trải qua quy trình rà soát chéo mã nguồn qua các yêu cầu tích hợp nhánh (Pull Request).
 - Xây dựng bộ dữ liệu 12 hóa đơn kiểm thử thực tế đa dạng vai trò và trạng thái; phối hợp kiểm thử tích hợp đầu cuối giữa máy chủ và ứng dụng di động trên thiết bị thật.
+- **Hạ tầng sự kiện thời gian thực:** Phạm Thanh Lam đặt nền móng với luồng truyền phát sự kiện theo nhóm, cơ chế phiên bản danh sách tăng tuần tự và điểm cuối đồng bộ bù dữ liệu khi thiết bị mất kết nối; Phạm Lê Hoàng Nam tối ưu tiếp bằng cách gộp toàn bộ về **một kết nối cơ sở dữ liệu duy nhất** lắng nghe chung cho cả ba kênh sự kiện và **một luồng sự kiện cho mỗi phiên đăng nhập**, thay cho mô hình mỗi màn hình tự mở một luồng riêng. Mọi tín hiệu sự kiện chỉ được phát trong đúng giao dịch của phép ghi, nên dữ liệu chỉ tới thiết bị sau khi đã được lưu bền.
 - Biên soạn tài liệu báo cáo thử việc, thiết kế slide thuyết trình và phối hợp vận hành hệ thống trong buổi demo ngày 07/09/2026.
 
 ### 2. Chi tiết đóng góp từng thành viên <a id="2-chi-tiết-đóng-góp-từng-thành-viên"></a>
@@ -502,7 +506,37 @@ Qua quá trình nghiên cứu và phát triển từ ngày 30/07/2026 đến ng�
 - **Quản lý tài nguyên và kết nối hiệu quả:** Thay vì để máy khách kết nối trực tiếp hoặc mở nhiều kết nối tới cơ sở dữ liệu cho các tác vụ thời gian thực, việc thiết kế một bộ lắng nghe tập trung giúp hệ thống duy trì hiệu năng tốt khi số lượng người dùng đồng thời tăng lên.
 - **Phối hợp làm việc nhóm có kỷ luật:** Việc phân định ranh giới chức năng rõ ràng theo kiến trúc phân tầng sạch, kết hợp văn hóa rà soát chéo mã nguồn qua từng yêu cầu tích hợp nhánh giúp nâng cao chất lượng mã nguồn và sự am hiểu kiến trúc chung của toàn đội ngũ.
 
-### 3. Định hướng phát triển tiếp theo <a id="3-định-hướng-phát-triển-tiếp-theo"></a>
+### 3. Cải tiến sau giai đoạn báo cáo <a id="3-cải-tiến-sau-giai-đoạn-báo-cáo"></a>
+
+Sau buổi nghiệm thu ngày 07/09/2026, nhóm tiếp tục rà soát lại các quyết định thiết kế đã đưa ra và nhận thấy phân hệ xác thực tồn tại một điểm yếu về mặt kiến trúc. Nội dung dưới đây nằm ngoài phạm vi thời gian của báo cáo, được ghi lại nhằm phản ánh trung thực hiện trạng mã nguồn và quá trình trưởng thành của nhóm.
+
+**Vấn đề nhận ra.** Cơ chế xác thực mô tả ở các chương trên kết hợp Access Token dạng JWT với Refresh Token xoay vòng. Tuy nhiên, do yêu cầu bảo mật buộc mỗi yêu cầu nghiệp vụ phải kiểm tra phiên đăng nhập còn hiệu lực hay không, hệ thống vẫn phải truy vấn cơ sở dữ liệu ở mọi lời gọi. Nói cách khác, hệ thống đã trả đủ chi phí của mô hình token tra cứu tập trung nhưng vẫn gánh toàn bộ độ phức tạp của JWT: khóa bí mật toàn hệ thống, thời hạn ngắn, quy trình làm mới token, xoay vòng và phát hiện tái sử dụng. Khi đã chấp nhận tra cứu ở mỗi yêu cầu thì JWT không còn mang lại lợi ích nào tương xứng.
+
+Ba hệ quả cụ thể đã được ghi nhận:
+1. Đường xác thực dành riêng cho thao tác đăng xuất không truy vấn cơ sở dữ liệu, để lại cửa sổ thu hồi phiên lên tới 15 phút.
+2. Khi luồng gọi API thông thường và luồng sự kiện thời gian thực cùng hết hạn token, hai bên có thể cùng làm mới token; lượt thứ hai bị hệ thống hiểu nhầm là hành vi đánh cắp và thu hồi cả phiên, khiến người dùng bị đăng xuất không rõ nguyên nhân.
+3. Mã thông báo đẩy được gắn vào phiên đăng nhập, dẫn tới người dùng lâu ngày không mở ứng dụng sẽ không nhận được thông báo nhắc nợ, đúng nhóm đối tượng mà tính năng này phục vụ.
+
+**Giải pháp thay thế.** Nhóm thay cặp token bằng **một mã phiên đục duy nhất** lưu trên Redis, trong đó Redis đóng vai trò nguồn phán quyết duy nhất cho câu hỏi một phiên còn hiệu lực hay không.
+
+| Tiêu chí | Trước (JWT và token làm mới) | Sau (mã phiên đục và Redis) |
+| :--- | :--- | :--- |
+| Số chứng chỉ ứng dụng lưu giữ | 2 | **1** |
+| Xác thực mỗi yêu cầu | Kiểm chữ ký cộng truy vấn ghép 2 bảng | **1 lượt đọc Redis** |
+| Hiệu lực thu hồi phiên | Tức thì hoặc tối đa 15 phút tùy đường | **Tức thì trên mọi đường** |
+| Hạn phiên | 7 ngày cố định từ lúc đăng nhập | **7 ngày trượt, trần cứng 30 ngày** |
+| Số đường xác thực phải duy trì | 2 | **1** |
+| Khóa bí mật toàn hệ thống | Có | **Không còn** |
+| Mã thông báo đẩy | Gắn với phiên (lỗi nêu trên) | Bảng riêng theo thiết bị |
+| Xử lý phía ứng dụng di động | Lớp làm mới token chống gọi trùng | Gắn một tiêu đề yêu cầu |
+
+**Cái giá phải trả được ghi nhận sòng phẳng.** Hai điểm đánh đổi đã được xác định và xử lý thay vì bỏ qua:
+- Redis trở thành thành phần bắt buộc trên đường đi của mọi yêu cầu có xác thực. Nhóm bù lại bằng cấu hình chống tự xóa dữ liệu khi đầy bộ nhớ, ghi nhật ký bền vững, kiểm tra kết nối ngay lúc khởi động, điểm cuối giám sát tình trạng từng thành phần, và đặc biệt là **phân biệt rõ mã lỗi 401 với 503**: 401 nghĩa là phiên đã chết nên ứng dụng xóa chứng chỉ, còn 503 nghĩa là hạ tầng tạm lỗi nên ứng dụng giữ nguyên và thử lại. Gộp hai mã này sẽ biến một sự cố Redis vài chục giây thành một lần đăng xuất vĩnh viễn của toàn bộ người dùng.
+- Vai trò người dùng được lưu sẵn trong phiên nên có thể lạc hậu tối đa 7 ngày. Nhóm bổ sung một bài kiểm thử tự động quét mã nguồn, báo lỗi ngay khi xuất hiện bất kỳ vị trí nào ghi vào trường vai trò hoặc trạng thái tài khoản mà không kèm thao tác thu hồi phiên.
+
+Phần cải tiến được thực hiện qua hai chặng: **Phạm Thanh Lam** thiết kế lại toàn bộ cơ chế xác thực trong các ngày 09 đến 11/09/2026, kèm một tài liệu quyết định kiến trúc riêng và bộ kiểm thử tích hợp chạy trên Redis thật; **Phạm Lê Hoàng Nam** bổ sung lớp gia cố ngày 13/09/2026, gồm bài kiểm thử canh bất biến thu hồi phiên nêu trên và việc chuyển số liệu phiên đang hoạt động ở trang quản trị sang đọc từ Redis, thay cho cách đếm cũ có thể báo sai một phiên đã hết hạn là vẫn còn hoạt động.
+
+### 4. Định hướng phát triển tiếp theo <a id="4-định-hướng-phát-triển-tiếp-theo"></a>
 - **Tích hợp cổng ngân hàng mở:** Nghiên cứu kết nối thêm Webhook thông báo giao dịch biến động số dư từ các cổng ngân hàng để tự động nhận diện và gạch nợ ngay khi tài khoản nhận được tiền, giúp giảm bớt thao tác kiểm tra và xác nhận thủ công của người nhận tiền.
 - **Bổ sung tính năng chia hóa đơn định kỳ:** Phát triển cơ chế tự động tạo lịch phân bổ cho các khoản chi phí cố định lặp lại hàng tháng như tiền thuê nhà, tiền điện, nước hoặc các gói dịch vụ dùng chung của nhóm sinh hoạt.
 

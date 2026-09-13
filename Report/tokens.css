@@ -1,0 +1,113 @@
+/* Hallmark · genre: editorial · theme: Cobalt/Editorial · macrostructure: Long Document */
+:root {
+  /* Color Palette - Clean Technical Slate & Fintech Emerald/Cyan */
+  --color-paper: oklch(99.5% 0.003 240);
+  --color-paper-2: oklch(97.5% 0.008 240);
+  --color-paper-3: oklch(94.5% 0.012 240);
+  --color-paper-card: #ffffff;
+  
+  --color-rule: oklch(88% 0.015 240);
+  --color-rule-2: oklch(75% 0.020 240);
+  --color-muted: oklch(55% 0.020 240);
+  --color-neutral: oklch(40% 0.018 240);
+  --color-ink-2: oklch(25% 0.015 240);
+  --color-ink: oklch(14% 0.012 240);
+  
+  /* Primary Brand & Accents */
+  --color-accent: oklch(52% 0.16 230);        /* Deep Tech Blue */
+  --color-accent-hover: oklch(45% 0.18 230);
+  --color-accent-subtle: oklch(95% 0.035 230);
+  --color-accent-ink: oklch(99% 0.005 240);
+  --color-focus: oklch(55% 0.18 230);
+  
+  --color-teal: oklch(55% 0.14 175);          /* Emerald / VietQR Teal */
+  --color-teal-subtle: oklch(96% 0.03 175);
+  --color-amber: oklch(65% 0.16 75);          /* Warning / Attention */
+  --color-amber-subtle: oklch(96% 0.035 75);
+  --color-rose: oklch(58% 0.19 25);           /* Danger / Error */
+  --color-rose-subtle: oklch(96% 0.035 25);
+  --color-purple: oklch(55% 0.16 300);
+  --color-purple-subtle: oklch(96% 0.03 300);
+
+  /* Typography */
+  --font-display: "Plus Jakarta Sans", "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Newsreader", "Cardo", Georgia, serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace;
+
+  --display-weight: 700;
+  --display-style: normal;
+  --tracking-display: -0.025em;
+  --tracking-label: 0.06em;
+
+  /* Scale */
+  --text-2xs: 0.70rem;
+  --text-xs: 0.78rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --text-3xl: 2.25rem;
+  --text-display: clamp(2.2rem, 3.5vw + 1rem, 3.2rem);
+
+  /* Spacing Scale */
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 6rem;
+
+  /* UI Tokens */
+  --rule-hair: 1px;
+  --rule-fine: 2px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-card: 10px;
+  --radius-pill: 9999px;
+
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-short: 180ms;
+  --dur-med: 300ms;
+}
+
+[data-theme="dark"] {
+  --color-paper: oklch(16% 0.015 240);
+  --color-paper-2: oklch(19% 0.018 240);
+  --color-paper-3: oklch(23% 0.020 240);
+  --color-paper-card: oklch(18% 0.018 240);
+  
+  --color-rule: oklch(28% 0.020 240);
+  --color-rule-2: oklch(35% 0.022 240);
+  --color-muted: oklch(65% 0.018 240);
+  --color-neutral: oklch(75% 0.014 240);
+  --color-ink-2: oklch(85% 0.010 240);
+  --color-ink: oklch(96% 0.005 240);
+  
+  --color-accent: oklch(65% 0.18 230);
+  --color-accent-hover: oklch(72% 0.20 230);
+  --color-accent-subtle: oklch(25% 0.06 230);
+  --color-accent-ink: oklch(12% 0.01 240);
+  
+  --color-teal: oklch(68% 0.15 175);
+  --color-teal-subtle: oklch(24% 0.05 175);
+  --color-amber: oklch(75% 0.15 75);
+  --color-amber-subtle: oklch(25% 0.05 75);
+  --color-rose: oklch(68% 0.18 25);
+  --color-rose-subtle: oklch(24% 0.05 25);
+  --color-purple: oklch(68% 0.16 300);
+  --color-purple-subtle: oklch(24% 0.05 300);
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6);
+}

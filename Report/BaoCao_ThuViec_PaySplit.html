@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Báo Cáo Kết Quả Thử Việc - PaySplit Fintech System</title>
+  <!-- Google Fonts for High-Precision Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="report.css">
+  <!-- Mermaid.js for Vector Architecture Diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      securityLevel: 'loose',
+      flowchart: {
+        curve: 'basis',
+        useMaxWidth: true,
+        htmlLabels: false,
+        nodeSpacing: 22,
+        rankSpacing: 26
+      },
+      themeVariables: {
+        fontFamily: 'Plus Jakarta Sans, Inter, sans-serif',
+        fontSize: '12.5px',
+        primaryColor: '#e0f2fe',
+        primaryBorderColor: '#0284c7',
+        primaryTextColor: '#0f172a',
+        lineColor: '#334155',
+        secondaryColor: '#f1f5f9',
+        tertiaryColor: '#ffffff'
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Screen Floating Toolbar -->
+  <div class="screen-toolbar">
+    <button class="toolbar-btn" onclick="window.print()" title="Xuất báo cáo sang PDF">
+      <svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+      In / Xuất PDF
+    </button>
+    <button class="toolbar-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Chuyển chế độ Sáng / Tối">
+      <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+      Giao diện
+    </button>
+  </div>
+
+  <!-- Document Main Container -->
+  <main class="document-container">
+
+    <!-- ==================== COVER SECTION ==================== -->
+    <header class="cover-section">
+      <div class="doc-badge-row">
+        <span class="badge badge-primary">Báo Cáo Thử Việc</span>
+        <span class="badge badge-teal">Fintech & Settlement</span>
+        <span class="badge badge-neutral">30/07/2026 – 07/09/2026</span>
+      </div>
+      
+      <h1 class="doc-title">PAYSPLIT - HỆ THỐNG CHIA HÓA ĐƠN NHÓM VÀ NHẮC NỢ THÔNG MINH</h1>
+      <h2 class="doc-subtitle">BÁO CÁO KẾT QUẢ THỬ VIỆC</h2>
+
+      <!-- Project Metadata Grid -->
+      <div class="meta-grid">
+        <div class="meta-group">
+          <h4>Dự án & Định vị</h4>
+          <p><strong>PaySplit</strong> – Hệ thống chia hóa đơn nhóm và nhắc nợ thông minh (Mô hình điều phối thanh toán ngang hàng không lưu ký vốn).</p>
+        </div>
+        <div class="meta-group">
+          <h4>Thành viên nhóm</h4>
+          <ul>
+            <li>• <strong>Phạm Lê Hoàng Nam</strong></li>
+            <li>• <strong>Phạm Thanh Lam</strong></li>
+            <li>• <strong>Nguyễn Trọng Tín</strong></li>
+          </ul>
+        </div>
+        <div class="meta-group">
+          <h4>Đội ngũ Mentor</h4>
+          <ul>
+            <li>• <strong>Trần Quang Hiển</strong> <span class="mentor-tag">VSF-FINTECH-VDTDVTC</span></li>
+            <li>• <strong>Bành Quốc Danh</strong> <span class="mentor-tag">VSF-FINTECH&TT-PTPM</span></li>
+            <li>• <strong>Phan Công Huân</strong> <span class="mentor-tag">VSF-FINTECH-VDTDVTC</span></li>
+            <li>• <strong>Nguyễn Mạnh Tể</strong> <span class="mentor-tag">VSF-FINTECH&TT-PTPM</span></li>
+            <li>• <strong>Nguyễn Nam Trường</strong> <span class="mentor-tag">VSF-FINTECH-VDTDVTC</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Key Metrics Highlight Strip -->
+      <div class="kpi-strip">
+        <div class="kpi-card">
+          <div class="kpi-num">5</div>
+          <div class="kpi-label">Phân hệ cốt lõi</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num">82 / 530+</div>
+          <div class="kpi-label">File / Test Go BE</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num">384</div>
+          <div class="kpi-label">Test tự động Flutter</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num">0 VNĐ</div>
+          <div class="kpi-label">Sai lệch số lẻ</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num">300+</div>
+          <div class="kpi-label">Git Commits</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-num">100%</div>
+          <div class="kpi-label">Nghiệm thu 12/12 Bill</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ==================== TABLE OF CONTENTS ==================== -->
+    <nav class="toc-box">
+      <div class="toc-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+        Mục lục báo cáo
+      </div>
+      <ul class="toc-list">
+        <li>
+          <a href="#i-tong-quan-bai-toan">I. TỔNG QUAN BÀI TOÁN</a>
+          <ul class="toc-sublist">
+            <li><a href="#1-boi-canh-bai-toan">1. Bối cảnh bài toán</a></li>
+            <li><a href="#2-muc-tieu-san-pham">2. Mục tiêu sản phẩm</a></li>
+            <li><a href="#3-pham-vi-chuc-nang">3. Phạm vi chức năng</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#ii-kien-truc-he-thong">II. KIẾN TRÚC HỆ THỐNG</a>
+          <ul class="toc-sublist">
+            <li><a href="#1-mo-hinh-tong-the">1. Mô hình tổng thể & Sơ đồ kiến trúc</a></li>
+            <li><a href="#2-kien-truc-ma-nguon">2. Kiến trúc mã nguồn</a></li>
+            <li><a href="#3-giai-phap-ky-thuat-trong-yeu">3. Giải pháp kỹ thuật trọng yếu</a></li>
+            <li><a href="#4-ha-tang-cong-nghe">4. Hạ tầng công nghệ</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#iii-tien-do-trien-khai">III. TIẾN ĐỘ TRIỂN KHAI</a>
+          <ul class="toc-sublist">
+            <li><a href="#1-phan-ky-trien-khai">1. Phân kỳ triển khai</a></li>
+            <li><a href="#2-nhat-ky-tien-do">2. Nhật ký tiến độ 5 giai đoạn</a></li>
+            <li><a href="#3-danh-gia-hoan-thanh">3. Đánh giá hoàn thành</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#iv-ket-qua-nghiem-thu">IV. KẾT QUẢ NGHIỆM THU</a>
+          <ul class="toc-sublist">
+            <li><a href="#1-muc-do-hoan-thanh-chuc-nang">1. Mức độ hoàn thành chức năng</a></li>
+            <li><a href="#2-kich-ban-nghiem-thu-thuc-te">2. Kịch bản nghiệm thu thực tế</a></li>
+            <li><a href="#3-kiem-thu-tu-dong">3. Kiểm thử tự động</a></li>
+            <li><a href="#4-danh-gia-chat-luong-phi-chuc-nang">4. Đánh giá chất lượng phi chức năng</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#v-dong-gop-tung-thanh-vien">V. ĐÓNG GÓP TỪNG THÀNH VIÊN</a>
+          <ul class="toc-sublist">
+            <li><a href="#1-dong-gop-chung">1. Đóng góp chung</a></li>
+            <li><a href="#2-chi-tiet-dong-gop-tung-thanh-vien">2. Chi tiết đóng góp từng thành viên</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#vi-ket-luan">VI. KẾT LUẬN</a>
+          <ul class="toc-sublist">
+            <li><a href="#1-tong-ket-ket-qua-dat-duoc">1. Tổng kết kết quả đạt được</a></li>
+            <li><a href="#2-bai-hoc-kinh-nghiem">2. Bài học kinh nghiệm trong quá trình phát triển</a></li>
+            <li><a href="#3-cai-tien-sau-giai-doan-bao-cao">3. Cải tiến sau giai đoạn báo cáo</a></li>
+            <li><a href="#4-dinh-huong-phat-trien-tiep-theo">4. Định hướng phát triển tiếp theo</a></li>
+          </ul>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- ==================== CHAPTER I ==================== -->
+    <section id="i-tong-quan-bai-toan">
+      <h2 class="chapter-heading"><span class="ch-num">I.</span> TỔNG QUAN BÀI TOÁN</h2>
+
+      <h3 class="section-heading" id="1-boi-canh-bai-toan">1. Bối cảnh bài toán</h3>
+      <p>
+        Trong các hoạt động sinh hoạt nhóm như ăn uống, du lịch hay sự kiện tập thể, việc chia tiền và tất toán công nợ thường gặp nhiều bất cập do hóa đơn thực tế có cấu trúc phức tạp gồm nhiều mức thuế, phí dịch vụ và các khoản giảm giá hỗn hợp, dễ dẫn đến sai lệch tiền bạc khi tính toán thủ công.
+      </p>
+      <p>
+        Bên cạnh đó, việc đòi nợ trực tiếp thường tạo tâm lý e ngại, quy trình chuyển khoản rời rạc qua việc gõ số tài khoản thủ công dễ gây nhầm lẫn và thiếu công cụ theo dõi minh bạch xem ai đã thanh toán, ai còn nợ. Để giải quyết các bất cập này, <strong>PaySplit</strong> được xây dựng như một hệ thống điều phối thanh toán ngang hàng không lưu ký, đóng vai trò trợ lý số hóa giúp tự động tính toán chính xác, hỗ trợ chuyển khoản trực tiếp qua mã VietQR và nhắc nợ văn minh mà không can thiệp hay giữ tiền của người dùng.
+      </p>
+
+      <h3 class="section-heading" id="2-muc-tieu-san-pham">2. Mục tiêu sản phẩm</h3>
+      <p>PaySplit hướng đến hỗ trợ giải quyết bài toán chi tiêu nhóm thông qua 4 giá trị cốt lõi:</p>
+      <ol>
+        <li><strong>Số hóa hóa đơn tự động:</strong> Người dùng chỉ cần chụp hoặc tải lên nhiều ảnh hóa đơn cùng lúc, hệ thống tự động đọc và nhận diện đầy đủ tên món, số lượng, đơn giá, tiền thuế cùng các khoản giảm giá mà không cần nhập liệu thủ công.</li>
+        <li><strong>Chia tiền công bằng và chuẩn xác:</strong> Hỗ trợ linh hoạt chia tiền theo từng món, theo phần ăn hoặc theo tỉ lệ; tự động phân bổ tiền thuế và giảm giá đến từng người, đảm bảo tổng tiền của các thành viên luôn khớp chính xác từng đồng với hóa đơn gốc, không xảy ra lệch tiền làm tròn.</li>
+        <li><strong>Thanh toán một chạm:</strong> Tự động tổng hợp toàn bộ các khoản nợ giữa hai người thành một mã VietQR duy nhất, điền sẵn chính xác số tiền cần trả và nội dung chuyển khoản để người dùng quét và thanh toán ngay trên ứng dụng ngân hàng.</li>
+        <li><strong>Đối soát minh bạch và nhắc nợ thông minh:</strong> Cho phép người trả nộp ảnh biên lai chuyển khoản để chủ nợ xác nhận hoàn tất; trạng thái thanh toán được cập nhật ngay lập tức cho cả nhóm và hệ thống tự động gửi thông báo nhắc nợ lịch sự, tránh cảm giác ngại ngùng khi đòi tiền.</li>
+      </ol>
+
+      <h3 class="section-heading" id="3-pham-vi-chuc-nang">3. Phạm vi chức năng</h3>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 25%;">Phân hệ</th>
+              <th>Chức năng chính</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Xác thực tài khoản</strong></td>
+              <td>Đăng ký tài khoản kèm xác minh mã OTP qua email; quản lý duy nhất một phiên trên mỗi thiết bị; cơ chế xác thực với Access Token 15 phút và Refresh Token 7 ngày có tính năng phát hiện tái sử dụng trái phép; quản lý hồ sơ cá nhân và cấu hình tài khoản nhận tiền VietQR.</td>
+            </tr>
+            <tr>
+              <td><strong>Quản lý nhóm</strong></td>
+              <td>Khởi tạo nhóm, chuyển nhượng vai trò Trưởng nhóm; mời thành viên tham gia qua liên kết động và mã QR; ma trận theo dõi công nợ nội bộ nhóm; tính năng khóa hoặc mở nhận hóa đơn mới của nhóm.</td>
+            </tr>
+            <tr>
+              <td><strong>Hóa đơn OCR</strong></td>
+              <td>Tiếp nhận hóa đơn thủ công hoặc qua ảnh chụp; luồng xử lý OCR bất đồng bộ có mã theo dõi tiến trình; giao diện rà soát và chỉnh sửa kết quả OCR hỗ trợ nhiều mức VAT, chiết khấu, phí dịch vụ; cơ chế khóa chỉnh sửa khi hóa đơn đã duyệt.</td>
+            </tr>
+            <tr>
+              <td><strong>Phân bổ chi phí</strong></td>
+              <td>Gán người dùng vào món ăn theo tỉ lệ linh hoạt (theo phần, phần trăm hoặc số lượng); thuật toán phân bổ Hamilton xử lý làm tròn không phát sinh số dư; chốt hóa đơn an toàn trong giao dịch cơ sở dữ liệu; hỗ trợ chốt sổ hàng loạt cả nhóm có kiểm tra xung đột dữ liệu.</td>
+            </tr>
+            <tr>
+              <td><strong>Quyết toán công nợ</strong></td>
+              <td>Gộp nợ và sinh mã VietQR động; nộp ảnh biên lai và quy trình duyệt đối soát hai bước; kênh truyền phát dữ liệu thời gian thực SSE kết hợp cơ chế đồng bộ bù lịch sử; trang Web Admin nhúng trực tiếp trong backend để tra cứu người dùng, nhật ký kiểm toán và giám sát hệ thống.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== CHAPTER II ==================== -->
+    <section id="ii-kien-truc-he-thong">
+      <h2 class="chapter-heading"><span class="ch-num">II.</span> KIẾN TRÚC HỆ THỐNG</h2>
+
+      <h3 class="section-heading" id="1-mo-hinh-tong-the">1. Mô hình tổng thể</h3>
+      <p>
+        Hệ thống được thiết kế theo mô hình khối dịch vụ tập trung, phân tách rõ ràng ranh giới nghiệp vụ và các kênh tích hợp bên ngoài.
+      </p>
+
+      <h4 class="subsection-heading">Sơ đồ ngữ cảnh hệ thống</h4>
+      <p>Mô tả tương tác tổng quan giữa người dùng, hệ thống PaySplit và các dịch vụ tích hợp bên ngoài:</p>
+      
+      <figure class="diagram-card">
+        <div class="mermaid">
+flowchart LR
+    User(["Người dùng PaySplit"])
+    System["Hệ thống PaySplit (Backend &amp; Mobile)"]
+    OCR(["Dịch vụ OCR (LlamaExtract)"])
+    VietQR(["Hệ thống VietQR (NAPAS 24/7)"])
+    ObjStore(["Dịch vụ lưu trữ ảnh (Cloudinary)"])
+    PushNotif(["Dịch vụ thông báo (Firebase FCM)"])
+
+    User -->|"Quản lý nhóm, hóa đơn, thanh toán"| System
+    System -->|"Bóc tách dữ liệu hóa đơn"| OCR
+    System -->|"Sinh mã QR thanh toán"| VietQR
+    System -->|"Lưu trữ ảnh hóa đơn &amp; biên lai"| ObjStore
+    System -->|"Gửi thông báo &amp; nhắc nợ"| PushNotif
+        </div>
+        <figcaption class="diagram-caption">Hình 2.1: Sơ đồ ngữ cảnh hệ thống PaySplit và các liên kết dịch vụ ngoài</figcaption>
+      </figure>
+
+      <h4 class="subsection-heading">Sơ đồ phân vùng kiến trúc</h4>
+      <p>Mô tả chi tiết các phân hệ bên trong hệ thống cùng các luồng đồng bộ trực tiếp và luồng xử lý sự kiện bất đồng bộ qua hàng đợi:</p>
+
+      <div class="landscape-plate">
+        <div class="plate-title">Hình 2.2: Sơ đồ phân vùng kiến trúc nội bộ PaySplit (Architecture Partitioning)</div>
+        <div class="mermaid">
+flowchart LR
+    subgraph ClientCol ["1. CLIENT LAYER"]
+        Mobile(["Ứng dụng di động Flutter"])
+    end
+
+    subgraph BackendCol ["2. PAYSPLIT BACKEND PLATFORM (Go 1.26 + PostgreSQL 18)"]
+        direction TB
+        Gateway["Bộ định tuyến API (Chi Router)"]
+        
+        subgraph CoreModules ["Phân hệ nghiệp vụ cốt lõi"]
+            direction TB
+            Auth["Xác thực tài khoản"]
+            Group["Quản lý nhóm"]
+            Bill["Hóa đơn &amp; Chi phí"]
+            Debt["Quyết toán công nợ"]
+        end
+
+        Queue[["Hàng đợi River Queue Engine (PostgreSQL)"]]
+
+        subgraph WorkerEngine ["Worker ngầm bất đồng bộ"]
+            direction TB
+            OCRWorker["Tiến trình OCR Worker"]
+            NotifWorker["Tiến trình Notification Worker"]
+        end
+    end
+
+    subgraph ExternalCol ["3. DỊCH VỤ NGOÀI &amp; STORAGE"]
+        direction TB
+        CloudStore[("Cloud Storage (Cloudinary)")]
+        VisionAI["Mô hình Vision AI (LlamaExtract)"]
+        VietQR["Hệ thống VietQR (NAPAS 24/7)"]
+        PushNotif["Dịch vụ thông báo (Firebase FCM)"]
+    end
+
+    Mobile -->|"1. API Request"| Gateway
+    Gateway --> Auth
+    Gateway --> Group
+    Gateway --> Bill
+    Gateway --> Debt
+
+    Bill -->|"Lưu ảnh hóa đơn"| CloudStore
+    Bill -.->|"Enqueue job OCR"| Queue
+    Queue -.->|"Dispatch job"| OCRWorker
+    OCRWorker -->|"Bóc tách dữ liệu"| VisionAI
+
+    Bill -.->|"Enqueue chốt hóa đơn"| Queue
+    Queue -.->|"Tạo công nợ"| Debt
+    Debt -->|"Sinh VietQR"| VietQR
+    Debt -.->|"Nhắc nợ"| Queue
+    Queue -.->|"Dispatch notify"| NotifWorker
+    NotifWorker -->|"Push FCM"| PushNotif
+        </div>
+        <div class="plate-caption">Nét liền: Giao tiếp đồng bộ trực tiếp · Nét đứt: Điều phối bất đồng bộ qua River Queue Engine</div>
+      </div>
+
+      <p><strong>Quy ước kết nối:</strong></p>
+      <ul>
+        <li><strong>Mũi tên nét liền:</strong> Các yêu cầu xử lý đồng bộ trực tiếp giữa các phân hệ hoặc tới các dịch vụ bên ngoài.</li>
+        <li><strong>Mũi tên nét đứt:</strong> Các sự kiện bất đồng bộ được điều phối qua hàng đợi River Queue.</li>
+      </ul>
+      <p>Trong mô hình trên:</p>
+      <ul>
+        <li><strong>Ứng dụng di động:</strong> Đảm nhiệm thu thập hình ảnh hóa đơn, hiển thị dữ liệu chi tiêu và tiếp nhận tương tác của người dùng. Mọi giao tiếp với hệ thống đều đi qua giao thức bảo mật HTTPS và duy trì một luồng sự kiện thời gian thực duy nhất cho mỗi phiên đăng nhập.</li>
+        <li><strong>Backend:</strong> Đóng vai trò cổng điều phối trung tâm, chịu trách nhiệm xác thực người dùng, tính toán số liệu tài chính, quản lý hàng đợi tác vụ nền và phát dữ liệu tức thời.</li>
+        <li><strong>Cơ sở dữ liệu:</strong> Đóng vai trò nền tảng hợp nhất, vừa lưu trữ dữ liệu nghiệp vụ có cấu trúc, vừa vận hành hàng đợi xử lý tác vụ nền và quản lý kênh truyền tín hiệu sự kiện nội bộ.</li>
+      </ul>
+
+      <h4 class="subsection-heading">Chi tiết phân hệ nhận diện hóa đơn</h4>
+      <p>
+        Phân hệ OCR được thiết kế theo kiến trúc xử lý ngầm bất đồng bộ kết hợp giữa hàng đợi tác vụ River Queue và mô hình thị giác trí tuệ nhân tạo, giải phóng luồng xử lý giao diện của ứng dụng di động:
+      </p>
+
+      <figure class="diagram-card">
+        <div class="mermaid">
+flowchart TB
+    MobileReq["1. Ứng dụng di động (Flutter)\nPOST /api/v1/bills (Gửi ảnh nén)"]
+    APIGateway["2. API Controller (Go)\nValidate · Lưu Cloudinary · Enqueue River Job"]
+    FastAck["3. Phản hồi tức thời (202 Accepted)\nTrả mã tracking async cho Mobile"]
+    RiverQ[("4. Hàng đợi River Queue\nBảng Job hàng đợi PostgreSQL")]
+    OCRWorker["5. OCR Worker Engine\nĐiều phối tác vụ nền đa luồng"]
+    VisionAI["6. Vision AI (LlamaExtract)\nBóc tách JSON danh mục món &amp; giá"]
+    PostgresData[("7. Cơ sở dữ liệu (PostgreSQL 18)\nBảng bills &amp; bill_items")]
+    SSEHub["8. Real-time SSE Hub\npg_notify('ocr.updated')"]
+    ReviewScreen["9. Review Screen (Flutter)\nHiển thị danh sách món bóc tách"]
+
+    MobileReq -->|"1. Gửi ảnh"| APIGateway
+    APIGateway -->|"2. Phản hồi nhanh"| FastAck
+    APIGateway -.->|"2. Đưa job vào queue"| RiverQ
+    RiverQ -.->|"3. Dispatch job"| OCRWorker
+    OCRWorker -->|"4. Trích xuất dữ liệu"| VisionAI
+    VisionAI -->|"5. Lưu món ăn"| PostgresData
+    PostgresData -->|"6. Tín hiệu CSDL"| SSEHub
+    SSEHub -->|"7. Push SSE Event"| ReviewScreen
+        </div>
+        <figcaption class="diagram-caption">Hình 2.3: Đường ống xử lý bất đồng bộ phân hệ nhận diện hóa đơn OCR</figcaption>
+      </figure>
+
+      <p><strong>Quy trình vận hành:</strong></p>
+      <ul>
+        <li>Thiết bị người dùng nén ảnh và gửi yêu cầu tạo hóa đơn (<code>POST /api/v1/bills</code>). Bộ điều phối API xác thực dữ liệu, tải ảnh gốc lên Cloud Storage và đưa tác vụ vào hàng đợi River Queue trong cùng một giao dịch cơ sở dữ liệu.</li>
+        <li>API phản hồi ngay trạng thái <code>202 Accepted</code> kèm mã theo dõi để ứng dụng di động không bị nghẽn mạng.</li>
+        <li>Tiến trình OCR Worker nhận tác vụ từ hàng đợi, tải ảnh gốc từ bộ lưu trữ đám mây và gọi mô hình Vision AI (LlamaExtract) để trích xuất cấu trúc dữ liệu JSON gồm tên món, số lượng, đơn giá và thuế phí.</li>
+        <li>Dữ liệu bóc tách được lưu vào các bảng cơ sở dữ liệu <code>bills</code> và <code>bill_items</code>. Tín hiệu <code>pg_notify</code> kích hoạt Real-time Hub truyền thông điệp <code>ocr.updated</code> qua Server-Sent Events để hiển thị danh sách món lên màn hình Review Screen.</li>
+      </ul>
+
+      <h4 class="subsection-heading">Chi tiết phân hệ phân bổ chi phí</h4>
+      <p>
+        Quy trình chốt hóa đơn và phân bổ chi tiêu được tổ chức theo đường ống xử lý tuần tự 5 chặng, bảo đảm tính toàn vẹn dữ liệu tài chính và xử lý làm tròn không phát sinh số dư:
+      </p>
+
+      <figure class="diagram-card compact">
+        <div class="mermaid">
+flowchart TB
+    Step1["1. Client Request\nPOST /bills/{id}/finalize (Captain gửi lệnh chốt)"]
+    Step2["2. Phân Quyền &amp; Kiểm Soát\nQuyền Captain · Bill đã Reviewed · Khớp Version &amp; STK"]
+    Step3["3. Bộ Tính Toán Phân Bổ\nThuật toán Hamilton bảo toàn số học từng đồng lẻ"]
+    Step4["4. Giao Dịch CSDL (PostgreSQL 18)\nKhóa FOR UPDATE · Chốt Bill · Tự động sinh công nợ (Debts)"]
+    Step5["5. Hàng Đợi &amp; Thông Báo\nRiver Queue → Firebase FCM push nhắc nợ con nợ"]
+
+    Step1 -->|"Gửi dữ liệu"| Step2
+    Step2 -->|"Hợp lệ"| Step3
+    Step3 -->|"Phân bổ xong"| Step4
+    Step4 -->|"Tạo Outbox Job"| Step5
+        </div>
+        <figcaption class="diagram-caption">Hình 2.4: Pipeline 5 chặng chốt hóa đơn và phân bổ chi phí chuẩn xác</figcaption>
+      </figure>
+
+      <p><strong>Quy trình vận hành:</strong></p>
+      <ul>
+        <li><strong>1. Client Request:</strong> Trưởng nhóm gửi lệnh chốt hóa đơn qua điểm cuối <code>POST /bills/{id}/finalize</code>.</li>
+        <li><strong>2. Phân quyền và kiểm soát:</strong> Hệ thống kiểm tra vai trò Trưởng nhóm, trạng thái hóa đơn đã được rà soát (Reviewed), tính hợp lệ của số tài khoản nhận tiền và số phiên bản dữ liệu.</li>
+        <li><strong>3. Bộ tính toán phân bổ:</strong> Áp dụng thuật toán phân bổ Hamilton trên tập số hữu tỉ để phân chia chi phí món ăn, thuế VAT, phí dịch vụ và chiết khấu, bảo đảm tổng số tiền chia cho các thành viên khớp với hóa đơn gốc.</li>
+        <li><strong>4. Giao dịch cơ sở dữ liệu:</strong> Mở giao dịch ACID với khóa dòng <code>FOR UPDATE</code>, chuyển trạng thái hóa đơn sang đã chốt và tự động sinh các bản ghi nghĩa vụ công nợ (<code>debts</code>).</li>
+        <li><strong>5. Hàng đợi và thông báo:</strong> Tạo công việc thông báo theo mô hình Outbox Pattern qua hàng đợi River Queue, gửi thông báo đẩy Firebase FCM đến từng người liên quan để thông báo về khoản nợ mới.</li>
+      </ul>
+
+      <h4 class="subsection-heading">Chi tiết phân hệ quyết toán công nợ</h4>
+      <p>
+        Phân hệ quyết toán công nợ tích hợp chặt chẽ giữa ứng dụng di động, động cơ đối soát phía máy chủ và hạ tầng thanh toán ngân hàng qua mã VietQR động:
+      </p>
+
+      <figure class="diagram-card">
+        <div class="mermaid">
+flowchart TB
+    Debtor["1. Người nợ (Debtor App)\nGom nợ &amp; Request thanh toán"]
+    API["2. API Controller &amp; Lock Manager\nIdempotency 24h &amp; SELECT FOR UPDATE"]
+    VietQR["3. Dynamic VietQR Engine\nSinh mã QR chuẩn NAPAS 24/7"]
+    Banking["4. Ứng dụng Ngân hàng (App Banking)\nQuét VietQR &amp; Chuyển khoản"]
+    PendingDB[("5. Cơ sở dữ liệu (PostgreSQL 18)\ndebts: pending_confirmation")]
+    ProofStore[("6. Cloud Storage (Cloudinary)\nLưu trữ ảnh biên lai Proof")]
+    SSE["7. Real-time SSE Hub\npg_notify('payment_events')"]
+    Creditor["8. Chủ nợ (Creditor App)\nXem biên lai &amp; Duyệt đối soát"]
+    SettledDB[("9. Core Database (PostgreSQL 18)\ndebts: Settled (Số dư 0đ)")]
+
+    Debtor -->|"1. Gửi yêu cầu"| API
+    API -->|"2. Khóa dòng an toàn"| VietQR
+    VietQR -->|"3. Quét mã QR"| Banking
+    Banking -->|"4. Cập nhật nợ chờ duyệt"| PendingDB
+    Banking -->|"4. Upload ảnh biên lai"| ProofStore
+    PendingDB -->|"5. Bắn sự kiện"| SSE
+    ProofStore -.->|"5. Xem ảnh proof"| Creditor
+    SSE -->|"6. Push SSE Event"| Creditor
+    Creditor -->|"7. Xác nhận gạch nợ (POST /confirm)"| SettledDB
+        </div>
+        <figcaption class="diagram-caption">Hình 2.5: Phân hệ quyết toán công nợ, Dynamic VietQR &amp; Đối soát 2 bước</figcaption>
+      </figure>
+
+      <p><strong>Quy trình vận hành:</strong></p>
+      <ul>
+        <li>Người nợ yêu cầu thanh toán (<code>POST /payments/qr</code>). Bộ điều phối API kích hoạt khóa bảo vệ chống gửi lặp trong 24 giờ.</li>
+        <li>Quản lý khóa đồng thời thực hiện khóa các dòng công nợ theo thứ tự mã định danh tăng dần (<code>UUID ASC</code>) bằng truy vấn <code>SELECT FOR UPDATE</code> để chống xung đột và khóa chết dữ liệu.</li>
+        <li>Động cơ sinh mã VietQR động chuẩn NAPAS 24/7 với nội dung định danh giao dịch duy nhất và trả về ứng dụng di động để người nợ quét mã chuyển tiền qua ứng dụng ngân hàng.</li>
+        <li>Người nợ tải ảnh biên lai chuyển tiền (<code>POST /proof</code>), ảnh được lưu trữ an toàn trên Cloud Storage và trạng thái giao dịch chuyển sang chờ xác nhận.</li>
+        <li>Tín hiệu <code>pg_notify</code> gửi thông báo về Real-time Event Hub để cập nhật trạng thái qua SSE. Chủ nợ mở màn hình đối soát và nhấn xác nhận (<code>POST /confirm</code>), hệ thống cập nhật gạch nợ và đồng bộ biến động số dư cho các bên liên quan.</li>
+      </ul>
+
+      <h4 class="subsection-heading">Chi tiết phân hệ quản lý nhóm</h4>
+      <p>
+        Phân hệ quản trị nhóm bảo đảm tính nhất quán của danh sách thành viên và phân quyền điều hành thông qua cơ chế khóa dòng và kiểm soát phiên bản danh sách tuần tự:
+      </p>
+
+      <figure class="diagram-card">
+        <div class="mermaid">
+flowchart TB
+    Member["1. Thành viên / Trưởng nhóm\nTạo nhóm · Mã mời Base62 · Rời nhóm"]
+    APIRbac["2. API Controller &amp; RBAC\nXác thực JWT &amp; Phân quyền"]
+    GroupLock["3. LockActiveGroup Manager\nKhóa dòng nhóm (SELECT FOR UPDATE)"]
+    ExitGuard["4. Exit Guard Engine\nChặn rời nhóm nếu Nợ ≠ 0đ"]
+    CapacityGuard["5. Capacity Guard\nGiới hạn sĩ số tối đa 50"]
+    TxCommit["6. Atomic Transaction (PostgreSQL 18)\nCập nhật Roster &amp; Tăng Roster Version"]
+    PostgresCore[("7. Core DB (PostgreSQL 18)\ngroups, members, invites")]
+    AuditTrail[("8. Audit Trail Log\nBảng group_activities")]
+    RealtimeHub["9. Real-time SSE Hub\npg_notify('group_events')"]
+    GroupScreen["10. Group Detail Screen (Flutter)\nCập nhật Roster tức thời"]
+
+    Member -->|"1. Thao tác"| APIRbac
+    APIRbac -->|"2. Phân quyền"| GroupLock
+    GroupLock -->|"3. Kiểm tra nợ"| ExitGuard
+    GroupLock -->|"3. Kiểm tra sĩ số"| CapacityGuard
+    ExitGuard -->|"4. Hợp lệ"| TxCommit
+    CapacityGuard -->|"4. Hợp lệ"| TxCommit
+    TxCommit -->|"5. Ghi thành viên"| PostgresCore
+    TxCommit -->|"5. Ghi nhật ký"| AuditTrail
+    PostgresCore -->|"6. Tín hiệu CSDL"| RealtimeHub
+    AuditTrail -->|"6. Tín hiệu CSDL"| RealtimeHub
+    RealtimeHub -->|"7. Push SSE Event"| GroupScreen
+        </div>
+        <figcaption class="diagram-caption">Hình 2.6: Phân hệ quản trị nhóm, kiểm soát Exit Guard &amp; Đồng bộ Roster</figcaption>
+      </figure>
+
+      <p><strong>Quy trình vận hành:</strong></p>
+      <ul>
+        <li>Người dùng thực hiện các thao tác quản lý nhóm như tạo nhóm, tham gia qua mã mời Base62, rời nhóm hoặc chuyển giao quyền Trưởng nhóm.</li>
+        <li>Máy chủ kiểm tra phiên làm việc JWT và quyền hạn tương ứng (<code>RBAC</code>), sau đó thực hiện khóa dòng nhóm bằng hàm <code>LockActiveGroup</code> với mệnh đề <code>SELECT FOR UPDATE</code> để ngăn chặn tranh chấp khi nhiều người thao tác cùng lúc.</li>
+        <li>Bộ kiểm soát nghiệp vụ (Governance Guard Engine) kiểm tra các quy tắc an toàn: chặn rời nhóm nếu còn công nợ chưa quyết toán và giới hạn sĩ số tối đa của nhóm.</li>
+        <li>Dữ liệu được ghi nhận nguyên tử vào cơ sở dữ liệu, đồng thời ghi lại nhật ký kiểm toán trong bảng <code>group_activities</code> và tăng số phiên bản danh sách (<code>roster_version</code>).</li>
+        <li>Kênh sự kiện nội bộ <code>pg_notify</code> kích hoạt Real-time Hub phát sự kiện <code>roster.updated</code> qua luồng SSE để cập nhật tức thời danh sách thành viên và số dư trên màn hình Group Detail Screen.</li>
+      </ul>
+
+      <h3 class="section-heading" id="2-kien-truc-ma-nguon">2. Kiến trúc mã nguồn</h3>
+      <p>Mã nguồn của hệ thống được tổ chức nhất quán theo nguyên tắc phân tách trách nhiệm độc lập:</p>
+
+      <p><strong>Backend phân tầng theo nghiệp vụ:</strong> Áp dụng mô hình khối độc lập theo từng phân hệ. Mỗi phân hệ nghiệp vụ gồm bốn lớp riêng biệt, giúp tầng nghiệp vụ không phụ thuộc trực tiếp vào framework web hay thư viện cơ sở dữ liệu, thuận tiện cho việc kiểm thử tự động:</p>
+      <pre><code>internal/modules/group/
+├── delivery/http/        # Tiếp nhận yêu cầu HTTP, kiểm tra dữ liệu đầu vào
+├── usecase/              # Chứa toàn bộ logic xử lý nghiệp vụ
+├── domain/               # Định nghĩa thực thể nghiệp vụ và lỗi chuẩn
+└── repository/           # Khai báo cổng giao tiếp dữ liệu (interface)
+    └── postgres/         # Triển khai truy vấn cơ sở dữ liệu bằng sqlc</code></pre>
+
+      <p><strong>Ứng dụng di động hướng tính năng:</strong> Toàn bộ mã nguồn phía máy khách được phân chia theo từng tính năng cụ thể. Mỗi tính năng được phân rã thành ba lớp: dữ liệu, nghiệp vụ và giao diện. Tầng giao diện chỉ tương tác thông qua các đối tượng nghiệp vụ thuần túy, không xử lý trực tiếp các lời gọi mạng:</p>
+      <pre><code>lib/features/bills/
+├── domain/               # Thực thể nghiệp vụ, cổng giao tiếp và các ca sử dụng
+├── data/                 # Triển khai lưu trữ, mô hình dữ liệu và gọi API Retrofit
+└── presentation/         # Quản lý trạng thái bằng Riverpod, màn hình và giao diện</code></pre>
+
+      <p><strong>Chuẩn hóa giao tiếp:</strong> Toàn bộ giao diện lập trình ứng dụng được định nghĩa trước theo chuẩn OpenAPI 3.0 nhằm chốt hợp đồng dữ liệu giữa hai phía trước khi triển khai mã nguồn. Dữ liệu phản hồi được chuẩn hóa chung một cấu trúc bao đóng cho cả trường hợp thành công và báo lỗi:</p>
+      <pre><code>// Phản hồi thành công:
+{
+  "success": true,
+  "data": { ... },
+  "message": "Thành công"
+}
+
+// Phản hồi báo lỗi:
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Dữ liệu không hợp lệ",
+    "details": { ... }
+  }
+}</code></pre>
+
+      <h3 class="section-heading" id="3-giai-phap-ky-thuat-trong-yeu">3. Giải pháp kỹ thuật trọng yếu</h3>
+      <p>Quá trình xây dựng hệ thống tập trung giải quyết bốn bài toán kỹ thuật cốt lõi:</p>
+      
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 32%;">Bài toán kỹ thuật</th>
+              <th>Giải pháp triển khai</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Chia tiền lệch số lẻ khi có thuế và giảm giá</strong></td>
+              <td>Áp dụng thuật toán phân bổ Hamilton trên tập số hữu tỉ, đảm bảo tổng tiền chia cho từng người luôn khớp chính xác từng đồng so với hóa đơn gốc mà không phát sinh sai số làm tròn.</td>
+            </tr>
+            <tr>
+              <td><strong>Xử lý bóc tách hóa đơn nặng và chậm</strong></td>
+              <td>Xây dựng luồng xử lý bất đồng bộ qua hàng đợi River Queue tích hợp ngay trong PostgreSQL; API phản hồi ngay lập tức kèm mã theo dõi tiến trình để người dùng không phải chờ đợi.</td>
+            </tr>
+            <tr>
+              <td><strong>Tối ưu tài nguyên kết nối thời gian thực</strong></td>
+              <td>Toàn bộ hệ thống dùng chung một kết nối cơ sở dữ liệu duy nhất để lắng nghe sự kiện, truyền phát dữ liệu về ứng dụng qua một luồng sự kiện cho mỗi người dùng và có cơ chế đồng bộ bù dữ liệu khi mất mạng.</td>
+            </tr>
+            <tr>
+              <td><strong>An toàn giao dịch đồng thời</strong></td>
+              <td>Áp dụng mã định danh giao dịch để ngăn ngừa gửi trùng lặp yêu cầu, kết hợp cơ chế kiểm soát phiên làm việc duy nhất và khóa trạng thái hóa đơn khi chốt sổ để chống xung đột dữ liệu.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="section-heading" id="4-ha-tang-cong-nghe">4. Hạ tầng công nghệ</h3>
+      <p>Toàn bộ hệ thống được triển khai thực tế trên môi trường máy chủ đám mây:</p>
+      <ul>
+        <li><strong>Backend:</strong> Ngôn ngữ Go phiên bản 1.26, bộ định tuyến Chi, thư viện truy xuất pgx, công cụ sinh mã truy vấn sqlc, công cụ quản lý phiên bản cơ sở dữ liệu Goose và hàng đợi River Queue.</li>
+        <li><strong>Ứng dụng di động:</strong> Nền tảng Flutter, thư viện quản lý trạng thái Riverpod, thư viện kết nối mạng Retrofit và Dio.</li>
+        <li><strong>Cơ sở dữ liệu:</strong> PostgreSQL phiên bản 18 phục vụ đồng thời lưu trữ dữ liệu, quản lý hàng đợi và phát thông điệp sự kiện.</li>
+        <li><strong>Môi trường vận hành:</strong> Đóng gói bằng Docker Compose, triển khai trên máy chủ đám mây Oracle Cloud kiến trúc ARM64, sử dụng máy chủ web Caddy tự động cấp phát và gia hạn chứng chỉ bảo mật HTTPS.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="callout-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          Ghi chú kiến trúc
+        </div>
+        <p>
+          Toàn bộ chương này mô tả kiến trúc tại thời điểm nghiệm thu ngày 07/09/2026. Sau giai đoạn báo cáo, phân hệ xác thực đã được thiết kế lại; xem <a href="#3-cai-tien-sau-giai-doan-bao-cao"><strong>mục VI.3 (Cải tiến sau giai đoạn báo cáo)</strong></a>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ==================== CHAPTER III ==================== -->
+    <section id="iii-tien-do-trien-khai">
+      <h2 class="chapter-heading"><span class="ch-num">III.</span> TIẾN ĐỘ TRIỂN KHAI</h2>
+
+      <h3 class="section-heading" id="1-phan-ky-trien-khai">1. Phân kỳ triển khai</h3>
+      <p>
+        Dự án được triển khai trong khoảng thời gian từ ngày 30/07/2026 đến ngày 07/09/2026 (gần 6 tuần làm việc), chia thành 5 giai đoạn liên tiếp:
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 15%;">Giai đoạn</th>
+              <th style="width: 20%;">Thời gian</th>
+              <th>Trọng tâm công việc</th>
+              <th>Kết quả đầu ra</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Giai đoạn 1</strong></td>
+              <td>30/07 – 05/08/2026</td>
+              <td>Khảo sát nhu cầu, tìm kiếm ý tưởng và lựa chọn đề tài</td>
+              <td>Thống nhất bài toán chia tiền nhóm không lưu ký với Mentor</td>
+            </tr>
+            <tr>
+              <td><strong>Giai đoạn 2</strong></td>
+              <td>06/08 – 13/08/2026</td>
+              <td>Đặc tả tài liệu yêu cầu, thiết kế cơ sở dữ liệu và dựng khung dự án</td>
+              <td>Hoàn thành tài liệu yêu cầu, kịch bản cơ sở dữ liệu và khung mã nguồn</td>
+            </tr>
+            <tr>
+              <td><strong>Giai đoạn 3</strong></td>
+              <td>14/08 – 25/08/2026</td>
+              <td>Phát triển các phân hệ nghiệp vụ cốt lõi trên cả hai nền tảng</td>
+              <td>Hoàn thành xác thực người dùng, quản lý nhóm và luồng chụp hóa đơn</td>
+            </tr>
+            <tr>
+              <td><strong>Giai đoạn 4</strong></td>
+              <td>26/08 – 03/09/2026</td>
+              <td>Tối ưu thuật toán chia tiền, cổng quản trị và kết nối thời gian thực</td>
+              <td>Hoàn thiện thuật toán Hamilton, trang Web Admin và tối ưu kết nối dữ liệu</td>
+            </tr>
+            <tr>
+              <td><strong>Giai đoạn 5</strong></td>
+              <td>04/09 – 07/09/2026</td>
+              <td>Kiểm thử hệ thống, đóng gói hạ tầng đám mây và chuẩn bị demo</td>
+              <td>Triển khai thực tế trên máy chủ đám mây, thực hiện buổi demo sản phẩm vào ngày 07/09/2026</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="section-heading" id="2-nhat-ky-tien-do">2. Nhật ký tiến độ</h3>
+      <p>Tiến độ chi tiết được tổng hợp trực tiếp từ lịch sử phát triển thực tế của dự án:</p>
+
+      <div class="timeline">
+        <!-- Giai đoạn 1 -->
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-header">
+            <span class="timeline-title">Giai đoạn 1: Lựa chọn đề tài</span>
+            <span class="timeline-date">30/07 – 05/08/2026</span>
+          </div>
+          <div class="timeline-content">
+            <ul>
+              <li><strong>Tài liệu:</strong> Khảo sát các ý tưởng đề tài (sàn thương mại dịch vụ số, đặt lịch đánh giá, chia tiền nhóm). Nhận diện các bất cập lớn trong chia tiền thủ công: sai số làm tròn khi hóa đơn có thuế phí và rào cản tâm lý khi đòi nợ. Đề xuất xây dựng PaySplit với định vị là giải pháp điều phối thanh toán ngang hàng không lưu ký vốn, được Mentor phê duyệt.</li>
+              <li><strong>Backend:</strong> Khởi tạo dự án Go vào ngày 05/08/2026.</li>
+              <li><strong>Frontend:</strong> Khởi tạo dự án Flutter vào ngày 05/08/2026.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Giai đoạn 2 -->
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-header">
+            <span class="timeline-title">Giai đoạn 2: Thiết lập nền tảng</span>
+            <span class="timeline-date">06/08 – 13/08/2026</span>
+          </div>
+          <div class="timeline-content">
+            <ul>
+              <li><strong>Tài liệu:</strong> Soạn thảo tài liệu yêu cầu sản phẩm chi tiết; thiết kế lược đồ cơ sở dữ liệu quan hệ với các bảng nhóm, thành viên, hóa đơn, món ăn và cơ chế gộp nợ thanh toán.</li>
+              <li><strong>Backend:</strong> Khởi tạo khung dự án Go theo kiến trúc phân tầng sạch; xây dựng hệ thống nạp cấu hình môi trường, bộ định tuyến HTTP, xử lý phân trang và cấu trúc phản hồi lỗi chuẩn.</li>
+              <li><strong>Frontend:</strong> Khởi tạo dự án Flutter theo cấu trúc phân tầng sạch kết hợp tổ chức theo tính năng; dựng khung giao diện bảng điều khiển số dư và luồng xác thực ban đầu.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Giai đoạn 3 -->
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-header">
+            <span class="timeline-title">Giai đoạn 3: Phát triển tính năng cốt lõi</span>
+            <span class="timeline-date">14/08 – 25/08/2026</span>
+          </div>
+          <div class="timeline-content">
+            <ul>
+              <li><strong>Backend:</strong> Triển khai hệ thống bảo vệ với lớp kiểm soát tốc độ gửi yêu cầu và nguồn gốc truy cập; hoàn thiện cơ chế xác thực kép kèm tính năng phát hiện sử dụng lại phiên đăng nhập; phát triển nghiệp vụ quản lý nhóm, mã mời liên kết động và mã QR; tích hợp pipeline nhận diện hóa đơn bất đồng bộ qua hàng đợi.</li>
+              <li><strong>Frontend:</strong> Hoàn thiện trọn bộ giao diện người dùng gồm Đăng nhập, Đăng ký, nhập mã OTP, Bảng điều khiển trang chủ, Hồ sơ cá nhân, Chụp ảnh hóa đơn, Rà soát và phân bổ món ăn; tích hợp nhận thông báo đẩy qua Firebase.</li>
+              <li><strong>Tài liệu:</strong> Khởi tạo tài liệu thiết kế kỹ thuật, hoàn thiện các luồng nghiệp vụ và chốt phạm vi chức năng bàn giao.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Giai đoạn 4 -->
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-header">
+            <span class="timeline-title">Giai đoạn 4: Tối ưu hóa và tích hợp hệ thống</span>
+            <span class="timeline-date">26/08 – 03/09/2026</span>
+          </div>
+          <div class="timeline-content">
+            <ul>
+              <li><strong>Backend:</strong> Tối ưu hóa thuật toán phân bổ chi phí Hamilton trên tập số hữu tỉ, xử lý chính xác phần tiền lẻ làm tròn đối với hóa đơn có thuế và giảm giá; bổ sung tính năng Trưởng nhóm khóa nhận hóa đơn mới để chốt sổ hàng loạt; phát triển cổng Web Admin nhúng trực tiếp trong backend với giao diện theo dõi số liệu và nhật ký kiểm toán; tối ưu hóa kết nối cơ sở dữ liệu cho các sự kiện thời gian thực.</li>
+              <li><strong>Frontend:</strong> Tích hợp lớp bao đóng dữ liệu phản hồi, kết nối màn hình nhóm với API thực tế, xây dựng giao diện thanh toán và tìm kiếm nhóm.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Giai đoạn 5 -->
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-header">
+            <span class="timeline-title">Giai đoạn 5: Hoàn thiện và demo</span>
+            <span class="timeline-date">04/09 – 07/09/2026</span>
+          </div>
+          <div class="timeline-content">
+            <ul>
+              <li><strong>Backend:</strong> Hoàn thiện luồng truyền phát sự kiện thời gian thực theo từng người dùng; đóng gói toàn bộ hệ thống bằng Docker Compose và triển khai lên máy chủ đám mây Oracle Cloud với máy chủ web Caddy quản lý chứng chỉ bảo mật; dọn dẹp các tác vụ nhận diện hóa đơn bị kẹt.</li>
+              <li><strong>Frontend:</strong> Rà soát và khắc phục các vấn đề tiềm ẩn về gửi trùng lặp yêu cầu mạng, chuyển đổi mã định danh giao dịch sang chuẩn duy nhất để chống gửi lặp biên lai chuyển khoản; hoàn thiện đồng bộ thời gian thực và kiểm thử trên thiết bị thật.</li>
+              <li><strong>Tài liệu:</strong> Đồng bộ tài liệu thiết kế kỹ thuật, cập nhật tài liệu luồng chi tiết, xây dựng bộ dữ liệu 12 hóa đơn kiểm thử mẫu, hoàn thiện slide thuyết trình và thực hiện buổi demo chính thức vào ngày 07/09/2026.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="section-heading" id="3-danh-gia-hoan-thanh">3. Đánh giá hoàn thành</h3>
+      <ul>
+        <li><strong>Mức độ tuân thủ tiến độ:</strong> Toàn bộ các mốc công việc từ ngày khởi động đề tài đến ngày demo đều được thực hiện đúng thời hạn đặt ra, hoàn thành đầy đủ các hạng mục cam kết ban đầu.</li>
+        <li><strong>Khối lượng sản phẩm bàn giao:</strong> Hệ thống hoàn thành với hơn 300 commit trên toàn bộ các nhánh của hai kho mã nguồn, bao gồm Backend đầy đủ chức năng, ứng dụng Frontend hoàn thiện và bộ Tài liệu kỹ thuật đồng bộ.</li>
+        <li><strong>Tính ổn định của sản phẩm:</strong> Sản phẩm được triển khai thực tế trên môi trường máy chủ đám mây, luồng nghiệp vụ khép kín từ khâu chụp hóa đơn đến thanh toán VietQR và đối soát nợ hoạt động ổn định và chính xác trong buổi demo ngày 07/09/2026.</li>
+      </ul>
+    </section>
+
+    <!-- ==================== CHAPTER IV ==================== -->
+    <section id="iv-ket-qua-nghiem-thu">
+      <h2 class="chapter-heading"><span class="ch-num">IV.</span> KẾT QUẢ NGHIỆM THU</h2>
+
+      <h3 class="section-heading" id="1-muc-do-hoan-thanh-chuc-nang">1. Mức độ hoàn thành chức năng</h3>
+      <p>Đối chiếu với phạm vi thiết kế ban đầu, hiện trạng triển khai thực tế của 5 phân hệ cốt lõi được tổng hợp như sau:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 22%;">Phân hệ nghiệp vụ</th>
+              <th style="width: 38%;">Yêu cầu thiết kế</th>
+              <th>Hiện trạng triển khai thực tế</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Xác thực tài khoản</strong></td>
+              <td>Đăng ký kèm mã OTP email; kiểm soát một phiên đăng nhập; cơ chế token kép có phát hiện tái sử dụng trái phép; lưu danh bạ ngân hàng VietQR.</td>
+              <td>Hoàn thiện toàn bộ luồng đăng ký, OTP, thiết lập ngân hàng nhận tiền; tự động thu hồi phiên nếu phát hiện mã làm mới bị tái sử dụng.</td>
+            </tr>
+            <tr>
+              <td><strong>Quản lý nhóm</strong></td>
+              <td>Tạo nhóm, chuyển quyền Trưởng nhóm; mời thành viên qua liên kết và mã QR; ma trận nợ nội bộ; tính năng khóa nhận hóa đơn mới.</td>
+              <td>Vận hành ổn định, tạo mã mời và mã QR tức thời; tính năng khóa nhận hóa đơn mới phục vụ chốt sổ theo đợt hoạt động chính xác.</td>
+            </tr>
+            <tr>
+              <td><strong>Hóa đơn OCR</strong></td>
+              <td>Nhận diện nhiều ảnh hóa đơn bất đồng bộ qua hàng đợi; giao diện rà soát chỉnh sửa món ăn, thuế phí; khóa chỉnh sửa sau khi duyệt.</td>
+              <td>Hàng đợi tác vụ bóc tách xử lý ngầm trả kết quả chính xác; giao diện cho phép rà soát và hiệu chỉnh chi tiết trước khi chốt hóa đơn.</td>
+            </tr>
+            <tr>
+              <td><strong>Phân bổ chi phí</strong></td>
+              <td>Chia tiền theo món, theo phần hoặc tỷ lệ; thuật toán Hamilton xử lý làm tròn không phát sinh số dư; chốt hóa đơn an toàn; chốt sổ cả nhóm.</td>
+              <td>Tính toán chi phí chính xác từng đồng, bảo đảm số tiền chia khớp với hóa đơn gốc; luồng chốt sổ hàng loạt kiểm soát tốt xung đột dữ liệu.</td>
+            </tr>
+            <tr>
+              <td><strong>Quyết toán công nợ</strong></td>
+              <td>Gộp nợ ròng giữa hai người; sinh mã VietQR động; nộp biên lai và duyệt đối soát hai bước; đồng bộ thời gian thực; cổng Web Admin giám sát.</td>
+              <td>Tự động tổng hợp công nợ ròng và sinh mã VietQR chuẩn xác; đối soát nợ trực tiếp qua biên lai; cập nhật tức thời về ứng dụng di động.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="section-heading" id="2-kich-ban-nghiem-thu-thuc-te">2. Kịch bản nghiệm thu thực tế</h3>
+      <p>Hệ thống được kiểm chứng qua bộ dữ liệu chuẩn gồm <strong>12 hóa đơn kiểm thử</strong> trên ma trận 3 vai trò người dùng kết hợp 4 trạng thái vòng đời hóa đơn:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 28%;">Vai trò kiểm thử</th>
+              <th style="width: 14%; text-align: center;">Số kịch bản</th>
+              <th style="width: 29%;">Phạm vi xác thực nghiệp vụ</th>
+              <th>Kết quả nghiệm thu thực tế</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Trưởng nhóm</strong><br><em>(người trả tiền)</em></td>
+              <td style="text-align: center;"><strong>4 hóa đơn</strong></td>
+              <td>Quản lý vòng đời hóa đơn (Nháp, Review, Đã chốt, Đã hủy); kiểm soát quyền chốt sổ nhóm.</td>
+              <td>Vận hành đúng thẩm quyền: chốt hóa đơn và ghi nhận nợ chính xác, khóa chỉnh sửa sau khi chốt.</td>
+            </tr>
+            <tr>
+              <td><strong>Người tạo đơn</strong><br><em>(thành viên trả tiền)</em></td>
+              <td style="text-align: center;"><strong>4 hóa đơn</strong></td>
+              <td>Hiệu chỉnh món ăn, gửi yêu cầu đối soát, hủy hóa đơn nháp; không thể chốt đè quyền Trưởng nhóm.</td>
+              <td>Phân quyền chuẩn xác: lưu nháp và gửi duyệt thành công; hệ thống ngăn chặn can thiệp vượt quyền.</td>
+            </tr>
+            <tr>
+              <td><strong>Thành viên</strong><br><em>(người tham gia)</em></td>
+              <td style="text-align: center;"><strong>4 hóa đơn</strong></td>
+              <td>Xem phân bổ chi phí cá nhân, quét mã VietQR động để trả nợ; chỉ đọc dữ liệu, không can thiệp món ăn.</td>
+              <td>Hiển thị minh bạch số tiền nợ cá nhân; tạo mã VietQR chuyển khoản nhanh chóng và chính xác.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Các trường hợp biên đặc biệt đã được kiểm chứng thành công trong buổi demo ngày 07/09/2026:</p>
+      <ul>
+        <li><strong>Hóa đơn đa thuế và giảm giá:</strong> Xử lý chính xác hóa đơn có cùng lúc 2 mức thuế VAT (8% và 10%), phí phục vụ 5% và chiết khấu; phân bổ chi phí theo đúng tỷ trọng tiêu dùng của từng người mà không phát sinh sai lệch số học.</li>
+        <li><strong>Chia tiền số lẻ:</strong> Thuật toán Hamilton tự động phân bổ phần dư làm tròn (ví dụ chia 100.000 đ cho 3 người thành 33.334 đ và 33.333 đ × 2), bảo toàn tổng số tiền thu về đúng 100.000 đ.</li>
+        <li><strong>Quy trình đối soát hai bước:</strong> Người nợ quét mã VietQR chuyển khoản và nộp ảnh biên lai; người nhận đối chiếu ảnh và xác nhận gạch nợ tức thời qua ứng dụng.</li>
+      </ul>
+
+      <h3 class="section-heading" id="3-kiem-thu-tu-dong">3. Kiểm thử tự động</h3>
+      <p>Để bảo đảm độ tin cậy của mã nguồn, hệ thống duy trì các bộ kiểm thử tự động trên cả hai nền tảng:</p>
+      <ul>
+        <li><strong>Backend (Go 1.26):</strong> Duy trì <strong>82 tệp kiểm thử với hơn 530 ca kiểm thử tự động</strong>, bao phủ các ca sử dụng tính toán tài chính, thuật toán Hamilton, truy vấn cơ sở dữ liệu, các lớp bảo vệ bảo mật, hàng đợi tác vụ River Queue và kênh lắng nghe sự kiện dùng chung.</li>
+        <li><strong>Frontend (Flutter):</strong> Thực thi thành công <strong>384 bài kiểm thử tự động</strong>, bao phủ các ca sử dụng nghiệp vụ, lưu trữ an toàn, luồng điều hướng màn hình và thuật toán nén ảnh thông minh (giảm dung lượng ảnh từ 6,38 MB xuống 1,8 MB trong 928 mili-giây).</li>
+      </ul>
+
+      <h3 class="section-heading" id="4-danh-gia-chat-luong-phi-chuc-nang">4. Đánh giá chất lượng phi chức năng</h3>
+      <p>Hệ thống PaySplit đáp ứng các tiêu chuẩn kỹ thuật vận hành then chốt:</p>
+      <ul>
+        <li><strong>Độ chính xác tài chính:</strong> Tính toán trên tập số hữu tỉ kết hợp phương pháp phân bổ phần dư lớn nhất giúp bảo toàn dòng tiền: tổng số tiền chia cho các thành viên luôn khớp với số tiền ghi trên hóa đơn gốc, kiểm soát sai lệch làm tròn ở mức 0 đồng trong các ca kiểm thử.</li>
+        <li><strong>Tính toàn vẹn giao dịch:</strong> Áp dụng mã định danh giao dịch duy nhất do thiết bị di động sinh ra cho các yêu cầu nộp biên lai và duyệt gạch nợ, ngăn chặn việc xử lý trùng lặp khi người dùng bấm liên tiếp do gián đoạn mạng.</li>
+        <li><strong>Tối ưu tài nguyên hệ thống:</strong> Sử dụng một kết nối cơ sở dữ liệu duy nhất để lắng nghe các sự kiện thay đổi dữ liệu và điều phối tới thiết bị người dùng qua một luồng thời gian thực duy nhất, giữ kết nối ổn định khi quy mô người dùng tăng lên.</li>
+        <li><strong>Môi trường vận hành thực tế:</strong> Toàn bộ hệ thống được đóng gói bằng Docker Compose, triển khai ổn định trên hạ tầng đám mây Oracle Cloud kiến trúc ARM64 với chứng chỉ bảo mật HTTPS tự động từ Caddy trong suốt buổi demo ngày 07/09/2026.</li>
+      </ul>
+    </section>
+
+    <!-- ==================== CHAPTER V ==================== -->
+    <section id="v-dong-gop-tung-thanh-vien">
+      <h2 class="chapter-heading"><span class="ch-num">V.</span> ĐÓNG GÓP TỪNG THÀNH VIÊN</h2>
+
+      <h3 class="section-heading" id="1-dong-gop-chung">1. Đóng góp chung</h3>
+      <p>
+        Trong suốt quá trình triển khai dự án từ ngày 30/07/2026 đến ngày 07/09/2026, các thành viên trong nhóm đã duy trì sự phối hợp chặt chẽ trên các phương diện công việc chung:
+      </p>
+      <ul>
+        <li>Thảo luận định hướng sản phẩm, khảo sát các bài toán chi tiêu nhóm thực tế và thống nhất mô hình điều phối thanh toán ngang hàng không lưu ký vốn với Mentor.</li>
+        <li>Tham gia xây dựng và chuẩn hóa tài liệu đặc tả yêu cầu sản phẩm, tài liệu thiết kế kỹ thuật và các sơ đồ kiến trúc hệ thống.</li>
+        <li>Định nghĩa trước toàn bộ hợp đồng giao tiếp API theo chuẩn OpenAPI 3.0 nhằm bảo đảm sự nhất quán giữa phía máy chủ và ứng dụng di động trước khi viết mã nguồn.</li>
+        <li>Thiết lập quy trình làm việc chuyên nghiệp trên GitHub: mọi tính năng đều được phát triển theo nhánh riêng và trải qua quy trình rà soát chéo mã nguồn qua các yêu cầu tích hợp nhánh (Pull Request).</li>
+        <li>Xây dựng bộ dữ liệu 12 hóa đơn kiểm thử thực tế đa dạng vai trò và trạng thái; phối hợp kiểm thử tích hợp đầu cuối giữa máy chủ và ứng dụng di động trên thiết bị thật.</li>
+        <li><strong>Hạ tầng sự kiện thời gian thực:</strong> Phạm Thanh Lam đặt nền móng với luồng truyền phát sự kiện theo nhóm, cơ chế phiên bản danh sách tăng tuần tự và điểm cuối đồng bộ bù dữ liệu khi thiết bị mất kết nối; Phạm Lê Hoàng Nam tối ưu tiếp bằng cách gộp toàn bộ về <strong>một kết nối cơ sở dữ liệu duy nhất</strong> lắng nghe chung cho cả ba kênh sự kiện và <strong>một luồng sự kiện cho mỗi phiên đăng nhập</strong>, thay cho mô hình mỗi màn hình tự mở một luồng riêng. Mọi tín hiệu sự kiện chỉ được phát trong đúng giao dịch của phép ghi, nên dữ liệu chỉ tới thiết bị sau khi đã được lưu bền.</li>
+        <li>Biên soạn tài liệu báo cáo thử việc, thiết kế slide thuyết trình và phối hợp vận hành hệ thống trong buổi demo ngày 07/09/2026.</li>
+      </ul>
+
+      <h3 class="section-heading" id="2-chi-tiet-dong-gop-tung-thanh-vien">2. Chi tiết đóng góp từng thành viên</h3>
+
+      <div class="member-grid">
+        <!-- Member 1: Nam -->
+        <article class="member-card" id="pham-le-hoang-nam">
+          <div class="member-header">
+            <div class="member-avatar">N</div>
+            <div>
+              <h4 class="member-name">Phạm Lê Hoàng Nam</h4>
+              <span class="member-role">Xác thực · Quyết toán công nợ · Hạ tầng đám mây · Quyết toán Flutter &amp; SSE</span>
+            </div>
+          </div>
+          <div class="member-body">
+            <ul>
+              <li><strong>Phân hệ xác thực tài khoản:</strong> Xây dựng mô hình kiểm soát duy nhất một phiên đăng nhập trên mỗi thiết bị; thiết kế cơ chế bảo mật kết hợp giữa Access Token ngắn hạn (15 phút) và Refresh Token dài hạn (7 ngày) có tính năng phát hiện tái sử dụng trái phép; tích hợp thuật toán băm mật khẩu bcrypt và xây dựng lớp kiểm soát xác thực người dùng.</li>
+              <li><strong>Phân hệ quyết toán công nợ:</strong> Phát triển động cơ gộp nợ ròng giữa từng cặp thành viên; tích hợp dịch vụ sinh chuỗi dữ liệu mã VietQR động theo chuẩn NAPAS 24/7; xây dựng quy trình nộp biên lai và duyệt đối soát hai bước; áp dụng cơ chế khóa dòng dữ liệu theo thứ tự định danh tăng dần (<code>UUID ASC</code>) để chống xung đột và khóa chết dữ liệu khi có nhiều giao dịch đồng thời.</li>
+              <li><strong>Hạ tầng và nền tảng cốt lõi:</strong> Cấu hình vùng kết nối cơ sở dữ liệu <code>pgxpool</code>, thiết lập quy trình quản lý phiên bản lược đồ dữ liệu bằng Goose và công cụ sinh mã truy vấn an toàn sqlc; đóng gói toàn bộ hệ thống bằng Docker Compose và triển khai vận hành thực tế trên máy chủ đám mây Oracle Cloud với Caddy HTTPS.</li>
+              <li><strong>Ứng dụng di động Flutter:</strong> Xây dựng giao diện gom nợ thanh toán, quét mã VietQR động, màn hình nộp bằng chứng chuyển khoản và trung tâm đối soát xác nhận nợ; thiết lập kênh lắng nghe sự kiện Server-Sent Events qua một kết nối duy nhất cho toàn ứng dụng kèm cơ chế kiểm soát phiên bản tài nguyên; tích hợp danh mục ngân hàng động và tối ưu hóa vòng đời camera quét mã QR nhóm.</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- Member 2: Tin -->
+        <article class="member-card" id="nguyen-trong-tin">
+          <div class="member-header">
+            <div class="member-avatar">T</div>
+            <div>
+              <h4 class="member-name">Nguyễn Trọng Tín</h4>
+              <span class="member-role">Nhận diện hóa đơn OCR · Phân bổ Hamilton · Thông báo FCM · Giao diện Flutter</span>
+            </div>
+          </div>
+          <div class="member-body">
+            <ul>
+              <li><strong>Phân hệ nhận diện hóa đơn:</strong> Xây dựng đường ống bóc tách hóa đơn bất đồng bộ qua hàng đợi tác vụ River Queue trên cơ sở dữ liệu; tích hợp và chuẩn hóa cấu trúc dữ liệu JSON từ mô hình thị giác trí tuệ nhân tạo LlamaExtract; phát triển tiện ích nén ảnh thông minh phía ứng dụng di động giúp giảm dung lượng ảnh trước khi truyền tải qua mạng.</li>
+              <li><strong>Phân hệ phân bổ chi phí:</strong> Nghiên cứu và hiện thực hóa thuật toán phân bổ Hamilton trên tập số hữu tỉ (<code>math/big.Rat</code>), phân bổ chính xác chi phí món ăn, thuế VAT nhiều mức, phí dịch vụ và chiết khấu mà không phát sinh sai số làm tròn.</li>
+              <li><strong>Phân hệ thông báo:</strong> Tích hợp dịch vụ Firebase Cloud Messaging (FCM) ở phía máy chủ và ứng dụng di động để tự động gửi thông báo đẩy khi có hóa đơn mới, cập nhật trạng thái bóc tách và nhắc nợ lịch sự.</li>
+              <li><strong>Ứng dụng di động Flutter:</strong> Xây dựng toàn bộ luồng xác thực tài khoản (Đăng nhập, Đăng ký, nhập mã OTP với Pinput); phát triển bảng điều khiển trang chủ với tổng quan số dư nợ, carousel nhóm và dòng thời gian hoạt động; tích hợp camera chụp hóa đơn với đèn flash và thuật toán nén ảnh nền; xây dựng màn hình rà soát món ăn, gán người dùng, chia tiền theo phần và theo tỷ lệ; phát triển trung tâm thông báo và điều hướng liên kết sâu.</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- Member 3: Lam -->
+        <article class="member-card" id="pham-thanh-lam">
+          <div class="member-header">
+            <div class="member-avatar">L</div>
+            <div>
+              <h4 class="member-name">Phạm Thanh Lam</h4>
+              <span class="member-role">Quản lý nhóm · Cổng Web Admin · Kiến trúc Clean Arch · Group Hub Flutter</span>
+            </div>
+          </div>
+          <div class="member-body">
+            <ul>
+              <li><strong>Phân hệ quản lý nhóm:</strong> Xây dựng toàn bộ nghiệp vụ nhóm gồm tạo nhóm, mã mời liên kết Base62, mã QR nhóm, phân quyền Trưởng nhóm và Thành viên; phát triển tính năng Trưởng nhóm khóa nhận hóa đơn mới để phục vụ chốt sổ theo đợt; xây dựng cơ chế quản lý phiên bản danh sách nhóm tăng tuần tự (<code>roster_version</code>) và điểm cuối API đồng bộ bù sự kiện (<code>/sync</code>).</li>
+              <li><strong>Cổng Web Admin:</strong> Phát triển giao diện quản trị Web Admin được nhúng trực tiếp vào tệp thực thi Go (<code>//go:embed</code>), cung cấp công cụ cho quản trị viên tra cứu tài khoản, che mờ thông tin ngân hàng bảo mật, kiểm tra nhật ký kiểm toán hệ thống và theo dõi số liệu hàng đợi.</li>
+              <li><strong>Chuẩn hóa hệ thống và tài liệu:</strong> Thiết lập khung dự án ban đầu theo kiến trúc phân tầng sạch; chuẩn hóa cấu trúc dữ liệu bao đóng phản hồi API và cơ chế xử lý phân trang; khởi tạo và cập nhật tài liệu thiết kế kỹ thuật, sơ đồ kiến trúc và đặc tả yêu cầu nghiệp vụ.</li>
+              <li><strong>Ứng dụng di động Flutter:</strong> Khởi tạo khung mã nguồn ứng dụng ban đầu theo kiến trúc phân tầng sạch kết hợp tổ chức theo tính năng; xây dựng lớp bao đóng phản hồi mạng dùng chung (<code>ApiResponse</code>) và xử lý lỗi dữ liệu; phát triển màn hình Quản trị nhóm (Group Hub), luồng tạo nhóm và bảng mời thành viên; xây dựng tính năng tìm kiếm nhóm tiếng Việt có dấu, tìm kiếm nội tuyến dòng công nợ và cơ chế đếm ngược thời gian chờ gửi nhắc nợ duy trì qua các phiên.</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ==================== CHAPTER VI ==================== -->
+    <section id="vi-ket-luan">
+      <h2 class="chapter-heading"><span class="ch-num">VI.</span> KẾT LUẬN</h2>
+
+      <h3 class="section-heading" id="1-tong-ket-ket-qua-dat-duoc">1. Tổng kết kết quả đạt được</h3>
+      <p>
+        Qua quá trình nghiên cứu và phát triển từ ngày 30/07/2026 đến ngày 07/09/2026, nhóm đã hoàn thành việc xây dựng và đưa vào vận hành thử nghiệm hệ thống PaySplit. Dự án giải quyết hiệu quả bài toán chi tiêu nhóm thông qua việc tự động hóa bóc tách hóa đơn bằng trí tuệ nhân tạo, phân bổ chi phí chuẩn xác từng đồng với thuật toán Hamilton trên số hữu tỉ, hỗ trợ thanh toán ngang hàng không lưu ký qua mã VietQR động NAPAS 24/7 và tối ưu hóa kết nối thời gian thực qua kênh sự kiện dùng chung. Toàn bộ hệ thống đã được đóng gói Docker Compose, vận hành ổn định trên hạ tầng đám mây Oracle Cloud với chứng chỉ bảo mật HTTPS từ Caddy và hoàn thành tốt buổi demo vào ngày 07/09/2026.
+      </p>
+
+      <h3 class="section-heading" id="2-bai-hoc-kinh-nghiem">2. Bài học kinh nghiệm trong quá trình phát triển</h3>
+      <ul>
+        <li><strong>Chuẩn hóa hợp đồng giao tiếp sớm:</strong> Việc thống nhất tài liệu đặc tả OpenAPI 3.0 và tài liệu thiết kế kỹ thuật trước khi lập trình giúp các thành viên phát triển song song các phần việc máy chủ và ứng dụng di động một cách đồng bộ, giảm thiểu sự cố không tương thích khi tích hợp.</li>
+        <li><strong>Xử lý số liệu tài chính thận trọng:</strong> Việc tránh sử dụng số thực dấu phẩy động cho các phép toán chia tiền nhạy cảm và kiên định áp dụng số hữu tỉ là kinh nghiệm thực tế quý giá giúp hệ thống bảo toàn dòng tiền chính xác.</li>
+        <li><strong>Quản lý tài nguyên và kết nối hiệu quả:</strong> Thay vì để máy khách kết nối trực tiếp hoặc mở nhiều kết nối tới cơ sở dữ liệu cho các tác vụ thời gian thực, việc thiết kế một bộ lắng nghe tập trung giúp hệ thống duy trì hiệu năng tốt khi số lượng người dùng đồng thời tăng lên.</li>
+        <li><strong>Phối hợp làm việc nhóm có kỷ luật:</strong> Việc phân định ranh giới chức năng rõ ràng theo kiến trúc phân tầng sạch, kết hợp văn hóa rà soát chéo mã nguồn qua từng yêu cầu tích hợp nhánh giúp nâng cao chất lượng mã nguồn và sự am hiểu kiến trúc chung của toàn đội ngũ.</li>
+      </ul>
+
+      <h3 class="section-heading" id="3-cai-tien-sau-giai-doan-bao-cao">3. Cải tiến sau giai đoạn báo cáo</h3>
+      <div class="callout callout-warning">
+        <div class="callout-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+          Ghi nhận trung thực hiện trạng kiến trúc
+        </div>
+        <p>
+          Sau buổi nghiệm thu ngày 07/09/2026, nhóm tiếp tục rà soát lại các quyết định thiết kế đã đưa ra và nhận thấy phân hệ xác thực tồn tại một điểm yếu về mặt kiến trúc. Nội dung dưới đây nằm ngoài phạm vi thời gian của báo cáo, được ghi lại nhằm phản ánh trung thực hiện trạng mã nguồn và quá trình trưởng thành của nhóm.
+        </p>
+      </div>
+
+      <p>
+        <strong>Vấn đề nhận ra.</strong> Cơ chế xác thực mô tả ở các chương trên kết hợp Access Token dạng JWT với Refresh Token xoay vòng. Tuy nhiên, do yêu cầu bảo mật buộc mỗi yêu cầu nghiệp vụ phải kiểm tra phiên đăng nhập còn hiệu lực hay không, hệ thống vẫn phải truy vấn cơ sở dữ liệu ở mọi lời gọi. Nói cách khác, hệ thống đã trả đủ chi phí của mô hình token tra cứu tập trung nhưng vẫn gánh toàn bộ độ phức tạp của JWT: khóa bí mật toàn hệ thống, thời hạn ngắn, quy trình làm mới token, xoay vòng và phát hiện tái sử dụng. Khi đã chấp nhận tra cứu ở mỗi yêu cầu thì JWT không còn mang lại lợi ích nào tương xứng.
+      </p>
+
+      <p>Ba hệ quả cụ thể đã được ghi nhận:</p>
+      <ol>
+        <li>Đường xác thực dành riêng cho thao tác đăng xuất không truy vấn cơ sở dữ liệu, để lại cửa sổ thu hồi phiên lên tới 15 phút.</li>
+        <li>Khi luồng gọi API thông thường và luồng sự kiện thời gian thực cùng hết hạn token, hai bên có thể cùng làm mới token; lượt thứ hai bị hệ thống hiểu nhầm là hành vi đánh cắp và thu hồi cả phiên, khiến người dùng bị đăng xuất không rõ nguyên nhân.</li>
+        <li>Mã thông báo đẩy được gắn vào phiên đăng nhập, dẫn tới người dùng lâu ngày không mở ứng dụng sẽ không nhận được thông báo nhắc nợ, đúng nhóm đối tượng mà tính năng này phục vụ.</li>
+      </ol>
+
+      <p>
+        <strong>Giải pháp thay thế.</strong> Nhóm thay cặp token bằng <strong>một mã phiên đục duy nhất</strong> lưu trên Redis, trong đó Redis đóng vai trò nguồn phán quyết duy nhất cho câu hỏi một phiên còn hiệu lực hay không.
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 35%;">Tiêu chí so sánh</th>
+              <th style="width: 32%;">Trước (JWT và token làm mới)</th>
+              <th>Sau (mã phiên đục và Redis)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Số chứng chỉ ứng dụng lưu giữ</strong></td>
+              <td>2</td>
+              <td><strong>1</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Xác thực mỗi yêu cầu</strong></td>
+              <td>Kiểm chữ ký cộng truy vấn ghép 2 bảng</td>
+              <td><strong>1 lượt đọc Redis</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Hiệu lực thu hồi phiên</strong></td>
+              <td>Tức thì hoặc tối đa 15 phút tùy đường</td>
+              <td><strong>Tức thì trên mọi đường</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Hạn phiên</strong></td>
+              <td>7 ngày cố định từ lúc đăng nhập</td>
+              <td><strong>7 ngày trượt, trần cứng 30 ngày</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Số đường xác thực phải duy trì</strong></td>
+              <td>2</td>
+              <td><strong>1</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Khóa bí mật toàn hệ thống</strong></td>
+              <td>Có</td>
+              <td><strong>Không còn</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Mã thông báo đẩy</strong></td>
+              <td>Gắn với phiên (lỗi nêu trên)</td>
+              <td><strong>Bảng riêng theo thiết bị</strong></td>
+            </tr>
+            <tr>
+              <td><strong>Xử lý phía ứng dụng di động</strong></td>
+              <td>Lớp làm mới token chống gọi trùng</td>
+              <td><strong>Gắn một tiêu đề yêu cầu</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>Cái giá phải trả được ghi nhận sòng phẳng.</strong> Hai điểm đánh đổi đã được xác định và xử lý thay vì bỏ qua:</p>
+      <ul>
+        <li><strong>Redis trở thành thành phần bắt buộc</strong> trên đường đi của mọi yêu cầu có xác thực. Nhóm bù lại bằng cấu hình chống tự xóa dữ liệu khi đầy bộ nhớ, ghi nhật ký bền vững, kiểm tra kết nối ngay lúc khởi động, điểm cuối giám sát tình trạng từng thành phần, và đặc biệt là <strong>phân biệt rõ mã lỗi 401 với 503</strong>: 401 nghĩa là phiên đã chết nên ứng dụng xóa chứng chỉ, còn 503 nghĩa là hạ tầng tạm lỗi nên ứng dụng giữ nguyên và thử lại. Gộp hai mã này sẽ biến một sự cố Redis vài chục giây thành một lần đăng xuất vĩnh viễn của toàn bộ người dùng.</li>
+        <li><strong>Vai trò người dùng được lưu sẵn trong phiên</strong> nên có thể lạc hậu tối đa 7 ngày. Nhóm bổ sung một bài kiểm thử tự động quét mã nguồn, báo lỗi ngay khi xuất hiện bất kỳ vị trí nào ghi vào trường vai trò hoặc trạng thái tài khoản mà không kèm thao tác thu hồi phiên.</li>
+      </ul>
+
+      <p>
+        Phần cải tiến được thực hiện qua hai chặng: <strong>Phạm Thanh Lam</strong> thiết kế lại toàn bộ cơ chế xác thực trong các ngày 09 đến 11/09/2026, kèm một tài liệu quyết định kiến trúc riêng và bộ kiểm thử tích hợp chạy trên Redis thật; <strong>Phạm Lê Hoàng Nam</strong> bổ sung lớp gia cố ngày 13/09/2026, gồm bài kiểm thử canh bất biến thu hồi phiên nêu trên và việc chuyển số liệu phiên đang hoạt động ở trang quản trị sang đọc từ Redis, thay cho cách đếm cũ có thể báo sai một phiên đã hết hạn là vẫn còn hoạt động.
+      </p>
+
+      <h3 class="section-heading" id="4-dinh-huong-phat-trien-tiep-theo">4. Định hướng phát triển tiếp theo</h3>
+      <ul>
+        <li><strong>Tích hợp cổng ngân hàng mở:</strong> Nghiên cứu kết nối thêm Webhook thông báo giao dịch biến động số dư từ các cổng ngân hàng để tự động nhận diện và gạch nợ ngay khi tài khoản nhận được tiền, giúp giảm bớt thao tác kiểm tra và xác nhận thủ công của người nhận tiền.</li>
+        <li><strong>Bổ sung tính năng chia hóa đơn định kỳ:</strong> Phát triển cơ chế tự động tạo lịch phân bổ cho các khoản chi phí cố định lặp lại hàng tháng như tiền thuê nhà, tiền điện, nước hoặc các gói dịch vụ dùng chung của nhóm sinh hoạt.</li>
+      </ul>
+    </section>
+
+    <!-- Document Footer & Colophon -->
+    <footer class="doc-footer">
+      <p>PaySplit – Smart Bill Splitter & Settlement System · Báo Cáo Kết Quả Thử Việc</p>
+      <p style="font-size: 0.72rem; color: var(--color-muted); margin-top: 4px;">Tài liệu được sinh tự động và tối ưu hóa hiển thị cho in ấn chuẩn A4 & định dạng PDF</p>
+    </footer>
+
+  </main>
+
+  <!-- Diagram Zoom Modal (Screen Interaction) -->
+  <div id="diagramModal" class="diagram-modal" onclick="closeDiagramModal(event)">
+    <div class="diagram-modal-content">
+      <button class="diagram-modal-close" onclick="closeDiagramModalDirect()" title="Đóng phóng to">✕</button>
+      <div id="modalDiagramTarget" style="display:flex;justify-content:center;align-items:center;min-width:600px;min-height:300px;"></div>
+    </div>
+  </div>
+
+  <!-- Back to Top Button -->
+  <a href="#" class="back-to-top" title="Lên đầu trang">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
+  </a>
+
+  <!-- Theme Toggle & Diagram Zoom Script -->
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const target = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', target);
+      localStorage.setItem('paysplit_report_theme', target);
+    }
+    
+    // Auto load saved theme
+    (function() {
+      const saved = localStorage.getItem('paysplit_report_theme');
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', saved);
+      }
+    })();
+
+    // Diagram Zoom Modal Functions
+    function openDiagramModal(svgHtml) {
+      const modal = document.getElementById('diagramModal');
+      const target = document.getElementById('modalDiagramTarget');
+      target.innerHTML = svgHtml;
+      const svg = target.querySelector('svg');
+      if (svg) {
+        svg.style.maxWidth = '90vw';
+        svg.style.maxHeight = '80vh';
+        svg.style.width = 'auto';
+        svg.style.height = 'auto';
+      }
+      modal.classList.add('active');
+    }
+
+    function closeDiagramModalDirect() {
+      const modal = document.getElementById('diagramModal');
+      modal.classList.remove('active');
+    }
+
+    function closeDiagramModal(e) {
+      if (e.target.id === 'diagramModal') {
+        closeDiagramModalDirect();
+      }
+    }
+
+    // Attach click to zoom on diagrams
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        document.querySelectorAll('.mermaid').forEach(m => {
+          m.style.cursor = 'zoom-in';
+          m.title = 'Nhấn để phóng to sơ đồ toàn màn hình';
+          m.addEventListener('click', () => {
+            const svg = m.querySelector('svg');
+            if (svg) openDiagramModal(svg.outerHTML);
+          });
+        });
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

@@ -265,7 +265,7 @@
               <img src="assets/app_icon.png" alt="PaySplit Logo" class="node-logo node-logo-system">
               <div class="node-text">
                 <span class="node-name-system">PaySplit System</span>
-                <span class="node-type-system">Go, PostgreSQL, River Queue</span>
+                <span class="node-type-system">Go, PostgreSQL, Redis, River Queue</span>
               </div>
             </div>
 
@@ -480,7 +480,7 @@
               </div>
               <div class="card-title-gateway">API Gateway</div>
               <div class="card-pills">
-                <span class="card-pill">JWT Auth Guard</span>
+                <span class="card-pill">Session Guard (Redis)</span>
                 <span class="card-pill">Rate Limiter</span>
                 <span class="card-pill">CORS &amp; Recoverer</span>
                 <span class="card-pill">Sync Dispatch</span>
@@ -626,22 +626,23 @@
           </div>
         </div>
 
-        <div class="tsl-lede">Có token chưa đủ: mỗi request nghiệp vụ còn <strong>hỏi database xem phiên đăng nhập còn
-            hiệu lực</strong> hay không.</div>
+        <div class="tsl-lede">Credential là một chuỗi đục, <strong>không đọc được gì từ nó</strong>. Mỗi request nghiệp
+          vụ đều phải hỏi Redis xem phiên còn hiệu lực hay không.</div>
 
         <div class="tsl-body">
           <div class="tsl-chips tsl-chips-4">
-            <div class="tsl-chip">Access JWT sống <strong>15 phút</strong>, mang theo mã phiên <code>sid</code>.</div>
-            <div class="tsl-chip">API nghiệp vụ kiểm tra <strong>JWT và session còn sống</strong>, không chỉ chữ ký.
+            <div class="tsl-chip">Client giữ <strong>đúng một</strong> credential 43 ký tự, không mang thông tin nào.
             </div>
-            <div class="tsl-chip">Refresh token <strong>dùng một lần</strong>, giới hạn trong phiên <strong>7
+            <div class="tsl-chip">Redis chỉ lưu <strong>bản băm SHA-256</strong>; bản sao Redis không đăng nhập lại
+              được.</div>
+            <div class="tsl-chip"><strong>Hạn 7 ngày tự trượt</strong> theo mỗi request, trần cứng <strong>30
                 ngày</strong>.</div>
-            <div class="tsl-chip">Một tài khoản có <strong>một phiên chưa bị thu hồi</strong> tại một thời điểm.</div>
+            <div class="tsl-chip">Một tài khoản <strong>một phiên</strong>: máy mới đăng nhập là máy cũ chết ngay.</div>
           </div>
 
           <div class="tsl-figure">
-            <svg viewBox="0 0 1220 412" preserveAspectRatio="xMidYMid meet" role="img"
-              aria-label="Trình tự đăng nhập và kiểm tra phiên giữa app Flutter, Auth API và PostgreSQL">
+            <svg viewBox="0 0 1220 432" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Trình tự đăng nhập và xác thực mỗi request giữa app Flutter, Auth API, Redis và PostgreSQL">
               <defs>
                 <marker id="dgArrowSeq" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
                   <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
@@ -651,51 +652,59 @@
                 </marker>
               </defs>
 
-              <line class="dg-life" x1="200" y1="58" x2="200" y2="404" />
-              <line class="dg-life" x1="610" y1="58" x2="610" y2="404" />
-              <line class="dg-life" x1="1020" y1="58" x2="1020" y2="404" />
+              <line class="dg-life" x1="150" y1="58" x2="150" y2="392" />
+              <line class="dg-life" x1="470" y1="58" x2="470" y2="392" />
+              <line class="dg-life" x1="790" y1="58" x2="790" y2="392" />
+              <line class="dg-life" x1="1080" y1="58" x2="1080" y2="392" />
 
-              <rect class="dg-box dg-box-identity" x="75" y="6" width="250" height="48" rx="12" />
-              <text class="dg-lead" x="200" y="36" text-anchor="middle">App Flutter</text>
-              <rect class="dg-box dg-box-identity" x="485" y="6" width="250" height="48" rx="12" />
-              <text class="dg-lead" x="610" y="36" text-anchor="middle">PaySplit API</text>
-              <rect class="dg-box dg-box-identity" x="895" y="6" width="250" height="48" rx="12" />
-              <text class="dg-lead" x="1020" y="36" text-anchor="middle">PostgreSQL</text>
+              <rect class="dg-box dg-box-identity" x="32" y="6" width="236" height="48" rx="12" />
+              <text class="dg-lead" x="150" y="36" text-anchor="middle">App Flutter</text>
+              <rect class="dg-box dg-box-identity" x="352" y="6" width="236" height="48" rx="12" />
+              <text class="dg-lead" x="470" y="36" text-anchor="middle">PaySplit API</text>
+              <rect class="dg-box dg-box-money" x="672" y="6" width="236" height="48" rx="12" />
+              <text class="dg-lead" x="790" y="36" text-anchor="middle">Redis</text>
+              <rect class="dg-box dg-box-muted" x="962" y="6" width="236" height="48" rx="12" />
+              <text class="dg-lead" x="1080" y="36" text-anchor="middle">PostgreSQL</text>
 
-              <path class="dg-edge" d="M 200 96 L 604 96" marker-end="url(#dgArrowSeq)" />
-              <text class="dg-label" x="402" y="88" text-anchor="middle">sign-in: email, mật khẩu, device_id</text>
+              <path class="dg-edge" d="M 150 96 L 464 96" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="310" y="88" text-anchor="middle">sign-in: email, mật khẩu, device_id</text>
 
-              <path class="dg-edge" d="M 610 144 L 1014 144" marker-end="url(#dgArrowSeq)" />
-              <text class="dg-label" x="812" y="136" text-anchor="middle">thu hồi phiên cũ &#183; tạo session + hash
-                refresh</text>
+              <path class="dg-edge" d="M 470 134 L 1074 134" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="775" y="126" text-anchor="middle">ghi bản ghi kiểm toán &#183; thu hồi phiên
+                cũ</text>
 
-              <path class="dg-edge dg-edge-dash" d="M 610 192 L 206 192" marker-end="url(#dgArrowSeq)" />
-              <text class="dg-label" x="408" y="184" text-anchor="middle">Access JWT 15 phút (có sid) + refresh
-                token</text>
+              <path class="dg-edge dg-edge-strong" d="M 470 172 L 784 172" marker-end="url(#dgArrowSeqHot)" />
+              <text class="dg-label dg-label-strong" x="630" y="164" text-anchor="middle">tạo phiên + con trỏ, một lượt
+                nguyên tử</text>
 
-              <line class="dg-rule" x1="40" y1="226" x2="1180" y2="226" stroke-dasharray="7 6" />
-              <text class="dg-label dg-label-strong" x="610" y="231" text-anchor="middle">Mỗi request tới API nghiệp
+              <path class="dg-edge dg-edge-dash" d="M 470 210 L 156 210" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="310" y="202" text-anchor="middle">session_id đục + hạn dùng</text>
+
+              <line class="dg-rule" x1="20" y1="246" x2="1200" y2="246" stroke-dasharray="7 6" />
+              <text class="dg-label dg-label-strong" x="610" y="251" text-anchor="middle">Mỗi request tới API nghiệp
                 vụ</text>
 
-              <path class="dg-edge" d="M 200 268 L 604 268" marker-end="url(#dgArrowSeq)" />
-              <text class="dg-label" x="402" y="260" text-anchor="middle">GET /groups/&#8230; + Bearer JWT</text>
+              <path class="dg-edge" d="M 150 292 L 464 292" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="310" y="284" text-anchor="middle">GET /groups/&#8230; + Bearer
+                session_id</text>
 
-              <path class="dg-edge" d="M 610 296 L 700 296 L 700 322 L 616 322" marker-end="url(#dgArrowSeq)" />
-              <text class="dg-label" x="714" y="315">xác minh chữ ký &#8594; lấy sid</text>
+              <path class="dg-edge dg-edge-strong" d="M 470 336 L 784 336" marker-end="url(#dgArrowSeqHot)" />
+              <text class="dg-label dg-label-strong" x="630" y="328" text-anchor="middle">đọc phiên và gia hạn, chỉ
+                MỘT lượt đi về</text>
 
-              <path class="dg-edge dg-edge-strong" d="M 610 364 L 1014 364" marker-end="url(#dgArrowSeqHot)" />
-              <text class="dg-label dg-label-strong" x="812" y="356" text-anchor="middle">session còn sống? tài khoản
-                còn active?</text>
+              <path class="dg-edge dg-edge-dash" d="M 470 378 L 156 378" marker-end="url(#dgArrowSeq)" />
+              <text class="dg-label" x="310" y="370" text-anchor="middle">cho đi tiếp &#183; 401 phiên chết &#183; 503
+                Redis lỗi</text>
 
-              <path class="dg-edge dg-edge-dash" d="M 610 402 L 206 402" marker-end="url(#dgArrowSeq)" />
-              <text class="dg-label" x="408" y="394" text-anchor="middle">cho đi tiếp &#183; hoặc 401</text>
+              <text class="dg-cap" x="20" y="420">PostgreSQL chỉ bị chạm một lần lúc đăng nhập. Mọi request sau đó chỉ
+                hỏi Redis, và bảng sessions từ đây chỉ còn là bản ghi kiểm toán.</text>
             </svg>
           </div>
 
           <div class="tsl-note">Đăng ký &#8594; <strong>OTP 6 chữ số, hạn 10 phút</strong> &#8594; kích hoạt &#8594;
             đăng nhập. Sai 5 lần thì <strong>chính mã đó bị vô hiệu</strong>, không khóa tài khoản vĩnh viễn. Mật khẩu
-            được <strong>băm bằng bcrypt</strong> kèm salt; refresh token chỉ lưu hash ở server, app giữ token trong
-            secure storage.</div>
+            được <strong>băm bằng bcrypt</strong> kèm salt; credential chỉ tồn tại trên server dưới dạng
+            <strong>SHA-256</strong>, app giữ bản gốc trong secure storage.</div>
         </div>
 
       </div>
@@ -712,80 +721,112 @@
           <div class="module-sub-indicator">
             <span class="module-sub-num">2</span>
             <span class="module-sub-sep">.</span>
-            <span class="module-sub-title">Auth &amp; User Service <span class="module-sub-author">(Phạm Lê Hoàng Nam)</span> &#8212; Làm mới &amp; kết thúc phiên</span>
+            <span class="module-sub-title">Auth &amp; User Service <span class="module-sub-author">(Phạm Lê Hoàng Nam)</span> &#8212; Vòng đời phiên &amp; thu hồi</span>
           </div>
         </div>
 
-        <div class="tsl-lede">REST và SSE <strong>cùng chờ một lượt refresh</strong>; khi phiên bị thu hồi thì app kết
-          thúc dứt khoát tại màn Login.</div>
+        <div class="tsl-lede">Không có bước làm mới token: phiên <strong>tự gia hạn</strong> mỗi request. Cái khó nằm ở
+          chỗ phân biệt <strong>phiên đã chết</strong> với <strong>Redis đang lỗi</strong>.</div>
 
         <div class="tsl-body">
           <div class="tsl-figure">
-            <svg viewBox="0 0 1220 440" preserveAspectRatio="xMidYMid meet" role="img"
-              aria-label="Hai nguồn lỗi 401 gộp vào một lượt refresh dùng chung, và nhánh kết thúc phiên">
+            <svg viewBox="0 0 1220 446" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Ba phần: hai đồng hồ hạn dùng, cách phân biệt 401 với 503, và đường thu hồi phiên kèm lớp bảo hiểm">
               <defs>
                 <marker id="dgArrowFlow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
                   <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
                 </marker>
+                <marker id="dgArrowFlowHot" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#4F46E5" />
+                </marker>
               </defs>
 
-              <path class="dg-edge" d="M 234 100 C 284 100, 280 142, 314 142" marker-end="url(#dgArrowFlow)" />
-              <path class="dg-edge" d="M 234 208 C 284 208, 280 172, 314 172" marker-end="url(#dgArrowFlow)" />
-              <path class="dg-edge" d="M 560 160 L 634 160" marker-end="url(#dgArrowFlow)" />
-              <path class="dg-edge" d="M 880 142 C 918 142, 924 94, 954 88" marker-end="url(#dgArrowFlow)" />
-              <path class="dg-edge" d="M 880 178 C 918 178, 924 226, 954 232" marker-end="url(#dgArrowFlow)" />
-              <path class="dg-edge dg-edge-dash" d="M 880 328 C 924 328, 940 272, 954 254"
-                marker-end="url(#dgArrowFlow)" />
-              <path class="dg-edge" d="M 1078 276 L 1078 296" marker-end="url(#dgArrowFlow)" />
+              <!-- Băng 1: hai đồng hồ, cái sau kẹp cái trước -->
+              <text class="dg-lane" x="16" y="24">1 &#183; Hai đồng hồ, cái sau kẹp cái trước</text>
+              <rect class="dg-box dg-box-muted" x="16" y="36" width="1188" height="56" rx="10" />
+              <text class="dg-body" x="1190" y="60" text-anchor="end">trần cứng 30 ngày</text>
+              <text class="dg-sub" x="1190" y="80" text-anchor="end">không lần gia hạn nào vượt qua</text>
+              <rect class="dg-box dg-box-accent" x="28" y="46" width="286" height="36" rx="8" />
+              <text class="dg-lead" x="171" y="69" text-anchor="middle">Hạn trượt 7 ngày</text>
+              <path class="dg-edge dg-edge-strong" d="M 324 64 L 410 64" marker-end="url(#dgArrowFlowHot)" />
+              <text class="dg-label dg-label-strong" x="426" y="59">mỗi request có xác thực đẩy hạn ra thêm 7
+                ngày&#8230;</text>
+              <text class="dg-label" x="426" y="81">&#8230;nhưng bị cắt cụt khi chạm trần, nên phiên không sống mãi</text>
 
-              <text class="dg-label" x="948" y="108" text-anchor="end">thành công</text>
-              <text class="dg-label" x="948" y="222" text-anchor="end">thất bại</text>
+              <!-- Băng 2: 401 khác 503 -->
+              <line class="dg-rule" x1="16" y1="112" x2="1204" y2="112" />
+              <text class="dg-lane" x="16" y="136">2 &#183; Phiên đã chết, hay chỉ là Redis đang lỗi?</text>
 
-              <rect class="dg-box" x="24" y="70" width="210" height="60" rx="12" />
-              <text class="dg-lead" x="129" y="98" text-anchor="middle">REST gặp 401</text>
-              <text class="dg-sub" x="129" y="118" text-anchor="middle">một lời gọi API</text>
+              <rect class="dg-box" x="16" y="178" width="206" height="60" rx="12" />
+              <text class="dg-lead" x="119" y="204" text-anchor="middle">Request kèm</text>
+              <text class="dg-mono" x="119" y="226" text-anchor="middle">Bearer session_id</text>
 
-              <rect class="dg-box" x="24" y="178" width="210" height="60" rx="12" />
-              <text class="dg-lead" x="129" y="206" text-anchor="middle">SSE gặp 401</text>
-              <text class="dg-sub" x="129" y="226" text-anchor="middle">kết nối realtime</text>
+              <rect class="dg-box dg-box-accent" x="268" y="173" width="196" height="70" rx="14" />
+              <text class="dg-lead" x="366" y="202" text-anchor="middle">Tra kho phiên</text>
+              <text class="dg-sub" x="366" y="224" text-anchor="middle">đọc và gia hạn</text>
 
-              <rect class="dg-box dg-box-accent" x="320" y="120" width="240" height="80" rx="14" />
-              <text class="dg-lead" x="440" y="154" text-anchor="middle">SessionRefresher</text>
-              <text class="dg-sub" x="440" y="178" text-anchor="middle">dùng chung &#8212; single-flight</text>
+              <path class="dg-edge" d="M 222 208 L 262 208" marker-end="url(#dgArrowFlow)" />
 
-              <rect class="dg-box" x="640" y="120" width="240" height="80" rx="14" />
-              <text class="dg-lead" x="760" y="154" text-anchor="middle">Một request refresh</text>
-              <text class="dg-sub" x="760" y="178" text-anchor="middle">token cũ dùng một lần</text>
+              <path class="dg-edge" d="M 464 194 C 500 194, 496 172, 532 172" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 464 208 L 532 228" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 464 222 C 500 222, 496 284, 532 284" marker-end="url(#dgArrowFlow)" />
 
-              <rect class="dg-box dg-box-bill" x="960" y="44" width="236" height="86" rx="14" />
-              <text class="dg-lead" x="1078" y="78" text-anchor="middle">Lưu cặp token mới</text>
-              <text class="dg-sub" x="1078" y="102" text-anchor="middle">mọi bên chờ cùng đi tiếp</text>
+              <rect class="dg-box dg-box-bill" x="538" y="146" width="290" height="52" rx="12" />
+              <text class="dg-lead" x="683" y="178" text-anchor="middle">Tìm thấy &#8594; cho đi tiếp</text>
 
-              <rect class="dg-box dg-box-money" x="960" y="190" width="236" height="86" rx="14" />
-              <text class="dg-lead" x="1078" y="224" text-anchor="middle">Kết thúc phiên</text>
-              <text class="dg-sub" x="1078" y="248" text-anchor="middle">đóng stream, xóa token</text>
+              <rect class="dg-box dg-box-money" x="538" y="204" width="290" height="52" rx="12" />
+              <text class="dg-lead" x="683" y="236" text-anchor="middle">Không tìm thấy &#8594; 401</text>
 
-              <rect class="dg-box dg-box-muted" x="640" y="298" width="240" height="60" rx="12" />
-              <text class="dg-body" x="760" y="323" text-anchor="middle">SSE close:</text>
-              <text class="dg-mono" x="760" y="346" text-anchor="middle">session_ended</text>
+              <rect class="dg-box" x="538" y="262" width="290" height="52" rx="12" />
+              <text class="dg-lead" x="683" y="294" text-anchor="middle">Redis lỗi hoặc quá hạn &#8594; 503</text>
 
-              <rect class="dg-box dg-box-money" x="960" y="302" width="236" height="56" rx="12" />
-              <text class="dg-lead" x="1078" y="336" text-anchor="middle">Login + cảnh báo</text>
+              <path class="dg-edge" d="M 828 230 L 878 230" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 828 288 L 878 288" marker-end="url(#dgArrowFlow)" />
 
-              <text class="dg-cap" x="24" y="422">Mở app lần đầu chưa từng có token vẫn vào Welcome bình thường, không
-                hiện cảnh báo hết phiên.</text>
+              <rect class="dg-box dg-box-money" x="884" y="204" width="320" height="52" rx="12" />
+              <text class="dg-lead" x="1044" y="228" text-anchor="middle">App XÓA credential</text>
+              <text class="dg-sub" x="1044" y="247" text-anchor="middle">về Login kèm cảnh báo hết phiên</text>
+
+              <rect class="dg-box" x="884" y="262" width="320" height="52" rx="12" />
+              <text class="dg-lead" x="1044" y="286" text-anchor="middle">App GIỮ credential</text>
+              <text class="dg-sub" x="1044" y="305" text-anchor="middle">chờ rồi thử lại, không đá ai ra</text>
+
+              <!-- Băng 3: thu hồi và lớp bảo hiểm -->
+              <line class="dg-rule" x1="16" y1="330" x2="1204" y2="330" />
+              <text class="dg-lane" x="16" y="352">3 &#183; Thu hồi tức thì, và lớp bảo hiểm khi lệnh xóa bị lỡ</text>
+
+              <rect class="dg-box" x="16" y="364" width="282" height="64" rx="12" />
+              <text class="dg-lead" x="157" y="390" text-anchor="middle">Admin khóa tài khoản</text>
+              <text class="dg-sub" x="157" y="411" text-anchor="middle">hoặc đăng xuất, đặt lại mật khẩu</text>
+
+              <rect class="dg-box dg-box-accent" x="322" y="364" width="282" height="64" rx="12" />
+              <text class="dg-lead" x="463" y="390" text-anchor="middle">Xóa khóa trên Redis</text>
+              <text class="dg-sub" x="463" y="411" text-anchor="middle">phiên chết ngay, không chờ 15 phút</text>
+
+              <rect class="dg-box dg-box-bill" x="628" y="364" width="282" height="64" rx="12" />
+              <text class="dg-lead" x="769" y="390" text-anchor="middle">Báo hiệu kết thúc phiên</text>
+              <text class="dg-sub" x="769" y="411" text-anchor="middle">stream realtime đóng, app về Login</text>
+
+              <rect class="dg-box dg-box-muted" x="934" y="364" width="282" height="64" rx="12" />
+              <text class="dg-lead" x="1075" y="390" text-anchor="middle">Job bảo hiểm bền vững</text>
+              <text class="dg-sub" x="1075" y="411" text-anchor="middle">thử lại tới 10 lượt, khớp đúng phiên</text>
+
+              <path class="dg-edge" d="M 298 396 L 316 396" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge" d="M 604 396 L 622 396" marker-end="url(#dgArrowFlow)" />
+              <path class="dg-edge dg-edge-dash" d="M 910 396 L 928 396" marker-end="url(#dgArrowFlow)" />
             </svg>
           </div>
 
           <div class="tsl-chips tsl-chips-4">
-            <div class="tsl-chip">Mỗi lần refresh: <strong>dùng token cũ, cấp token mới</strong>; server lưu dấu đã
-              dùng.</div>
-            <div class="tsl-chip">Token đã dùng xuất hiện lại &#8594; server <strong>thu hồi phiên liên quan</strong>.
-            </div>
-            <div class="tsl-chip">Hai request cùng gặp 401 <strong>không tự refresh riêng</strong>; ai đến sau chờ lượt
-              đang chạy.</div>
-            <div class="tsl-chip is-rose">Không phải mọi lỗi refresh đều là bị tấn công &#8212; lỗi mạng cũng làm app
-              kết thúc phiên theo implementation hiện tại.</div>
+            <div class="tsl-chip">Thu hồi là <strong>một lệnh xóa</strong>, có hiệu lực ngay trên mọi đường &#8212;
+              không còn cửa sổ 15 phút của token cũ.</div>
+            <div class="tsl-chip">Hạn trượt luôn bị <strong>kẹp vào trần cứng</strong>; quá trần thì bản ghi phiên bị
+              xóa ngay tại chỗ.</div>
+            <div class="tsl-chip"><strong>401 là phiên chết</strong> (xóa credential), <strong>503 là hạ tầng
+                lỗi</strong> (giữ credential). Gộp hai thứ này lại là đăng xuất vĩnh viễn toàn bộ người dùng.</div>
+            <div class="tsl-chip is-rose">Vai trò người dùng được <strong>giữ sẵn trong phiên tới 7 ngày</strong>, nên
+              mọi luồng đổi vai trò về sau bắt buộc phải thu hồi phiên &#8212; đã có <strong>test tự động canh</strong>
+              điều đó.</div>
           </div>
         </div>
 
