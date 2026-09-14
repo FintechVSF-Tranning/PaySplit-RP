@@ -1298,9 +1298,132 @@
     </section>
 
     <!-- ==============================================
+         SLIDE 15: DEBT & SETTLEMENT — ĐỐI SOÁT TỰ ĐỘNG QUA SEPAY (D3)
+         ============================================== -->
+    <section class="slide" id="settlement-sepay" data-index="12">
+      <div class="slide-content module-detail-slide tsl-slide">
+
+        <div class="module-detail-header">
+          <h2 class="slide-title">Chi Tiết Các Module</h2>
+          <div class="module-sub-indicator">
+            <span class="module-sub-num">6</span>
+            <span class="module-sub-sep">.</span>
+            <span class="module-sub-title">Debt &amp; Settlement <span class="module-sub-author">(Phạm Thanh Lam)</span> &#8212; Đối soát tự động qua SePay</span>
+          </div>
+        </div>
+
+        <div class="tsl-lede">Ảnh biên lai là lời khai của người gửi. <strong>Nay ngân hàng nói thay</strong>: SePay
+          bắn webhook khi tiền vào tài khoản của creditor, hệ thống tự khớp theo mã <code>PAY&#8230;</code> và gạch nợ
+          &#8212; luồng gửi &amp; duyệt biên lai đã được gỡ bỏ.</div>
+
+        <div class="tsl-body">
+          <div class="tsl-figure">
+            <svg viewBox="0 0 1220 404" preserveAspectRatio="xMidYMid meet" role="img"
+              aria-label="Đường đi của một lần trả tiền từ lúc quét QR tới khi nợ được gạch tự động, và ba bước xử lý webhook bên trong PaySplit">
+              <defs>
+                <marker id="dgArrowSepay" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+                  <polygon points="0 0, 9 3.5, 0 7" fill="#94A3B8" />
+                </marker>
+              </defs>
+
+              <!-- Băng 1: đường đi của một lần trả tiền -->
+              <rect class="dg-box" x="10" y="10" width="220" height="76" rx="12" />
+              <text class="dg-lead" x="120" y="42" text-anchor="middle">Lam quét QR</text>
+              <text class="dg-sub" x="120" y="66" text-anchor="middle">nội dung SEVQR PAY&#8230;</text>
+
+              <rect class="dg-box dg-box-muted" x="254" y="10" width="220" height="76" rx="12" />
+              <text class="dg-lead" x="364" y="42" text-anchor="middle">Ngân hàng</text>
+              <text class="dg-sub" x="364" y="66" text-anchor="middle">tiền vào thẳng TK của Nam</text>
+
+              <rect class="dg-box dg-box-muted" x="498" y="10" width="220" height="76" rx="12" />
+              <text class="dg-lead" x="608" y="42" text-anchor="middle">SePay</text>
+              <text class="dg-sub" x="608" y="66" text-anchor="middle">đọc biến động số dư</text>
+
+              <rect class="dg-box" x="742" y="10" width="220" height="76" rx="12" />
+              <text class="dg-lead" x="852" y="42" text-anchor="middle">PaySplit API</text>
+              <text class="dg-sub" x="852" y="66" text-anchor="middle">POST /webhooks/sepay</text>
+
+              <rect class="dg-box dg-box-accent" x="986" y="10" width="220" height="76" rx="12" />
+              <text class="dg-lead" x="1096" y="42" text-anchor="middle">Nợ tự gạch</text>
+              <text class="dg-sub" x="1096" y="66" text-anchor="middle">không ai phải bấm xác nhận</text>
+
+              <path class="dg-edge" d="M 234 48 L 248 48" marker-end="url(#dgArrowSepay)" />
+              <path class="dg-edge" d="M 478 48 L 492 48" marker-end="url(#dgArrowSepay)" />
+              <path class="dg-edge" d="M 722 48 L 736 48" marker-end="url(#dgArrowSepay)" />
+              <path class="dg-edge" d="M 966 48 L 980 48" marker-end="url(#dgArrowSepay)" />
+
+              <!-- Băng 2: ba bước xử lý webhook -->
+              <line class="dg-rule" x1="10" y1="120" x2="1198" y2="120" />
+              <text class="dg-label dg-label-strong" x="604" y="125" text-anchor="middle">Một webhook, nhìn từ
+                backend</text>
+
+              <rect class="dg-box" x="10" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="34" y="180">1 &#183; Nhận &amp; chống trùng</text>
+              <text class="dg-body" x="34" y="208">So khóa <tspan class="dg-mono">Apikey</tspan> theo thời gian hằng
+                định,</text>
+              <text class="dg-body" x="34" y="230">chặn body quá lớn, rồi ghi giao dịch với</text>
+              <text class="dg-body" x="34" y="252"><tspan class="dg-mono">ON CONFLICT (id) DO NOTHING</tspan>.</text>
+              <text class="dg-body" x="34" y="274">SePay gửi lại tới 7 lần, nợ vẫn gạch một lần.</text>
+
+              <rect class="dg-box" x="420" y="148" width="380" height="140" rx="14" />
+              <text class="dg-lead" x="444" y="180">2 &#183; Đối soát</text>
+              <text class="dg-body" x="444" y="208">Tách mã <tspan class="dg-mono">PAY&#8230;</tspan> khỏi nội dung
+                chuyển,</text>
+              <text class="dg-body" x="444" y="230">khóa <tspan class="dg-mono">group &#8594; debts &#8594; payment</tspan></text>
+              <text class="dg-body" x="444" y="252">đúng thứ tự cũ. Khớp khi đủ bốn điều kiện:</text>
+              <text class="dg-body dg-label-strong" x="444" y="274">đúng mã, đúng tiền, đúng TK nhận, payment còn
+                mở.</text>
+
+              <rect class="dg-box dg-box-accent" x="830" y="148" width="368" height="140" rx="14" />
+              <text class="dg-lead" x="854" y="180">3 &#183; Kết sổ</text>
+              <text class="dg-body" x="854" y="208">payment &#8594; <tspan class="dg-mono">confirmed</tspan> với</text>
+              <text class="dg-body" x="854" y="230"><tspan class="dg-mono">confirmation_source = bank_transfer</tspan>,
+              </text>
+              <text class="dg-body" x="854" y="252">debt &#8594; <tspan class="dg-mono">settled</tspan>, ghi
+                activity,</text>
+              <text class="dg-body" x="854" y="274">bắn realtime và thông báo cho cả hai bên.</text>
+
+              <path class="dg-edge" d="M 394 218 L 414 218" marker-end="url(#dgArrowSepay)" />
+              <path class="dg-edge" d="M 804 218 L 824 218" marker-end="url(#dgArrowSepay)" />
+
+              <rect class="dg-box dg-box-money" x="10" y="304" width="1188" height="68" rx="12"
+                stroke-dasharray="7 6" />
+              <text class="dg-body" x="34" y="332">Khi ngân hàng không tự khớp &#8212; chuyển tay sai số tiền, mất mã
+                trong nội dung, SePay chậm &#8212; <tspan class="dg-label-strong">creditor bấm &#8220;Đã nhận
+                  tiền&#8221;</tspan>:</text>
+              <text class="dg-body" x="34" y="356">payment ghi nguồn <tspan class="dg-mono">manual</tspan>, vẫn không
+                cần ảnh, vẫn không ai duyệt hộ.</text>
+
+              <text class="dg-cap" x="10" y="394">Mỗi giao dịch lưu lại một <tspan class="dg-mono">match_status</tspan>
+                (<tspan class="dg-mono">confirmed</tspan>, <tspan class="dg-mono">amount_mismatch</tspan>, <tspan
+                  class="dg-mono">no_reference</tspan>&#8230;) &#8212; chỗ tra đầu tiên khi tiền đã chuyển mà nợ chưa
+                gạch.</text>
+            </svg>
+          </div>
+
+          <div class="tsl-chips tsl-chips-2">
+            <div class="tsl-chip is-rose">
+              <span class="tsl-chip-head">Ranh giới dịch chuyển tới đâu</span>
+              PaySplit vẫn <strong>không giữ tiền</strong>: tiền đi thẳng từ Lam sang Nam. Cái mới là hệ thống đọc được
+              tín hiệu tiền vào từ chính ngân hàng của người nhận, nên <strong>không còn phải tin vào ảnh biên
+                lai</strong>.
+            </div>
+            <div class="tsl-chip is-teal">
+              <span class="tsl-chip-head">Cái giá phải trả</span>
+              Người nhận phải liên kết tài khoản với SePay thì mới tự khớp được. VietinBank cá nhân chỉ đẩy giao dịch
+              có nội dung mở đầu bằng <code>SEVQR</code>, nên QR sinh ra mang sẵn tiền tố đó và <strong>nội dung chuyển
+                khoản không được sửa</strong>.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==============================================
          SLIDE 15: DEBT & SETTLEMENT — ĐỒNG THỜI & GỬI LẠI (D3)
          ============================================== -->
-    <section class="slide" id="settlement-reliability" data-index="12">
+    <section class="slide" id="settlement-reliability" data-index="13">
       <div class="slide-content module-detail-slide tsl-slide">
 
         <div class="module-detail-header">
@@ -1418,7 +1541,7 @@
     <!-- ==============================================
          SLIDE 11: CHI TIẾT CÁC MODULE: 7. NOTIFICATION
          ============================================== -->
-    <section class="slide" id="slide-11" data-index="13">
+    <section class="slide" id="slide-11" data-index="14">
       <div class="slide-content module-detail-slide">
         <!-- TIÊU ĐỀ CHÍNH & MỤC CON -->
         <div class="module-detail-header">
@@ -1552,7 +1675,7 @@
     <!-- ==============================================
          SLIDE 15: DEMO TRẢI NGHIỆM & LỜI CẢM ƠN
          ============================================== -->
-    <section class="slide" id="slide-15" data-index="14">
+    <section class="slide" id="slide-15" data-index="15">
       <div class="slide-content closing-slide">
         <div class="closing-grid">
 
@@ -1618,7 +1741,7 @@
     <div class="slide-counter" id="slideCounter" aria-label="Số trang slide">
       <span class="current-slide">01</span>
       <span class="slide-sep">/</span>
-      <span class="total-slides">15</span>
+      <span class="total-slides">16</span>
     </div>
     <button class="nav-btn" id="btnNext" title="Slide tiếp theo">
       <i class="fa-solid fa-arrow-right"></i>
