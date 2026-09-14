@@ -88,6 +88,180 @@ body {
   padding-bottom: var(--space-lg);
 }
 
+/* ==========================================================================
+   FORMAL REPORT COVER PAGE (Chuẩn tài liệu báo cáo hành chính / doanh nghiệp)
+   ========================================================================== */
+.formal-cover {
+  padding: 0;
+  margin-bottom: var(--space-2xl);
+}
+
+.cover-frame {
+  border: 3px double var(--color-ink);
+  border-radius: var(--radius-xs);
+  padding: 64px 48px;
+  min-height: 840px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 48px;
+  background: var(--color-paper);
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.cover-org {
+  text-align: center;
+  padding-bottom: 12px;
+}
+
+.cover-org-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-ink);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.cover-dept-title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-2);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.cover-dept-sub {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-neutral);
+  margin-bottom: 14px;
+}
+
+.cover-org-divider {
+  width: 140px;
+  height: 1.5px;
+  background: var(--color-ink);
+  margin: 0 auto;
+}
+
+.cover-body {
+  text-align: center;
+  margin: 0;
+  width: 100%;
+}
+
+.cover-doc-type {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--color-ink);
+  text-transform: uppercase;
+  margin-bottom: 22px;
+  line-height: 1.25;
+}
+
+.cover-project-block {
+  padding: 0 10px;
+}
+
+.cover-subject-label {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--color-neutral);
+  margin-bottom: 10px;
+}
+
+.cover-project-title {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  margin-bottom: 0;
+  letter-spacing: -0.01em;
+}
+
+.cover-divider {
+  width: 110px;
+  height: 2.5px;
+  background: var(--color-accent);
+  margin: 0 auto;
+  border-radius: 2px;
+}
+
+.cover-meta-section {
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.cover-meta-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+  background: transparent !important;
+  border: none !important;
+}
+
+.cover-meta-table tr,
+.cover-meta-table tr:hover {
+  background: transparent !important;
+}
+
+.cover-meta-table tr td {
+  padding: 10px 12px;
+  vertical-align: top;
+  border: none !important;
+  background: transparent !important;
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.cover-meta-table .meta-col-label {
+  width: 195px;
+  font-weight: 600;
+  color: var(--color-ink);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.cover-meta-table .meta-col-val {
+  text-align: left;
+  color: var(--color-ink-2);
+}
+
+.meta-person {
+  margin-bottom: 5px;
+}
+
+.meta-unit {
+  font-size: 0.82rem;
+  color: var(--color-muted);
+}
+
+.cover-location-date {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--color-ink-2);
+  text-transform: uppercase;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-rule);
+}
+
 .doc-badge-row {
   display: flex;
   flex-wrap: wrap;
@@ -890,10 +1064,61 @@ pre code {
   .cover-section {
     page-break-after: always !important;
     break-after: page !important;
-    min-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+    height: 262mm !important;
+    max-height: 266mm !important;
+    min-height: 255mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .cover-frame {
+    border: 3px double #0f172a !important;
+    height: 100% !important;
+    padding: 24mm 16mm 26mm 16mm !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 16mm !important;
+    background: #ffffff !important;
+  }
+
+  .cover-doc-type {
+    color: #0f172a !important;
+  }
+
+  .cover-project-title {
+    color: #0284c7 !important;
+  }
+
+  .cover-divider {
+    width: 28mm !important;
+    height: 1.5px !important;
+    background: #0284c7 !important;
+  }
+
+  .cover-meta-section {
+    width: 100% !important;
+    max-width: 155mm !important;
+    margin: 0 auto !important;
+  }
+
+  .cover-meta-table tr td {
+    padding: 3mm 4mm !important;
+    font-size: 10.5pt !important;
+    line-height: 1.55 !important;
+  }
+
+  .cover-meta-table .meta-col-label,
+  .cover-meta-table .meta-col-val strong,
+  .cover-org-title {
+    color: #0f172a !important;
   }
 
   .toc-box {
